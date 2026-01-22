@@ -4,14 +4,15 @@ server:
 spring:
   datasource:
     url: jdbc:postgresql://postgres-analysis:5432/analysis_db
-    username: analysis_service
-    password: analysis123
+    username: postgres
+    password: 12345
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
+    open-in-view: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect

@@ -7,8 +7,8 @@ spring:
 
   datasource:
     url: jdbc:postgresql://postgres-report:5432/report_db
-    username: report_service
-    password: report123
+    username: postgres
+    password: 12345
     driver-class-name: org.postgresql.Driver
 
   jpa:

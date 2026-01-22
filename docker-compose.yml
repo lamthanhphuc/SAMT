@@ -2,20 +2,21 @@ version: "3.9"
 
 services:
 
-  # ================= API GATEWAY =================
+  # ========= API GATEWAY =========
   api-gateway:
     build: ./api-gateway
-    container_name: api-gateway
     ports:
       - "8080:8080"
 
-  # ================= IDENTITY =================
+  # ========= IDENTITY =========
   postgres-identity:
     image: postgres:15
     environment:
       POSTGRES_DB: identity_db
-      POSTGRES_USER: identity_service
-      POSTGRES_PASSWORD: identity123
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12345
+    ports:
+      - "5432:5432"
     volumes:
       - identity_data:/var/lib/postgresql/data
 
@@ -27,16 +28,18 @@ services:
       - postgres-identity
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-identity:5432/identity_db
-      SPRING_DATASOURCE_USERNAME: identity_service
-      SPRING_DATASOURCE_PASSWORD: identity123
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 12345
 
-  # ================= ANALYSIS =================
+  # ========= ANALYSIS =========
   postgres-analysis:
     image: postgres:15
     environment:
       POSTGRES_DB: analysis_db
-      POSTGRES_USER: analysis_service
-      POSTGRES_PASSWORD: analysis123
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12345
+    ports:
+      - "5433:5432"
     volumes:
       - analysis_data:/var/lib/postgresql/data
 
@@ -48,16 +51,18 @@ services:
       - postgres-analysis
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-analysis:5432/analysis_db
-      SPRING_DATASOURCE_USERNAME: analysis_service
-      SPRING_DATASOURCE_PASSWORD: analysis123
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 12345
 
-  # ================= REPORT =================
+  # ========= REPORT =========
   postgres-report:
     image: postgres:15
     environment:
       POSTGRES_DB: report_db
-      POSTGRES_USER: report_service
-      POSTGRES_PASSWORD: report123
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12345
+    ports:
+      - "5434:5432"
     volumes:
       - report_data:/var/lib/postgresql/data
 
@@ -68,13 +73,15 @@ services:
     depends_on:
       - postgres-report
 
-  # ================= SYNC =================
+  # ========= SYNC =========
   postgres-sync:
     image: postgres:15
     environment:
       POSTGRES_DB: sync_db
-      POSTGRES_USER: sync_service
-      POSTGRES_PASSWORD: sync123
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12345
+    ports:
+      - "5435:5432"
     volumes:
       - sync_data:/var/lib/postgresql/data
 
@@ -85,13 +92,15 @@ services:
     depends_on:
       - postgres-sync
 
-  # ================= NOTIFICATION =================
+  # ========= NOTIFICATION =========
   postgres-notification:
     image: postgres:15
     environment:
       POSTGRES_DB: notification_db
-      POSTGRES_USER: notify_service
-      POSTGRES_PASSWORD: notify123
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12345
+    ports:
+      - "5436:5432"
     volumes:
       - notification_data:/var/lib/postgresql/data
 
