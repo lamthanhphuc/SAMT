@@ -1,0 +1,110 @@
+version: "3.9"
+
+services:
+
+  # ================= API GATEWAY =================
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+
+  # ================= IDENTITY =================
+  postgres-identity:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: identity_db
+      POSTGRES_USER: identity_service
+      POSTGRES_PASSWORD: identity123
+    volumes:
+      - identity_data:/var/lib/postgresql/data
+
+  identity-service:
+    build: ./identity-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgres-identity
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-identity:5432/identity_db
+      SPRING_DATASOURCE_USERNAME: identity_service
+      SPRING_DATASOURCE_PASSWORD: identity123
+
+  # ================= ANALYSIS =================
+  postgres-analysis:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: analysis_db
+      POSTGRES_USER: analysis_service
+      POSTGRES_PASSWORD: analysis123
+    volumes:
+      - analysis_data:/var/lib/postgresql/data
+
+  analysis-service:
+    build: ./analysis-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      - postgres-analysis
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-analysis:5432/analysis_db
+      SPRING_DATASOURCE_USERNAME: analysis_service
+      SPRING_DATASOURCE_PASSWORD: analysis123
+
+  # ================= REPORT =================
+  postgres-report:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: report_db
+      POSTGRES_USER: report_service
+      POSTGRES_PASSWORD: report123
+    volumes:
+      - report_data:/var/lib/postgresql/data
+
+  report-service:
+    build: ./report-service
+    ports:
+      - "8083:8083"
+    depends_on:
+      - postgres-report
+
+  # ================= SYNC =================
+  postgres-sync:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: sync_db
+      POSTGRES_USER: sync_service
+      POSTGRES_PASSWORD: sync123
+    volumes:
+      - sync_data:/var/lib/postgresql/data
+
+  sync-service:
+    build: ./sync-service
+    ports:
+      - "8084:8084"
+    depends_on:
+      - postgres-sync
+
+  # ================= NOTIFICATION =================
+  postgres-notification:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: notification_db
+      POSTGRES_USER: notify_service
+      POSTGRES_PASSWORD: notify123
+    volumes:
+      - notification_data:/var/lib/postgresql/data
+
+  notification-service:
+    build: ./notification-service
+    ports:
+      - "8085:8085"
+    depends_on:
+      - postgres-notification
+
+volumes:
+  identity_data:
+  analysis_data:
+  report_data:
+  sync_data:
+  notification_data:
