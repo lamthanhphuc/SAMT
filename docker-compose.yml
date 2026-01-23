@@ -2,118 +2,157 @@ version: "3.9"
 
 services:
 
-  # ========= API GATEWAY =========
-  api-gateway:
-    build: ./api-gateway
-    ports:
-      - "8080:8080"
-
-  # ========= IDENTITY =========
+  # ========= DATABASES (CHỈ 2 DB CHÍNH) =========
   postgres-identity:
     image: postgres:15
+    container_name: postgres-identity
     environment:
-      POSTGRES_DB: identity_db
+      POSTGRES_DB: samt_identity
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 12345
     ports:
       - "5432:5432"
     volumes:
       - identity_data:/var/lib/postgresql/data
+    networks:
+      - samt-network
 
-  identity-service:
-    build: ./identity-service
-    ports:
-      - "8081:8081"
-    depends_on:
-      - postgres-identity
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-identity:5432/identity_db
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: 12345
-
-  # ========= ANALYSIS =========
-  postgres-analysis:
+  postgres-core:
     image: postgres:15
+    container_name: postgres-core
     environment:
-      POSTGRES_DB: analysis_db
+      POSTGRES_DB: samt_core
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 12345
     ports:
       - "5433:5432"
     volumes:
-      - analysis_data:/var/lib/postgresql/data
+      - core_data:/var/lib/postgresql/data
+    networks:
+      - samt-network
 
-  analysis-service:
-    build: ./analysis-service
+  # ========= REDIS (BẮT BUỘC) =========
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - samt-network
+
+  # ========= API GATEWAY =========
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis
+      - identity-service
+    environment:
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+    networks:
+      - samt-network
+
+  # ========= IDENTITY SERVICE (DB RIÊNG) =========
+  identity-service:
+    build: ./identity-service
+    container_name: identity-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgres-identity
+      - redis
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-identity:5432/samt_identity
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 12345
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+    networks:
+      - samt-network
+
+  # ========= SYNC SERVICE (DÙNG CORE DB) =========
+  sync-service:
+    build: ./sync-service
+    container_name: sync-service
     ports:
       - "8082:8082"
     depends_on:
-      - postgres-analysis
+      - postgres-core
+      - redis
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-analysis:5432/analysis_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-core:5432/samt_core
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: 12345
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+    networks:
+      - samt-network
 
-  # ========= REPORT =========
-  postgres-report:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: report_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 12345
-    ports:
-      - "5434:5432"
-    volumes:
-      - report_data:/var/lib/postgresql/data
-
-  report-service:
-    build: ./report-service
+  # ========= ANALYSIS SERVICE (DÙNG CORE DB) =========
+  analysis-service:
+    build: ./analysis-service
+    container_name: analysis-service
     ports:
       - "8083:8083"
     depends_on:
-      - postgres-report
-
-  # ========= SYNC =========
-  postgres-sync:
-    image: postgres:15
+      - postgres-core
+      - redis
     environment:
-      POSTGRES_DB: sync_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 12345
-    ports:
-      - "5435:5432"
-    volumes:
-      - sync_data:/var/lib/postgresql/data
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-core:5432/samt_core
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 12345
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+    networks:
+      - samt-network
 
-  sync-service:
-    build: ./sync-service
+  # ========= REPORT SERVICE (DÙNG CORE DB) =========
+  report-service:
+    build: ./report-service
+    container_name: report-service
     ports:
       - "8084:8084"
     depends_on:
-      - postgres-sync
-
-  # ========= NOTIFICATION =========
-  postgres-notification:
-    image: postgres:15
+      - postgres-core
+      - redis
     environment:
-      POSTGRES_DB: notification_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 12345
-    ports:
-      - "5436:5432"
-    volumes:
-      - notification_data:/var/lib/postgresql/data
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-core:5432/samt_core
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 12345
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+    networks:
+      - samt-network
 
+  # ========= NOTIFICATION SERVICE (DÙNG CORE DB) =========
   notification-service:
     build: ./notification-service
+    container_name: notification-service
     ports:
       - "8085:8085"
     depends_on:
-      - postgres-notification
+      - postgres-core
+      - redis
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-core:5432/samt_core
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 12345
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+    networks:
+      - samt-network
+
+networks:
+  samt-network:
+    driver: bridge
 
 volumes:
   identity_data:
-  analysis_data:
-  report_data:
-  sync_data:
-  notification_data:
+  core_data:
+  redis_data:

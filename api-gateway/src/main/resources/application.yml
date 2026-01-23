@@ -5,6 +5,11 @@ spring:
   application:
     name: api-gateway
 
+  data:
+    redis:
+      host: redis
+      port: 6379
+
   cloud:
     gateway:
       routes:
@@ -12,18 +17,18 @@ spring:
           uri: http://identity-service:8081
           predicates:
             - Path=/identity/**
+        - id: sync-service
+          uri: http://sync-service:8082
+          predicates:
+            - Path=/sync/**
         - id: analysis-service
-          uri: http://analysis-service:8082
+          uri: http://analysis-service:8083
           predicates:
             - Path=/analysis/**
         - id: report-service
-          uri: http://report-service:8083
+          uri: http://report-service:8084
           predicates:
             - Path=/report/**
-        - id: sync-service
-          uri: http://sync-service:8084
-          predicates:
-            - Path=/sync/**
         - id: notification-service
           uri: http://notification-service:8085
           predicates:
