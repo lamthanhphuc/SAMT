@@ -1,0 +1,48 @@
+# ==============================================
+# DOCKER COMPOSE OVERRIDE (LOCAL DEVELOPMENT)
+# ==============================================
+# File này tự động merge với docker-compose.yml
+# Dùng để override config cho local development
+
+version: "3.9"
+
+services:
+  # Override để mount code vào container (hot reload)
+  identity-service:
+    volumes:
+      - ./identity-service/target:/app
+    environment:
+      SPRING_DEVTOOLS_RESTART_ENABLED: "true"
+    
+  sync-service:
+    volumes:
+      - ./sync-service/target:/app
+    environment:
+      SPRING_DEVTOOLS_RESTART_ENABLED: "true"
+
+  analysis-service:
+    volumes:
+      - ./analysis-service/target:/app
+    environment:
+      SPRING_DEVTOOLS_RESTART_ENABLED: "true"
+
+  report-service:
+    volumes:
+      - ./report-service/target:/app
+    environment:
+      SPRING_DEVTOOLS_RESTART_ENABLED: "true"
+
+  notification-service:
+    volumes:
+      - ./notification-service/target:/app
+    environment:
+      SPRING_DEVTOOLS_RESTART_ENABLED: "true"
+
+  # Expose PostgreSQL ports for pgAdmin access
+  postgres-identity:
+    ports:
+      - "5432:5432"
+
+  postgres-core:
+    ports:
+      - "5433:5432"
