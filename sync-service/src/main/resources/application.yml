@@ -14,10 +14,11 @@ spring:
     timeout-per-shutdown-phase: 30s
 
   datasource:
-    # ⚠️ Local dev: set env vars hoặc tạo file .env.local
+    # Local dev: default password là 12345 (khớp với Docker PostgreSQL)
+    # Docker: sẽ override bởi SPRING_DATASOURCE_PASSWORD từ .env
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/samt_core?serverTimezone=UTC&ApplicationName=sync-service}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:}
+    password: ${SPRING_DATASOURCE_PASSWORD:12345}
     driver-class-name: org.postgresql.Driver
     hikari:
       connection-timeout: 30000

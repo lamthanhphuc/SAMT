@@ -16,10 +16,11 @@ spring:
     timeout-per-shutdown-phase: 30s
 
   datasource:
-    # ⚠️ Local dev: set env vars hoặc tạo file .env.local
+    # Local dev: default password là 12345 (khớp với Docker PostgreSQL)
+    # Docker: sẽ override bởi SPRING_DATASOURCE_PASSWORD từ .env
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/samt_identity?serverTimezone=UTC&ApplicationName=identity-service}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:}
+    password: ${SPRING_DATASOURCE_PASSWORD:12345}
     driver-class-name: org.postgresql.Driver
     hikari:
       connection-timeout: 30000
@@ -71,6 +72,18 @@ logging:
     com.example: ${LOG_LEVEL:DEBUG}
     org.hibernate.SQL: ${SQL_LOG_LEVEL:WARN}
 
+# ==============================================
+# JWT CONFIGURATION
+# ==============================================
+jwt:
+  # Secret key for HS256 (minimum 32 characters for 256 bits)
+  # ⚠️ CHANGE THIS IN PRODUCTION! Use environment variable JWT_SECRET
+  secret: ${JWT_SECRET:samt-super-secret-key-for-jwt-hs256-algorithm-minimum-32-chars}
+  # Access token expiration: 15 minutes (900000 ms)
+  access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:900000}
+  # Refresh token expiration: 7 days (604800000 ms)
+  refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:604800000}
+
 ---
 # ==============================================
 # DOCKER PROFILE
@@ -94,3 +107,13 @@ logging:
   level:
     root: INFO
     com.example: INFO
+
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
