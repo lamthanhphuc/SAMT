@@ -78,10 +78,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (user != null && user.getStatus() == User.Status.ACTIVE) {
                 // Create authentication token with user's role
+                // Prefix with "ROLE_" for Spring Security hasRole() compatibility
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         user,
                         null,
-                        List.of(new SimpleGrantedAuthority(user.getRole().name()))
+                        List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
                 );
 
                 // Set request details

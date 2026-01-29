@@ -1,5 +1,6 @@
 package com.example.identityservice.exception;
 
+import com.example.identityservice.dto.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -7,12 +8,12 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
  * Global exception handler for REST API.
+ * @see docs/Security-Review.md - Section 12. Exception Handling Requirements
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -24,7 +25,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleEmailAlreadyExists(EmailAlreadyExistsException ex) {
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
-                .body(ErrorResponse.of(HttpStatus.CONFLICT.value(), ex.getMessage()));
+                .body(ErrorResponse.of("EMAIL_EXISTS", ex.getMessage()));
     }
 
     /**
@@ -34,7 +35,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handlePasswordMismatch(PasswordMismatchException ex) {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ErrorResponse.of(HttpStatus.BAD_REQUEST.value(), ex.getMessage()));
+                .body(ErrorResponse.of("PASSWORD_MISMATCH", ex.getMessage()));
     }
 
     /**
@@ -44,7 +45,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleInvalidCredentials(InvalidCredentialsException ex) {
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
-                .body(ErrorResponse.of(HttpStatus.UNAUTHORIZED.value(), ex.getMessage()));
+                .body(ErrorResponse.of("INVALID_CREDENTIALS", ex.getMessage()));
     }
 
     /**
@@ -54,7 +55,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleAccountLocked(AccountLockedException ex) {
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
-                .body(ErrorResponse.of(HttpStatus.FORBIDDEN.value(), ex.getMessage()));
+                .body(ErrorResponse.of("ACCOUNT_LOCKED", ex.getMessage()));
     }
 
     /**
@@ -64,7 +65,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleTokenExpired(TokenExpiredException ex) {
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
-                .body(ErrorResponse.of(HttpStatus.UNAUTHORIZED.value(), ex.getMessage()));
+                .body(ErrorResponse.of("TOKEN_EXPIRED", ex.getMessage()));
     }
 
     /**
@@ -74,7 +75,37 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleTokenInvalid(TokenInvalidException ex) {
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
-                .body(ErrorResponse.of(HttpStatus.UNAUTHORIZED.value(), ex.getMessage()));
+                .body(ErrorResponse.of("TOKEN_INVALID", ex.getMessage()));
+    }
+
+    /**
+     * Handle UserNotFoundException - 404 Not Found
+     */
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleUserNotFound(UserNotFoundException ex) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ErrorResponse.of("USER_NOT_FOUND", ex.getMessage()));
+    }
+
+    /**
+     * Handle InvalidUserStateException - 400 Bad Request
+     */
+    @ExceptionHandler(InvalidUserStateException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidUserState(InvalidUserStateException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.of("INVALID_STATE", ex.getMessage()));
+    }
+
+    /**
+     * Handle SelfActionException - 400 Bad Request
+     */
+    @ExceptionHandler(SelfActionException.class)
+    public ResponseEntity<ErrorResponse> handleSelfAction(SelfActionException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.of("SELF_ACTION_DENIED", ex.getMessage()));
     }
 
     /**
@@ -89,29 +120,10 @@ public class GlobalExceptionHandler {
             errors.put(fieldName, message);
         });
         
-        // Get first error message
         String message = errors.values().stream().findFirst().orElse("Validation failed");
         
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ErrorResponse.of(HttpStatus.BAD_REQUEST.value(), message, errors));
-    }
-
-    /**
-     * Error response DTO
-     */
-    public record ErrorResponse(
-            int status,
-            String message,
-            LocalDateTime timestamp,
-            Map<String, String> errors
-    ) {
-        public static ErrorResponse of(int status, String message) {
-            return new ErrorResponse(status, message, LocalDateTime.now(), null);
-        }
-
-        public static ErrorResponse of(int status, String message, Map<String, String> errors) {
-            return new ErrorResponse(status, message, LocalDateTime.now(), errors);
-        }
+                .body(ErrorResponse.of("VALIDATION_ERROR", message));
     }
 }

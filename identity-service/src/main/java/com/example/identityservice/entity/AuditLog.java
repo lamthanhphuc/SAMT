@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
     @Index(name = "idx_audit_entity", columnList = "entity_type, entity_id"),
     @Index(name = "idx_audit_actor", columnList = "actor_id"),
     @Index(name = "idx_audit_action", columnList = "action"),
-    @Index(name = "idx_audit_created_at", columnList = "created_at"),
+    @Index(name = "idx_audit_timestamp", columnList = "timestamp"),
     @Index(name = "idx_audit_outcome", columnList = "outcome")
 })
 public class AuditLog {
@@ -47,8 +47,8 @@ public class AuditLog {
     private String actorEmail;
 
     // When
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    @Column(name = "timestamp", nullable = false, updatable = false)
+    private LocalDateTime timestamp;
 
     // Request context
     @Column(name = "ip_address", length = 45)
@@ -77,7 +77,7 @@ public class AuditLog {
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
+        this.timestamp = LocalDateTime.now();
     }
 
     // Private constructor - use Builder
@@ -193,7 +193,7 @@ public class AuditLog {
     public AuditAction getAction() { return action; }
     public Long getActorId() { return actorId; }
     public String getActorEmail() { return actorEmail; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getTimestamp() { return timestamp; }
     public String getIpAddress() { return ipAddress; }
     public String getUserAgent() { return userAgent; }
     public String getOldValue() { return oldValue; }

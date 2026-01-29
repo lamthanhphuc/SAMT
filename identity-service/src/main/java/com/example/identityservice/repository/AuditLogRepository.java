@@ -19,6 +19,8 @@ import java.util.List;
  * - Read-only queries (no update/delete methods)
  * - Paginated queries for large datasets
  * - Indexed queries for common access patterns
+ * 
+ * @see docs/Database-Design.md - Section 6. Table: audit_logs
  */
 @Repository
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
@@ -27,56 +29,34 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
      * Find audit logs by entity type and ID.
      * Use case: View history of a specific user.
      */
-    List<AuditLog> findByEntityTypeAndEntityIdOrderByCreatedAtDesc(
+    List<AuditLog> findByEntityTypeAndEntityIdOrderByTimestampDesc(
             String entityType, Long entityId);
 
     /**
      * Find audit logs by entity type and ID (paginated).
      * Use case: Admin view history of a specific entity.
      */
-    Page<AuditLog> findByEntityTypeAndEntityId(
+    Page<AuditLog> findByEntityTypeAndEntityIdOrderByTimestampDesc(
             String entityType, Long entityId, Pageable pageable);
 
     /**
      * Find audit logs by actor (who performed the action).
      * Use case: View all actions by a specific admin.
      */
-    Page<AuditLog> findByActorId(Long actorId, Pageable pageable);
-
-    /**
-     * Find audit logs by actor (ordered).
-     */
-    Page<AuditLog> findByActorIdOrderByCreatedAtDesc(Long actorId, Pageable pageable);
+    Page<AuditLog> findByActorIdOrderByTimestampDesc(Long actorId, Pageable pageable);
 
     /**
      * Find audit logs by action type.
      * Use case: View all login failures.
      */
-    Page<AuditLog> findByActionOrderByCreatedAtDesc(AuditAction action, Pageable pageable);
-
-    /**
-     * Find audit logs by action and outcome.
-     * Use case: View all denied refresh attempts (security events).
-     */
-    Page<AuditLog> findByActionAndOutcomeOrderByCreatedAtDesc(
-            AuditAction action, AuditLog.AuditOutcome outcome, Pageable pageable);
-
-    /**
-     * Find audit logs within a time range (alias for findByDateRange).
-     * Use case: Daily/weekly security reports.
-     */
-    @Query("SELECT a FROM AuditLog a WHERE a.createdAt BETWEEN :start AND :end ORDER BY a.createdAt DESC")
-    Page<AuditLog> findByTimestampBetween(
-            @Param("start") LocalDateTime start,
-            @Param("end") LocalDateTime end,
-            Pageable pageable);
+    Page<AuditLog> findByActionOrderByTimestampDesc(AuditAction action, Pageable pageable);
 
     /**
      * Find audit logs within a time range.
      * Use case: Daily/weekly security reports.
      */
-    @Query("SELECT a FROM AuditLog a WHERE a.createdAt BETWEEN :start AND :end ORDER BY a.createdAt DESC")
-    Page<AuditLog> findByDateRange(
+    @Query("SELECT a FROM AuditLog a WHERE a.timestamp BETWEEN :start AND :end ORDER BY a.timestamp DESC")
+    Page<AuditLog> findByTimestampBetween(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end,
             Pageable pageable);
@@ -85,14 +65,14 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
      * Find security events (failed logins, token reuse).
      * Use case: Security monitoring dashboard.
      */
-    @Query("SELECT a FROM AuditLog a WHERE a.outcome IN ('FAILURE', 'DENIED') ORDER BY a.createdAt DESC")
+    @Query("SELECT a FROM AuditLog a WHERE a.outcome IN ('FAILURE', 'DENIED') ORDER BY a.timestamp DESC")
     Page<AuditLog> findSecurityEvents(Pageable pageable);
 
     /**
      * Count actions by type within time range.
      * Use case: Analytics - login count per day.
      */
-    @Query("SELECT COUNT(a) FROM AuditLog a WHERE a.action = :action AND a.createdAt BETWEEN :start AND :end")
+    @Query("SELECT COUNT(a) FROM AuditLog a WHERE a.action = :action AND a.timestamp BETWEEN :start AND :end")
     long countByActionAndDateRange(
             @Param("action") AuditAction action,
             @Param("start") LocalDateTime start,

@@ -38,7 +38,7 @@ public record UserDto(
             user.getId(),
             user.getEmail(),
             user.getFullName(),
-            user.getRole().name().replace("ROLE_", ""), // ROLE_STUDENT -> STUDENT
+            user.getRole().name(),
             user.getStatus().name(),
             user.getCreatedAt()
         );

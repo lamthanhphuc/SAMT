@@ -70,7 +70,7 @@ public class AuthService {
         user.setEmail(request.email());
         user.setPasswordHash(passwordHash);
         user.setFullName(request.fullName());
-        user.setRole(User.Role.valueOf("ROLE_" + request.role())); // STUDENT -> ROLE_STUDENT
+        user.setRole(User.Role.valueOf(request.role())); // STUDENT -> STUDENT
         user.setStatus(User.Status.ACTIVE);
 
         // Step 3: Save user - DB UNIQUE constraint handles race condition

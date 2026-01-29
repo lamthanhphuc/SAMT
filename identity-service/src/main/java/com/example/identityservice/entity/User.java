@@ -59,9 +59,9 @@ public class User {
 
     // Enums as defined in docs
     public enum Role {
-        ROLE_ADMIN,
-        ROLE_STUDENT,
-        ROLE_LECTURER
+        ADMIN,
+        STUDENT,
+        LECTURER
     }
 
     public enum Status {
@@ -181,5 +181,26 @@ public class User {
     public void restore() {
         this.deletedAt = null;
         this.deletedBy = null;
+    }
+
+    /**
+     * Check if user account is locked.
+     */
+    public boolean isLocked() {
+        return this.status == Status.LOCKED;
+    }
+
+    /**
+     * Lock user account.
+     */
+    public void lock() {
+        this.status = Status.LOCKED;
+    }
+
+    /**
+     * Unlock user account.
+     */
+    public void unlock() {
+        this.status = Status.ACTIVE;
     }
 }
