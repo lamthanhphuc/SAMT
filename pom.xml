@@ -39,6 +39,8 @@
 		<module>notification-service</module>
 		<module>report-service</module>
 		<module>sync-service</module>
+		<module>user-group-service</module>
+		<module>project-config-service</module>
 
 	</modules>
 
