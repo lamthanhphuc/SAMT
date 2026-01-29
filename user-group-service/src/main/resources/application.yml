@@ -1,22 +1,22 @@
 # ==============================================
-# ANALYSIS SERVICE - APPLICATION CONFIG
+# USER & GROUP SERVICE - APPLICATION CONFIG
 # ==============================================
 
 server:
-  port: ${SERVER_PORT:8086}
+  port: ${SERVER_PORT:8082}
   shutdown: graceful
+  servlet:
+    context-path: /api
 
 spring:
   application:
-    name: user-group-service
+    name: usergroup-service
 
   lifecycle:
     timeout-per-shutdown-phase: 30s
 
   datasource:
-    # Local dev: default password là 12345 (khớp với Docker PostgreSQL)
-    # Docker: sẽ override bởi SPRING_DATASOURCE_PASSWORD từ .env
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/samt_core?serverTimezone=UTC&ApplicationName=analysis-service}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/samt_usergroup?serverTimezone=UTC&ApplicationName=usergroup-service}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:12345}
     driver-class-name: org.postgresql.Driver
@@ -28,20 +28,9 @@ spring:
       max-lifetime: 1800000
       leak-detection-threshold: 60000
 
-  data:
-    redis:
-      host: ${SPRING_DATA_REDIS_HOST:localhost}
-      port: ${SPRING_DATA_REDIS_PORT:6379}
-      timeout: 3000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 2
-
   jpa:
     hibernate:
-      ddl-auto: ${DDL_AUTO:update}
+      ddl-auto: ${DDL_AUTO:validate}
     show-sql: ${SHOW_SQL:false}
     open-in-view: false
     properties:
@@ -54,6 +43,16 @@ spring:
         order_inserts: true
         order_updates: true
 
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+# JWT Configuration - MUST match identity-service
+jwt:
+  secret: ${JWT_SECRET:dGhpcy1pcy1hLXZlcnktbG9uZy1zZWNyZXQta2V5LWZvci1qd3QtdG9rZW4tc2lnbmluZy1hdC1sZWFzdC0yNTYtYml0cw==}
+
 management:
   endpoints:
     web:
@@ -63,11 +62,22 @@ management:
     health:
       show-details: when-authorized
 
+# OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+
 logging:
   level:
     root: ${LOG_LEVEL:INFO}
-    com.example: ${LOG_LEVEL:DEBUG}
+    com.example.user_groupservice: ${LOG_LEVEL:DEBUG}
     org.hibernate.SQL: ${SQL_LOG_LEVEL:WARN}
+    org.springframework.security: DEBUG
 
 ---
 # ==============================================
@@ -79,11 +89,7 @@ spring:
       on-profile: docker
 
   datasource:
-    url: jdbc:postgresql://postgres-core:5432/samt_core?serverTimezone=UTC&ApplicationName=analysis-service
-
-  data:
-    redis:
-      host: redis
+    url: jdbc:postgresql://postgres-core:5432/samt_usergroup?serverTimezone=UTC&ApplicationName=usergroup-service
 
 server:
   port: 8080
@@ -91,4 +97,6 @@ server:
 logging:
   level:
     root: INFO
-    com.example: INFO
+    com.example.user_groupservice: INFO
+    org.springframework.security: INFO
+
