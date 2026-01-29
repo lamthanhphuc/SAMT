@@ -181,12 +181,14 @@ WHERE role = 'LEADER' AND deleted_at IS NULL;
 #### Dockerfile
 
 ```dockerfile
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY target/*.jar app.jar
 EXPOSE 8082
 ENTRYPOINT ["java", "-jar", "app.jar"]
 ```
+
+> **Note:** Updated to Java 21 (from Java 17) per project requirements.
 
 #### docker-compose.yml
 
@@ -422,11 +424,24 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UserGroupI
            "AND ug.deletedAt IS NULL")
     boolean existsByGroupIdAndRole(UUID groupId, GroupRole role);
     
+    /**
+     * Find leader with pessimistic lock to prevent race conditions.
+     * CRITICAL: Use this for assign role operations.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT ug FROM UserGroup ug " +
+           "WHERE ug.group.id = :groupId AND ug.role = 'LEADER' " +
+           "AND ug.deletedAt IS NULL")
+    Optional<UserGroup> findLeaderByGroupIdWithLock(UUID groupId);
+    
     @Query("SELECT COUNT(ug) FROM UserGroup ug " +
            "WHERE ug.group.id = :groupId AND ug.role = 'MEMBER' " +
            "AND ug.deletedAt IS NULL")
     long countMembersByGroupId(UUID groupId);
 }
+```
+
+> **IMPORTANT:** Use `findLeaderByGroupIdWithLock()` in `assignRole()` method to prevent race conditions when multiple requests try to assign LEADER simultaneously.
 ```
 
 ---
@@ -491,16 +506,20 @@ public class GroupMemberServiceImpl implements GroupMemberService {
     @Override
     @Transactional
     public MemberResponse assignRole(UUID groupId, UUID userId, AssignRoleRequest request) {
+        // Validate group exists - use findById not existsById
+        Group group = groupRepository.findById(groupId)
+            .orElseThrow(() -> ResourceNotFoundException.groupNotFound(groupId));
+        
         // Validate membership exists
         UserGroup membership = userGroupRepository.findByUserIdAndGroupId(userId, groupId)
             .orElseThrow(() -> ResourceNotFoundException.userNotFound(userId));
         
         GroupRole newRole = GroupRole.valueOf(request.getRole());
         
-        // If assigning LEADER, demote old leader
+        // If assigning LEADER, demote old leader with PESSIMISTIC LOCK
         if (newRole == GroupRole.LEADER) {
             Optional<UserGroup> existingLeader = 
-                userGroupRepository.findLeaderByGroupId(groupId);
+                userGroupRepository.findLeaderByGroupIdWithLock(groupId);
             
             if (existingLeader.isPresent() && 
                 !existingLeader.get().getUser().getId().equals(userId)) {
@@ -520,6 +539,10 @@ public class GroupMemberServiceImpl implements GroupMemberService {
     @Override
     @Transactional
     public void removeMember(UUID groupId, UUID userId) {
+        // Validate group exists - use findById not existsById
+        Group group = groupRepository.findById(groupId)
+            .orElseThrow(() -> ResourceNotFoundException.groupNotFound(groupId));
+        
         UserGroup membership = userGroupRepository.findByUserIdAndGroupId(userId, groupId)
             .orElseThrow(() -> ResourceNotFoundException.userNotFound(userId));
         
@@ -625,6 +648,72 @@ public class AddMemberRequest {
     private Boolean isLeader;
 }
 ```
+
+---
+
+## PART 3: CRITICAL IMPLEMENTATION WARNINGS
+
+### 1. Soft Delete & `existsById()` Bug
+
+**PROBLEM:** JPA's `existsById()` method does NOT respect `@SQLRestriction` annotation. It queries directly by primary key without applying the soft delete filter.
+
+**IMPACT:** Code like below will return `true` for soft-deleted records:
+```java
+// ❌ BUGGY - returns true even if group is soft-deleted
+if (!groupRepository.existsById(groupId)) {
+    throw ResourceNotFoundException.groupNotFound(groupId);
+}
+```
+
+**SOLUTION:** Always use `findById().isPresent()` or custom JPQL query:
+```java
+// ✅ CORRECT - respects @SQLRestriction
+if (groupRepository.findById(groupId).isEmpty()) {
+    throw ResourceNotFoundException.groupNotFound(groupId);
+}
+
+// ✅ ALSO CORRECT - explicit JPQL
+@Query("SELECT CASE WHEN COUNT(g) > 0 THEN true ELSE false END " +
+       "FROM Group g WHERE g.id = :id AND g.deletedAt IS NULL")
+boolean existsByIdAndNotDeleted(UUID id);
+```
+
+**AFFECTED REPOSITORIES:** All repositories with soft-delete entities (User, Group, UserGroup).
+
+---
+
+### 2. Race Condition in Leader Assignment
+
+**PROBLEM:** When two requests simultaneously try to assign LEADER to different users in the same group, both may succeed if not properly locked.
+
+**SOLUTION:** Use pessimistic locking:
+```java
+@Lock(LockModeType.PESSIMISTIC_WRITE)
+@Query("SELECT ug FROM UserGroup ug WHERE ug.group.id = :groupId AND ug.role = 'LEADER'")
+Optional<UserGroup> findLeaderByGroupIdWithLock(UUID groupId);
+```
+
+---
+
+### 3. Authorization Edge Cases
+
+| Actor | UC21 (Get Profile) | UC22 (Update Profile) |
+|-------|--------------------|-----------------------|
+| ADMIN | ✅ All users | ✅ All users |
+| LECTURER | ⚠️ Only STUDENT targets | ❌ Not allowed |
+| STUDENT | ✅ Self only | ✅ Self only |
+
+**Note:** LECTURER viewing non-STUDENT target should return `403 FORBIDDEN`. If target role cannot be verified (cross-service), allow with warning log.
+
+---
+
+### 4. Deferred Features
+
+| Feature | Status | Reason |
+|---------|--------|--------|
+| List Users - role filter | Deferred | Roles stored in identity-service |
+| Verify lecturer role on create group | Deferred | Cross-service verification needed |
+| Verify target is STUDENT for LECTURER | Partial | Allow with warning if cannot verify |
 
 ---
 

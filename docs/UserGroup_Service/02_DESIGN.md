@@ -80,39 +80,71 @@ User
 
 ### 2.2 Endpoint → Role Mapping
 
-| Endpoint | Required Role |
-|----------|---------------|
-| GET /users | AUTHENTICATED |
-| PUT /users/{id} | SELF or ADMIN |
-| POST /groups | ADMIN |
-| ADD MEMBER | ADMIN |
-| ASSIGN ROLE | ADMIN |
+| Endpoint | Required Role | Notes |
+|----------|---------------|-------|
+| GET /users/{id} | AUTHENTICATED | LECTURER: only STUDENT targets |
+| PUT /users/{id} | SELF or ADMIN | LECTURER explicitly excluded |
+| GET /users | ADMIN | role filter deferred |
+| POST /groups | ADMIN | |
+| ADD MEMBER | ADMIN | |
+| ASSIGN ROLE | ADMIN | pessimistic lock required |
 
 ### 2.3 Special Rules
 
 - ADMIN không được xóa ADMIN khác
 - STUDENT không sửa role
+- **LECTURER không được update profile qua API này**
 - Soft delete bắt buộc
 
 ---
 
-## 3. Performance Considerations
+## 3. Soft Delete Behavior
 
-### 3.1 Indexes
+### 3.1 Entity-level Filtering
+
+All entities use `@SQLRestriction("deleted_at IS NULL")` which automatically filters soft-deleted records on:
+- `findById()`
+- `findAll()`
+- All JPQL queries on that entity
+
+### 3.2 Critical: `existsById()` Does NOT Filter
+
+**BUG RISK:** JPA's `existsById()` method bypasses `@SQLRestriction` and may return `true` for soft-deleted records.
+
+**Correct Pattern:**
+```java
+// ❌ WRONG - may return true for deleted records
+if (!groupRepository.existsById(groupId)) { ... }
+
+// ✅ CORRECT - uses @SQLRestriction filter
+if (groupRepository.findById(groupId).isEmpty()) { ... }
+```
+
+**Affected Methods:**
+- `GroupRepository.existsById()` 
+- `UserRepository.existsById()`
+
+**Solution:** Always use `findById().isPresent()` OR custom JPQL query with explicit `deleted_at IS NULL` check.
+
+---
+
+## 4. Performance Considerations
+
+### 4.1 Indexes
 
 Add index hỗ trợ check:
 - `user_groups(user_id, group_id)`
 - `groups(id, semester)`
 
-### 3.2 Constraint Enforcement
+### 4.2 Constraint Enforcement
 
 - Constraint enforce ở **SERVICE layer** (not DB)
 
 ---
 
-## 4. Business Rules
+## 5. Business Rules
 
-### 4.1 Core Rules
+### 5.1 Core Rules
 
 1. **Soft Delete Only:** Không hard delete user/group
 2. **Single Leader:** 1 group chỉ có 1 leader
@@ -122,13 +154,13 @@ Add index hỗ trợ check:
 
 ---
 
-### 4.2 Authorization Rules
+### 5.2 Authorization Rules
 
 - Mọi API phải kiểm tra quyền rõ ràng
 
 ---
 
-### 4.3 Group Management Rules
+### 5.3 Group Management Rules
 
 #### Group Status
 
@@ -141,10 +173,15 @@ Add index hỗ trợ check:
   - LEADER cũ tự động xuống MEMBER
   - Không cho remove LEADER nếu group còn ≥ 1 MEMBER
 
+- **Concurrency Control:**
+  - Sử dụng `@Lock(LockModeType.PESSIMISTIC_WRITE)` trên query `findLeaderByGroupId()`
+  - Đảm bảo chỉ 1 request thành công khi có nhiều request đồng thời assign LEADER
+
 #### Transaction Management
 
 - **Assign Group Role phải chạy trong 1 transaction:**
   - Nếu update LEADER mới fail → rollback toàn bộ
+  - **Lock order:** Lock existing leader record TRƯỚC khi update
 
 #### API cần @Transactional
 

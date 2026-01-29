@@ -60,10 +60,14 @@ sequenceDiagram
    - ✅ Exists in DB
    - ✅ Not revoked
    - ✅ Not expired
-3. Server revokes old token
-4. Generate new refresh token
-5. Persist new token
-6. Issue new access token
+3. **Server checks user account status**
+   - If LOCKED → Revoke all tokens, return 403
+4. Server revokes old token
+5. Generate new refresh token
+6. Persist new token
+7. Issue new access token
+
+> **Design Decision:** Account status is checked during token refresh to ensure locked users cannot obtain new access tokens even with a valid refresh token issued before the lock.
 
 ### Reuse Detection
 
@@ -212,7 +216,22 @@ public void logAction(...) {
 - Fault-tolerant: audit failure doesn't affect business logic
 - Independent: audit persists even if main transaction fails
 
-### 7.5 Actor Resolution
+### 7.5 Request Context Capture for Async Audit
+
+Since audit logging is asynchronous (`@Async`), request context (IP address, User-Agent) must be captured BEFORE the async call:
+
+```java
+// In service layer (synchronous)
+String ipAddress = extractClientIp(request);
+String userAgent = extractUserAgent(request);
+
+// Pass to async audit method
+auditService.logActionAsync(..., ipAddress, userAgent);
+```
+
+**Rationale:** `RequestContextHolder` may be cleared after the HTTP request completes, before the async task executes.
+
+### 7.6 Actor Resolution
 
 | Scenario | Actor Resolution |
 |----------|-----------------|
@@ -229,7 +248,14 @@ public void logAction(...) {
 | **Token** | `REFRESH_SUCCESS`, `REFRESH_REUSE` |
 | **User Lifecycle** | `CREATE`, `UPDATE`, `SOFT_DELETE`, `RESTORE` |
 | **Account Status** | `ACCOUNT_LOCKED`, `ACCOUNT_UNLOCKED` |
+**Clarification:**
 
+| Action | Trigger | Outcome |
+|--------|---------|---------||
+| `LOGIN_FAILED` | Wrong password OR user not found | FAILURE |
+| `LOGIN_DENIED` | Correct password BUT account locked | DENIED |
+
+> **Note:** `LOGIN_DENIED` is only logged when password validation succeeds but account is locked. This prevents attackers from using audit logs to enumerate locked accounts.
 ### 7.7 Security Event Monitoring
 
 High-priority events for security monitoring:
@@ -267,12 +293,30 @@ public class AdminController {
 
 ### 8.3 Admin Action Effects
 
-| Action | User Table | Refresh Tokens | Audit Log |
-|--------|------------|----------------|-----------|
-| Soft Delete | `deleted_at`, `deleted_by` set | All revoked | `SOFT_DELETE` logged |
-| Restore | `deleted_at`, `deleted_by` cleared | (none) | `RESTORE` logged |
-| Lock | `status = LOCKED` | All revoked | `ACCOUNT_LOCKED` logged |
-| Unlock | `status = ACTIVE` | (none) | `ACCOUNT_UNLOCKED` logged |
+| Action | User Table | Refresh Tokens | Audit Log | Self-Action |
+|--------|------------|----------------|-----------|-------------|
+| Soft Delete | `deleted_at`, `deleted_by` set | All revoked | `SOFT_DELETE` logged | ❌ Blocked |
+| Restore | `deleted_at`, `deleted_by` cleared | (none) | `RESTORE` logged | N/A |
+| Lock | `status = LOCKED` | All revoked | `ACCOUNT_LOCKED` logged | ❌ Blocked |
+| Unlock | `status = ACTIVE` | (none) | `ACCOUNT_UNLOCKED` logged | N/A |
+
+### 8.4 Admin Self-Action Prevention
+
+Admin users are prevented from performing destructive actions on their own account:
+
+| Action | Self-Action | Reason |
+|--------|-------------|--------|
+| Soft Delete | ❌ Blocked | Prevents admin lockout, requires another admin to delete |
+| Lock | ❌ Blocked | Prevents accidental self-lockout |
+| Unlock | ✅ Allowed | N/A (cannot self-lock) |
+| Restore | ✅ Allowed | N/A (cannot self-delete) |
+
+**Implementation:**
+```java
+if (userId.equals(currentAdminId)) {
+    throw new InvalidUserStateException("Cannot perform this action on own account");
+}
+```
 
 ---
 

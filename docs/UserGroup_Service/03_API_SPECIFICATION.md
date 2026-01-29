@@ -28,7 +28,9 @@
 
 **Endpoint:** `GET /api/users/{userId}`  
 **Security:** JWT (AUTHENTICATED)  
-**Roles:** ADMIN (all users), LECTURER (students), STUDENT (self only)
+**Roles:** ADMIN (all users), LECTURER (students only), STUDENT (self only)
+
+> **Authorization Clarification:** LECTURER can only view users with STUDENT role. If target user is not a STUDENT, returns `403 FORBIDDEN`. In cross-service scenarios where target role cannot be verified, the request is **allowed** with a warning log.
 
 #### Response
 
@@ -55,6 +57,8 @@
 **Endpoint:** `PUT /api/users/{userId}`  
 **Security:** JWT (AUTHENTICATED)  
 **Roles:** ADMIN (any user), STUDENT (self only)
+
+> **Authorization Clarification:** LECTURER role is explicitly **EXCLUDED** from this API. A LECTURER cannot update profiles (including their own) via this endpoint — returns `403 FORBIDDEN`.
 
 #### Request
 
@@ -94,7 +98,9 @@
 - `page` (default: 0)
 - `size` (default: 20)
 - `status` (optional: ACTIVE, INACTIVE)
-- `role` (optional: ADMIN, LECTURER, STUDENT)
+- `role` (optional: ADMIN, LECTURER, STUDENT) — **Deferred:** Filter by role NOT implemented (roles stored in identity-service)
+
+> **Implementation Note:** The `role` parameter is accepted for backward compatibility but **ignored** in the current implementation. Filter by status works correctly.
 
 #### Response
 
@@ -338,11 +344,13 @@
 
 #### Error Codes
 
-- `404 USER_NOT_FOUND`
+- `404 USER_NOT_FOUND` (membership not found)
 - `404 GROUP_NOT_FOUND`
-- `409 LEADER_ALREADY_EXISTS`
 
-**Note:** When assigning new LEADER, old LEADER auto-demotes to MEMBER
+**Notes:**
+- When assigning new LEADER, old LEADER auto-demotes to MEMBER
+- Uses **pessimistic locking** on leader query to prevent race conditions
+- `409 LEADER_ALREADY_EXISTS` error does NOT apply here (only in addMember with isLeader=true)
 
 ---
 
@@ -445,18 +453,18 @@
 
 ## API Summary Table
 
-| Method | Endpoint | Role | Description |
-|--------|----------|------|-------------|
-| GET | /api/users/{userId} | AUTHENTICATED | Get user profile |
-| PUT | /api/users/{userId} | ADMIN, SELF | Update user profile |
-| GET | /api/users | ADMIN | List all users |
-| POST | /api/groups | ADMIN | Create group |
-| GET | /api/groups/{groupId} | AUTHENTICATED | Get group details |
-| GET | /api/groups | AUTHENTICATED | List groups |
-| PUT | /api/groups/{groupId} | ADMIN | Update group |
-| DELETE | /api/groups/{groupId} | ADMIN | Delete group (soft) |
-| POST | /api/groups/{groupId}/members | ADMIN | Add member |
-| PUT | /api/groups/{groupId}/members/{userId}/role | ADMIN | Assign role |
-| DELETE | /api/groups/{groupId}/members/{userId} | ADMIN | Remove member |
-| GET | /api/groups/{groupId}/members | AUTHENTICATED | Get members |
-| GET | /api/users/{userId}/groups | AUTHENTICATED | Get user's groups |
+| Method | Endpoint | Role | Description | Notes |
+|--------|----------|------|-------------|-------|
+| GET | /api/users/{userId} | AUTHENTICATED | Get user profile | LECTURER: STUDENT targets only |
+| PUT | /api/users/{userId} | ADMIN, SELF | Update user profile | LECTURER excluded |
+| GET | /api/users | ADMIN | List all users | role filter deferred |
+| POST | /api/groups | ADMIN | Create group | |
+| GET | /api/groups/{groupId} | AUTHENTICATED | Get group details | |
+| GET | /api/groups | AUTHENTICATED | List groups | |
+| PUT | /api/groups/{groupId} | ADMIN | Update group | |
+| DELETE | /api/groups/{groupId} | ADMIN | Delete group (soft) | |
+| POST | /api/groups/{groupId}/members | ADMIN | Add member | |
+| PUT | /api/groups/{groupId}/members/{userId}/role | ADMIN | Assign role | pessimistic lock |
+| DELETE | /api/groups/{groupId}/members/{userId} | ADMIN | Remove member | |
+| GET | /api/groups/{groupId}/members | AUTHENTICATED | Get members | |
+| GET | /api/users/{userId}/groups | AUTHENTICATED | Get user's groups | |

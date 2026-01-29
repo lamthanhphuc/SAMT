@@ -171,11 +171,15 @@ sequenceDiagram
 **Steps:**
 
 1. User submits credentials (`email`, `password`)
-2. System validates email & password
-3. System generates **access token** (JWT, 15 min TTL)
-4. System generates **refresh token** (UUID, 7 days TTL)
-5. System persists refresh token in database
-6. System returns both tokens to client
+2. System validates email exists → if not found, return "Invalid credentials"
+3. System validates password with BCrypt → if incorrect, return "Invalid credentials"
+4. System checks account status → if LOCKED, return "Account is locked"
+5. System generates **access token** (JWT, 15 min TTL)
+6. System generates **refresh token** (UUID, 7 days TTL)
+7. System persists refresh token in database
+8. System returns both tokens to client
+
+> **Design Decision:** Password validation occurs BEFORE status check to prevent account enumeration. Attackers cannot determine if an account is locked without knowing the password.
 
 ### Response (Success)
 
@@ -510,8 +514,7 @@ sequenceDiagram
 | A1 | Not authenticated | 401 Unauthorized | "Unauthorized" |
 | A2 | Not ROLE_ADMIN | 403 Forbidden | "Access denied" |
 | A3 | User not found | 404 Not Found | "User not found" |
-| A4 | User already deleted | 400 Bad Request | "User already deleted" |
-| A5 | Admin deleting self | 400 Bad Request | "Cannot delete own account" |
+| A4 | User already deleted | 400 Bad Request | "User already deleted" || A5 | Admin deleting self | 400 Bad Request | "Cannot delete own account" || A5 | Admin deleting self | 400 Bad Request | "Cannot delete own account" |
 
 ### Post-conditions
 
@@ -630,6 +633,20 @@ POST /api/admin/users/{userId}/lock?reason=Suspicious%20activity
 }
 ```
 
+### Alternate Flows
+
+| Flow | Condition | Response Code | Message |
+|------|-----------|---------------|---------||
+| A1 | Not authenticated | 401 Unauthorized | "Unauthorized" |
+| A2 | Not ROLE_ADMIN | 403 Forbidden | "Access denied" |
+| A3 | User not found | 404 Not Found | "User not found" |
+| A4 | Admin locking self | 400 Bad Request | "Cannot lock own account" |
+| A5 | User already locked | 200 OK | (Idempotent - no error) |
+
+### Idempotency
+
+Locking an already-locked user returns **200 OK** (idempotent). No duplicate audit log is created.
+
 ---
 
 ## UC-UNLOCK-ACCOUNT – Admin Unlock User Account
@@ -661,6 +678,15 @@ POST /api/admin/users/{userId}/unlock
 }
 ```
 
+### Alternate Flows
+
+| Flow | Condition | Response Code | Message |
+|------|-----------|---------------|---------||
+| A1 | Not authenticated | 401 Unauthorized | "Unauthorized" |
+| A2 | Not ROLE_ADMIN | 403 Forbidden | "Access denied" |
+| A3 | User not found | 404 Not Found | "User not found" |
+| A4 | User not locked | 400 Bad Request | "User is not locked" |
+
 ---
 
 ## Admin API Endpoints Summary
@@ -672,7 +698,7 @@ POST /api/admin/users/{userId}/unlock
 | Method | DELETE |
 | Auth | Bearer Token (ROLE_ADMIN) |
 | Success | 200 OK |
-| Errors | 401, 403, 404, 400 |
+| Errors | 401 (Unauthorized), 403 (Not Admin), 404 (User not found), 400 (Already deleted, Self-delete) |
 
 ### POST `/api/admin/users/{userId}/restore` – Restore
 
@@ -691,7 +717,7 @@ POST /api/admin/users/{userId}/unlock
 | Auth | Bearer Token (ROLE_ADMIN) |
 | Query Param | `reason` (optional) |
 | Success | 200 OK |
-| Errors | 401, 403, 404 |
+| Errors | 401 (Unauthorized), 403 (Not Admin), 404 (User not found), 400 (Self-lock) |
 
 ### POST `/api/admin/users/{userId}/unlock` – Unlock Account
 
@@ -700,7 +726,7 @@ POST /api/admin/users/{userId}/unlock
 | Method | POST |
 | Auth | Bearer Token (ROLE_ADMIN) |
 | Success | 200 OK |
-| Errors | 401, 403, 404 |
+| Errors | 401 (Unauthorized), 403 (Not Admin), 404 (User not found), 400 (User not locked) |
 
 ---
 

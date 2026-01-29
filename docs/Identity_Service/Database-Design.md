@@ -236,6 +236,8 @@ CREATE INDEX idx_audit_outcome ON audit_logs(outcome);
 | `ACCOUNT_LOCKED`   | Account locked by admin                  | Admin locks user               |
 | `ACCOUNT_UNLOCKED` | Account unlocked by admin                | Admin unlocks user             |
 
+> **Implementation Note:** Action names in code (`AuditAction` enum) must match these values exactly. Use `SOFT_DELETE` (not `DELETE`), `ACCOUNT_LOCKED` (not `LOCK_ACCOUNT`).
+
 ### 6.3 Outcome Values
 
 | Outcome   | Description                          |
@@ -246,11 +248,14 @@ CREATE INDEX idx_audit_outcome ON audit_logs(outcome);
 
 ### 6.4 Immutability Rules
 
-| Rule | Description |
-|------|-------------|
-| **Append-Only** | `audit_logs` is INSERT-only, no UPDATE/DELETE |
-| **No FK Constraint** | No foreign key to `users` (deleted users should keep audit trail) |
-| **Actor Email Denormalized** | Email stored directly for query performance |
+| Rule | Description | Enforcement |
+|------|-------------|-------------|
+| **Append-Only** | `audit_logs` is INSERT-only, no UPDATE/DELETE | Application: no setter methods on entity |
+| **No FK Constraint** | No foreign key to `users` | Preserves audit trail for deleted users |
+| **Actor Email Denormalized** | Email stored directly | Avoids JOIN, preserves email even if user deleted |
+| **old_value Timing** | Capture BEFORE entity modification | Ensures accurate change history |
+
+> **Critical:** `old_value` must be captured BEFORE the entity is modified. Capturing after modification will store the new state incorrectly.
 
 ---
 

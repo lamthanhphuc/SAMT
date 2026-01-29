@@ -598,6 +598,7 @@ if (userId.equals(securityContextHelper.getCurrentUserId().orElse(null))) {
 | Admin-only restore | ✅ | `@PreAuthorize("hasRole('ADMIN')")` |
 | Revoke tokens on delete | ✅ | `refreshTokenService.revokeAllTokens(user)` |
 | Admin self-delete prevention | ✅ | Check `userId.equals(actorId)` |
+| Admin self-lock prevention | ✅ | Check `userId.equals(actorId)` in `lockUser()` |
 
 ### 11.4 Security & Edge Cases Verification
 
@@ -619,6 +620,11 @@ if (userId.equals(securityContextHelper.getCurrentUserId().orElse(null))) {
 | Password hash in audit JSON | **HIGH** | ✅ Created `UserAuditDto` without passwordHash |
 | Admin self-delete | **HIGH** | ✅ Added prevention check in `UserAdminService` |
 | old_value/new_value context | Medium | ✅ Capture correct state in audit methods |
+| Admin self-lock not prevented | **Medium** | ✅ Add check in `lockUser()` |
+| Unlock accepts non-locked user | Low | ✅ Add state validation |
+| Lock accepts already-locked user | Low | ✅ Make idempotent (no error, no duplicate audit) |
+| Missing exception handlers | **High** | ✅ Add handlers for admin exceptions |
+| old_value captured after modification | Medium | ✅ Capture state before modification |
 
 ### 11.6 Final Status
 
@@ -631,3 +637,32 @@ if (userId.equals(securityContextHelper.getCurrentUserId().orElse(null))) {
 | Soft Delete Rules | 8/8 ✅ |
 | Security Checks | 7/7 ✅ |
 | **Total** | **35/35 ✅** |
+---
+
+## 12. Exception Handling Requirements
+
+### 12.1 Admin API Exception Mapping
+
+| Exception | HTTP Status | Error Code | Message |
+|-----------|-------------|------------|---------||
+| `UserNotFoundException` | 404 | USER_NOT_FOUND | "User not found" |
+| `InvalidUserStateException` | 400 | INVALID_STATE | Dynamic message |
+| `SelfActionException` | 400 | SELF_ACTION_DENIED | "Cannot perform this action on own account" |
+
+### 12.2 Implementation
+
+```java
+@ExceptionHandler(UserNotFoundException.class)
+public ResponseEntity<ErrorResponse> handleUserNotFound(UserNotFoundException ex) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(ErrorResponse.of("USER_NOT_FOUND", ex.getMessage()));
+}
+
+@ExceptionHandler(InvalidUserStateException.class)
+public ResponseEntity<ErrorResponse> handleInvalidState(InvalidUserStateException ex) {
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body(ErrorResponse.of("INVALID_STATE", ex.getMessage()));
+}
+```
+
+> **Rationale:** Using `IllegalArgumentException` for business logic errors results in 500 Internal Server Error, which is incorrect and leaks implementation details.

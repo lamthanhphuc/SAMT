@@ -217,6 +217,7 @@ WHERE group_id = :groupId
 3. **Trimming:** All string inputs are trimmed before validation
 4. **Case Sensitivity:** Email is case-insensitive, others are case-sensitive
 5. **Soft Delete:** Always check `deleted_at IS NULL` in queries
+6. **existsById Caveat:** Do NOT use JPA `existsById()` for soft-delete entities — use `findById().isPresent()` instead
 
 ---
 
@@ -360,6 +361,14 @@ public class ForbiddenException extends BaseException {
     
     public static ForbiddenException insufficientPermission() {
         return new ForbiddenException("You do not have permission to perform this action");
+    }
+    
+    public static ForbiddenException cannotAccessOtherUser() {
+        return new ForbiddenException("You can only access your own profile");
+    }
+    
+    public static ForbiddenException lecturerCannotUpdateProfile() {
+        return new ForbiddenException("Lecturers cannot update profiles via this API");
     }
 }
 ```

@@ -29,7 +29,11 @@ com.example.identityservice
  │    ├── InvalidCredentialsException
  │    ├── TokenExpiredException
  │    ├── EmailAlreadyExistsException
- │    └── AccountLockedException
+ │    ├── AccountLockedException
+ │    ├── PasswordMismatchException
+ │    ├── UserNotFoundException
+ │    ├── InvalidUserStateException
+ │    └── GlobalExceptionHandler
  ├── validation
  │    ├── PasswordValidator
  │    └── EmailValidator
@@ -63,6 +67,12 @@ com.example.identityservice
 - **Method**: Role-based via `hasRole()`
 - **Role Prefix**: `ROLE_`
 - **Example**: `@PreAuthorize("hasRole('ADMIN')")`
+
+### Admin Authorization
+
+- **Class-level**: `@PreAuthorize("hasRole('ADMIN')")` on `AdminController`
+- **Self-action prevention**: Service layer validates `userId != currentUserId` for destructive actions
+- **Exception mapping**: Custom exceptions map to appropriate HTTP status codes (404, 400, 403)
 
 ---
 

@@ -35,8 +35,10 @@
 #### Authorization Rules
 
 - **ADMIN:** xem mọi user
-- **LECTURER:** xem student
+- **LECTURER:** xem student (target user phải có role STUDENT, nếu không → 403)
 - **STUDENT:** chỉ xem chính mình
+
+> **Clarification (UC21-AUTH):** LECTURER chỉ được xem user có role STUDENT. Nếu target user không phải STUDENT, system trả về `403 FORBIDDEN`. Trong trường hợp không thể verify role của target user (cross-service), mặc định ALLOW và log warning.
 
 #### API
 
@@ -81,7 +83,10 @@
 
 - **STUDENT:** chỉ update chính mình
 - **ADMIN:** update mọi user
+- **LECTURER:** KHÔNG được update profile (kể cả chính mình qua API này)
 - Không update role tại UC này
+
+> **Clarification (UC22-AUTH):** LECTURER role bị loại trừ hoàn toàn khỏi UC này. LECTURER muốn update profile phải thông qua kênh khác hoặc liên hệ ADMIN.
 
 #### API
 
@@ -193,10 +198,14 @@
 #### Rules
 
 - 1 group chỉ có 1 LEADER
+- Khi assign LEADER mới, LEADER cũ tự động demote xuống MEMBER
+- **Transaction:** Phải dùng pessimistic lock khi demote old leader để tránh race condition
+
+> **Clarification (UC25-LOCK):** Khi có nhiều request đồng thời assign LEADER, system phải sử dụng `@Lock(PESSIMISTIC_WRITE)` trên query `findLeaderByGroupId()` để đảm bảo chỉ 1 request thành công. Request còn lại sẽ thấy user đã là LEADER và không thực hiện demote.
 
 #### Error Codes
 
-- `409 LEADER_ALREADY_EXISTS`
+- `409 LEADER_ALREADY_EXISTS` (chỉ khi isLeader=true trong addMember, không áp dụng khi assignRole)
 
 ---
 
