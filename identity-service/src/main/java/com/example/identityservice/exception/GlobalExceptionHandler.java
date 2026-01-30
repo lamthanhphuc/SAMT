@@ -109,6 +109,16 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle ConflictException - 409 Conflict
+     */
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex) {
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of("CONFLICT", ex.getMessage()));
+    }
+
+    /**
      * Handle Bean Validation errors - 400 Bad Request
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)

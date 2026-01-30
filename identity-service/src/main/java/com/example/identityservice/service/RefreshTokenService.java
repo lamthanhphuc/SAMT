@@ -68,20 +68,25 @@ public class RefreshTokenService {
     /**
      * UC-REFRESH-TOKEN: Rotate refresh token and issue new access token.
      * 
-     * Steps (from SRS.md):
-     * 1. Validate token exists in database
+     * CRITICAL SECURITY: Check account status BEFORE generating new tokens.
+     * 
+     * Steps (from IMPLEMENTATION_GUIDE.md):
+     * 1. Find token in database
      * 2. Check if token is revoked (REUSE DETECTION)
      * 3. Check if token is expired
-     * 4. Revoke old token
-     * 5. Generate new refresh token
-     * 6. Generate new access token
-     * 7. Return new tokens
+     * 4. Get user from token
+     * 5. Check user account status (LOCKED) - CRITICAL
+     * 6. Revoke old token
+     * 7. Generate new refresh token
+     * 8. Generate new access token
+     * 9. Return new tokens
      *
      * @param tokenString Refresh token UUID string
      * @return LoginResponse with new tokens
      * @throws TokenInvalidException if token not found (401)
      * @throws TokenInvalidException + revoke all if REUSE DETECTED (401)
      * @throws TokenExpiredException if token expired (401)
+     * @throws AccountLockedException if user account is locked (403)
      */
     @Transactional
     public LoginResponse refreshToken(String tokenString) {
@@ -89,18 +94,11 @@ public class RefreshTokenService {
         RefreshToken refreshToken = refreshTokenRepository.findByToken(tokenString)
                 .orElseThrow(TokenInvalidException::new);
 
-        User user = refreshToken.getUser();
-
-        if (user.getStatus() != User.Status.ACTIVE) {
-            log.warn("SECURITY: Locked user {} tried to refresh token", user.getId());
-            refreshTokenRepository.revokeAllByUser(user);
-            throw new AccountLockedException();
-        }
-
         // Step 2: REUSE DETECTION - Check if token is already revoked
         if (refreshToken.isRevoked()) {
             // SECURITY: Revoked token reused → Token theft detected!
             // Revoke ALL refresh tokens for this user
+            User user = refreshToken.getUser();
             log.warn("SECURITY: Refresh token reuse detected for user {}. Revoking all tokens.", user.getId());
             refreshTokenRepository.revokeAllByUser(user);
             
@@ -115,20 +113,35 @@ public class RefreshTokenService {
             throw new TokenExpiredException();
         }
 
-        // Step 4: Revoke old token
+        // Step 4: Get user from token
+        User user = refreshToken.getUser();
+
+        // Step 5: CRITICAL - Check account status BEFORE generating new tokens
+        if (user.getStatus() != User.Status.ACTIVE) {
+            // If account is locked, revoke ALL tokens to prevent bypass
+            log.warn("SECURITY: Locked user {} tried to refresh token. Revoking all tokens.", user.getId());
+            refreshTokenRepository.revokeAllByUser(user);
+            
+            // Audit: Refresh denied - account locked
+            auditService.logLoginDenied(user, "Account is locked");
+            
+            throw new AccountLockedException();
+        }
+
+        // Step 6: Revoke old token
         refreshToken.setRevoked(true);
         refreshTokenRepository.save(refreshToken);
 
-        // Step 5: Generate new refresh token
+        // Step 7: Generate new refresh token
         String newRefreshToken = createRefreshToken(user);
 
-        // Step 6: Generate new access token
+        // Step 8: Generate new access token
         String newAccessToken = jwtService.generateAccessToken(user);
 
         // Audit: Refresh success
         auditService.logRefreshSuccess(user);
 
-        // Step 7: Return new tokens (expiresIn = 900 seconds = 15 minutes)
+        // Step 9: Return new tokens (expiresIn = 900 seconds = 15 minutes)
         return LoginResponse.of(newAccessToken, newRefreshToken, 900);
     }
 

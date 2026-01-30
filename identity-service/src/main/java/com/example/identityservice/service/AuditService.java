@@ -268,6 +268,30 @@ public class AuditService {
         );
     }
 
+    /**
+     * Log external accounts mapping update.
+     * Captures old and new values for Jira and GitHub account IDs.
+     * 
+     * @param user Target user
+     * @param updatedByUserId Admin who performed the update
+     * @param oldValue Old external accounts (e.g., "{jira: abc, github: xyz}")
+     * @param newValue New external accounts (e.g., "{jira: def, github: xyz}")
+     */
+    @Async
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void logExternalAccountsUpdated(User user, Long updatedByUserId, String oldValue, String newValue) {
+        createAuditLog(
+                "USER",
+                user.getId(),
+                AuditAction.UPDATE,
+                updatedByUserId,
+                securityContextHelper.getCurrentUserEmail().orElse("SYSTEM"),
+                AuditLog.AuditOutcome.SUCCESS,
+                oldValue,
+                newValue
+        );
+    }
+
     // ==================== Internal ====================
 
     private void createAuditLog(

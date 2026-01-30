@@ -22,9 +22,9 @@ public class OpenApiConfig {
                         .title("Identity Service API")
                         .version("1.0")
                         .description("Authentication & Authorization APIs for SAMT"))
-                .addSecurityItem(new SecurityRequirement().addList("Bearer Authentication"))
+                .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                 .components(new Components()
-                        .addSecuritySchemes("Bearer Authentication",
+                        .addSecuritySchemes("bearerAuth",
                                 new SecurityScheme()
                                         .type(SecurityScheme.Type.HTTP)
                                         .scheme("bearer")

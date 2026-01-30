@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -25,6 +26,15 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
      * @return Optional<RefreshToken>
      */
     Optional<RefreshToken> findByToken(String token);
+
+    /**
+     * Find all active (non-revoked) refresh tokens for a user.
+     * Used to display active sessions to user.
+     *
+     * @param user User entity
+     * @return List of active refresh tokens
+     */
+    List<RefreshToken> findAllByUserAndRevokedFalse(User user);
 
     /**
      * Revoke all refresh tokens for a user.

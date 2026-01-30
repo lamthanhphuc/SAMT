@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 /**
  * User DTO for API responses.
  * @see docs/SRS.md - UC-REGISTER Response.user
+ * @see docs/API_CONTRACT.md - PUT /api/admin/users/{userId}/external-accounts
  */
 public record UserDto(
     @JsonProperty("id")
@@ -26,6 +27,12 @@ public record UserDto(
     @JsonProperty("status")
     String status,
 
+    @JsonProperty("jiraAccountId")
+    String jiraAccountId,
+
+    @JsonProperty("githubUsername")
+    String githubUsername,
+
     @JsonProperty("createdAt")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'")
     LocalDateTime createdAt
@@ -40,6 +47,8 @@ public record UserDto(
             user.getFullName(),
             user.getRole().name(),
             user.getStatus().name(),
+            user.getJiraAccountId(),
+            user.getGithubUsername(),
             user.getCreatedAt()
         );
     }

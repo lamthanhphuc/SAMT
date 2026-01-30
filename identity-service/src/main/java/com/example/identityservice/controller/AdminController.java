@@ -1,7 +1,8 @@
 package com.example.identityservice.controller;
 
-import com.example.identityservice.dto.AdminActionResponse;
+import com.example.identityservice.dto.*;
 import com.example.identityservice.entity.AuditLog;
+import com.example.identityservice.entity.User;
 import com.example.identityservice.repository.AuditLogRepository;
 import com.example.identityservice.service.UserAdminService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -9,11 +10,13 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -47,6 +50,47 @@ public class AdminController {
     // ========================================
     // USER MANAGEMENT
     // ========================================
+
+    /**
+     * UC-ADMIN-CREATE-USER: Admin creates user account with any role.
+     * 
+     * POST /api/admin/users
+     * 
+     * Only ADMIN can create accounts with LECTURER or ADMIN roles.
+     * Public registration endpoint only allows STUDENT role.
+     * 
+     * @param request AdminCreateUserRequest with email, password, fullName, role
+     * @return 201 Created with user info and temporary password
+     * @throws EmailAlreadyExistsException 409 Conflict (email already exists)
+     */
+    @Operation(
+            summary = "Create user account (Admin only)",
+            description = "Create user account with any role (STUDENT, LECTURER, ADMIN). Only accessible by ADMIN.",
+            responses = {
+                    @ApiResponse(responseCode = "201", description = "User created"),
+                    @ApiResponse(responseCode = "409", description = "Email already exists"),
+                    @ApiResponse(responseCode = "403", description = "Not authorized")
+            }
+    )
+    @PostMapping("/users")
+    public ResponseEntity<AdminCreateUserResponse> createUser(
+            @Valid @RequestBody AdminCreateUserRequest request) {
+        
+        User createdUser = userAdminService.createUser(
+                request.email(),
+                request.password(),
+                request.fullName(),
+                request.role()
+        );
+        
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(AdminCreateUserResponse.of(
+                        "User created successfully",
+                        UserDto.fromEntity(createdUser),
+                        request.password() // Return temporary password for admin to share
+                ));
+    }
 
     /**
      * UC-SOFT-DELETE: Soft delete user
@@ -159,6 +203,47 @@ public class AdminController {
         userAdminService.unlockUser(userId);
         
         return ResponseEntity.ok(AdminActionResponse.of("User unlocked successfully", userId));
+    }
+
+    /**
+     * UC-MAP-EXTERNAL-ACCOUNTS: Map/unmap external accounts (Jira, GitHub).
+     * 
+     * PUT /api/admin/users/{userId}/external-accounts
+     * 
+     * @param userId Target user ID
+     * @param request ExternalAccountsRequest with jiraAccountId and githubUsername (null to unmap)
+     * @return 200 OK with updated user data
+     * @throws UserNotFoundException 404 Not Found
+     * @throws InvalidUserStateException 400 Bad Request (user is deleted)
+     * @throws ConflictException 409 Conflict (external account already mapped to another user)
+     */
+    @Operation(
+            summary = "Map/unmap external accounts",
+            description = "Map or unmap Jira account ID and GitHub username. Send null to unmap.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "External accounts updated"),
+                    @ApiResponse(responseCode = "404", description = "User not found"),
+                    @ApiResponse(responseCode = "400", description = "User is deleted"),
+                    @ApiResponse(responseCode = "409", description = "External account already mapped to another user")
+            }
+    )
+    @PutMapping("/users/{userId}/external-accounts")
+    public ResponseEntity<ExternalAccountsResponse> updateExternalAccounts(
+            @Parameter(description = "User ID") @PathVariable("userId") Long userId,
+            @Valid @RequestBody ExternalAccountsRequest request) {
+        
+        User updatedUser = userAdminService.updateExternalAccounts(
+                userId,
+                request.jiraAccountId(),
+                request.githubUsername()
+        );
+        
+        return ResponseEntity.ok(
+                ExternalAccountsResponse.of(
+                        "External accounts mapped successfully",
+                        UserDto.fromEntity(updatedUser)
+                )
+        );
     }
 
     // ========================================

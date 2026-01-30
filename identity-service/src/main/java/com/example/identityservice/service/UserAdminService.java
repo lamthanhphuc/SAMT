@@ -1,17 +1,22 @@
 package com.example.identityservice.service;
 
+import com.example.identityservice.entity.AuditAction;
 import com.example.identityservice.entity.User;
+import com.example.identityservice.exception.ConflictException;
+import com.example.identityservice.exception.EmailAlreadyExistsException;
 import com.example.identityservice.exception.InvalidUserStateException;
 import com.example.identityservice.exception.SelfActionException;
 import com.example.identityservice.exception.UserNotFoundException;
 import com.example.identityservice.repository.UserRepository;
 import com.example.identityservice.security.SecurityContextHelper;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Admin service for user management.
- * Handles soft delete, restore, lock/unlock operations.
+ * Handles user creation, soft delete, restore, lock/unlock operations, and external account mapping.
  * 
  * @see docs/SRS-Auth.md - Admin API Endpoints
  * @see docs/Authentication-Authorization-Design.md - Section 8. Admin Operations Design
@@ -24,16 +29,59 @@ public class UserAdminService {
     private final RefreshTokenService refreshTokenService;
     private final AuditService auditService;
     private final SecurityContextHelper securityContextHelper;
+    private final PasswordEncoder passwordEncoder;
 
     public UserAdminService(
             UserRepository userRepository,
             RefreshTokenService refreshTokenService,
             AuditService auditService,
-            SecurityContextHelper securityContextHelper) {
+            SecurityContextHelper securityContextHelper,
+            PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.refreshTokenService = refreshTokenService;
         this.auditService = auditService;
         this.securityContextHelper = securityContextHelper;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    /**
+     * UC-ADMIN-CREATE-USER: Admin creates user account with any role.
+     * 
+     * Only ADMIN can create LECTURER or ADMIN accounts.
+     * Public registration (/api/auth/register) only allows STUDENT.
+     * 
+     * @param email User email
+     * @param password User password (will be hashed)
+     * @param fullName User full name
+     * @param role User role (STUDENT, LECTURER, or ADMIN)
+     * @return Created user entity
+     * @throws EmailAlreadyExistsException if email already registered (409)
+     */
+    @Transactional
+    public User createUser(String email, String password, String fullName, String role) {
+        // Hash password with BCrypt
+        String passwordHash = passwordEncoder.encode(password);
+
+        // Create user
+        User user = new User();
+        user.setEmail(email);
+        user.setPasswordHash(passwordHash);
+        user.setFullName(fullName);
+        user.setRole(User.Role.valueOf(role));
+        user.setStatus(User.Status.ACTIVE);
+
+        // Save user - DB UNIQUE constraint handles race condition
+        try {
+            user = userRepository.save(user);
+        } catch (DataIntegrityViolationException ex) {
+            throw new EmailAlreadyExistsException();
+        }
+
+        // Audit
+        Long actorId = securityContextHelper.getCurrentUserId().orElse(null);
+        auditService.logUserCreated(user);
+
+        return user;
     }
 
     /**
@@ -165,5 +213,67 @@ public class UserAdminService {
 
         // Audit
         auditService.logAccountUnlocked(user, actorId);
+    }
+
+    /**
+     * UC-MAP-EXTERNAL-ACCOUNTS: Map/unmap external accounts (Jira, GitHub).
+     * 
+     * Business Rules:
+     * - BR-MAP-01: jira_account_id must be unique (409 if exists)
+     * - BR-MAP-02: github_username must be unique (409 if exists)
+     * - BR-MAP-04: Cannot map to deleted users (400)
+     * - BR-MAP-05: Audit log with old_value + new_value
+     * - BR-MAP-06: To unmap, send null value
+     * 
+     * @param userId ID of user to update
+     * @param jiraAccountId Jira account ID (null to unmap)
+     * @param githubUsername GitHub username (null to unmap)
+     * @return Updated user entity
+     * @throws UserNotFoundException if user not found (404)
+     * @throws InvalidUserStateException if user is deleted (400)
+     * @throws ConflictException if external account already mapped to another user (409)
+     */
+    @Transactional
+    public User updateExternalAccounts(Long userId, String jiraAccountId, String githubUsername) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
+
+        // BR-MAP-04: Cannot map to deleted users
+        if (user.isDeleted()) {
+            throw new InvalidUserStateException("Cannot map external accounts to deleted user");
+        }
+
+        Long actorId = securityContextHelper.getCurrentUserId().orElse(null);
+
+        // Store old values for audit
+        String oldJiraAccountId = user.getJiraAccountId();
+        String oldGithubUsername = user.getGithubUsername();
+
+        // BR-MAP-01: Validate Jira account ID uniqueness
+        if (jiraAccountId != null && !jiraAccountId.equals(oldJiraAccountId)) {
+            if (userRepository.existsByJiraAccountId(jiraAccountId)) {
+                throw new ConflictException("Jira account ID already mapped to another user");
+            }
+        }
+
+        // BR-MAP-02: Validate GitHub username uniqueness
+        if (githubUsername != null && !githubUsername.equals(oldGithubUsername)) {
+            if (userRepository.existsByGithubUsername(githubUsername)) {
+                throw new ConflictException("GitHub username already mapped to another user");
+            }
+        }
+
+        // Update external accounts
+        user.setJiraAccountId(jiraAccountId);
+        user.setGithubUsername(githubUsername);
+        userRepository.save(user);
+
+        // BR-MAP-05: Audit with old and new values
+        String oldValue = String.format("{jira: %s, github: %s}", oldJiraAccountId, oldGithubUsername);
+        String newValue = String.format("{jira: %s, github: %s}", jiraAccountId, githubUsername);
+        
+        auditService.logExternalAccountsUpdated(user, actorId, oldValue, newValue);
+
+        return user;
     }
 }

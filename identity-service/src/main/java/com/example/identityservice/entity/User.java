@@ -18,6 +18,8 @@ import java.time.LocalDateTime;
 @Table(name = "users", indexes = {
     @Index(name = "idx_users_email", columnList = "email"),
     @Index(name = "idx_users_status", columnList = "status"),
+    @Index(name = "idx_users_jira_account", columnList = "jira_account_id"),
+    @Index(name = "idx_users_github_username", columnList = "github_username"),
     @Index(name = "idx_users_deleted_at", columnList = "deleted_at")
 })
 @SQLRestriction("deleted_at IS NULL")  // Default: exclude soft-deleted users
@@ -43,6 +45,13 @@ public class User {
     @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     private Status status;
+
+    // External account mapping (for Jira/GitHub integration)
+    @Column(name = "jira_account_id", unique = true, length = 100)
+    private String jiraAccountId;
+
+    @Column(name = "github_username", unique = true, length = 100)
+    private String githubUsername;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -157,6 +166,22 @@ public class User {
 
     public void setDeletedBy(Long deletedBy) {
         this.deletedBy = deletedBy;
+    }
+
+    public String getJiraAccountId() {
+        return jiraAccountId;
+    }
+
+    public void setJiraAccountId(String jiraAccountId) {
+        this.jiraAccountId = jiraAccountId;
+    }
+
+    public String getGithubUsername() {
+        return githubUsername;
+    }
+
+    public void setGithubUsername(String githubUsername) {
+        this.githubUsername = githubUsername;
     }
 
     /**

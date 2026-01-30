@@ -61,4 +61,30 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     @Query(value = "SELECT COUNT(*) > 0 FROM users WHERE email = :email", nativeQuery = true)
     boolean existsByEmailIncludingDeleted(@Param("email") String email);
+
+    // ==================== External Account Mapping ====================
+
+    /**
+     * Find user by Jira account ID.
+     * Use case: Sync Service mapping Jira assignee to SAMT user.
+     */
+    Optional<User> findByJiraAccountId(String jiraAccountId);
+
+    /**
+     * Find user by GitHub username.
+     * Use case: Sync Service mapping GitHub commit author to SAMT user.
+     */
+    Optional<User> findByGithubUsername(String githubUsername);
+
+    /**
+     * Check if Jira account ID is already mapped to another user.
+     * Use case: Admin mapping validation - prevent duplicate mappings.
+     */
+    boolean existsByJiraAccountId(String jiraAccountId);
+
+    /**
+     * Check if GitHub username is already mapped to another user.
+     * Use case: Admin mapping validation - prevent duplicate mappings.
+     */
+    boolean existsByGithubUsername(String githubUsername);
 }

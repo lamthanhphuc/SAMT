@@ -95,13 +95,16 @@ public class AuthService {
     /**
      * UC-LOGIN: Authenticate user and return tokens.
      * 
-     * Steps (from SRS.md):
-     * 1. Validate email exists
-     * 2. Validate password with BCrypt
-     * 3. Generate access token (JWT, 15 min TTL)
-     * 4. Generate refresh token (UUID, 7 days TTL)
-     * 5. Persist refresh token in database
-     * 6. Return both tokens
+     * CRITICAL SECURITY: Password validation BEFORE status check (anti-enumeration).
+     * 
+     * Steps (from IMPLEMENTATION_GUIDE.md):
+     * 1. Find user by email
+     * 2. Validate password FIRST (constant-time BCrypt)
+     * 3. Check account status AFTER password validated
+     * 4. Generate access token (JWT, 15 min TTL)
+     * 5. Generate refresh token (UUID, 7 days TTL)
+     * 6. Persist refresh token in database
+     * 7. Return both tokens
      *
      * @param request LoginRequest with email and password
      * @return LoginResponse with tokens
@@ -118,14 +121,15 @@ public class AuthService {
                     return new InvalidCredentialsException();
                 });
 
-        // Step 2: Validate password with BCrypt (Alternate Flow A2)
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        // Step 2: Validate password FIRST (CRITICAL - anti-enumeration)
+        boolean passwordValid = passwordEncoder.matches(request.password(), user.getPasswordHash());
+        if (!passwordValid) {
             // Audit: Login failed - wrong password
             auditService.logLoginFailure(request.email(), "Invalid password");
             throw new InvalidCredentialsException();
         }
         
-        // Step 3: Check account status (Alternate Flow A3)
+        // Step 3: Check account status AFTER password validated
         if (user.getStatus() == User.Status.LOCKED) {
             // Audit: Login denied - account locked
             auditService.logLoginDenied(user, "Account is locked");
