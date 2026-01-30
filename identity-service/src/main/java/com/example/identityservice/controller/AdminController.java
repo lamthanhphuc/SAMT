@@ -70,7 +70,7 @@ public class AdminController {
     )
     @DeleteMapping("/users/{userId}")
     public ResponseEntity<AdminActionResponse> deleteUser(
-            @Parameter(description = "User ID") @PathVariable Long userId) {
+            @Parameter(description = "User ID") @PathVariable("userId") Long userId) {
         
         userAdminService.softDeleteUser(userId);
         
@@ -97,7 +97,7 @@ public class AdminController {
     )
     @PostMapping("/users/{userId}/restore")
     public ResponseEntity<AdminActionResponse> restoreUser(
-            @Parameter(description = "User ID") @PathVariable Long userId) {
+            @Parameter(description = "User ID") @PathVariable("userId") Long userId) {
         
         userAdminService.restoreUser(userId);
         
@@ -126,8 +126,8 @@ public class AdminController {
     )
     @PostMapping("/users/{userId}/lock")
     public ResponseEntity<AdminActionResponse> lockUser(
-            @Parameter(description = "User ID") @PathVariable Long userId,
-            @Parameter(description = "Reason for locking") @RequestParam(required = false) String reason) {
+            @Parameter(description = "User ID") @PathVariable("userId") Long userId,
+            @Parameter(description = "Reason for locking") @RequestParam( value = "reason", required = false) String reason) {
         
         userAdminService.lockUser(userId, reason);
         
@@ -154,7 +154,7 @@ public class AdminController {
     )
     @PostMapping("/users/{userId}/unlock")
     public ResponseEntity<AdminActionResponse> unlockUser(
-            @Parameter(description = "User ID") @PathVariable Long userId) {
+            @Parameter(description = "User ID") @PathVariable("userId") Long userId) {
         
         userAdminService.unlockUser(userId);
         
@@ -178,8 +178,8 @@ public class AdminController {
     )
     @GetMapping("/audit/entity/{entityType}/{entityId}")
     public ResponseEntity<Page<AuditLog>> getAuditByEntity(
-            @Parameter(description = "Entity type (e.g., User)") @PathVariable String entityType,
-            @Parameter(description = "Entity ID") @PathVariable Long entityId,
+            @Parameter(description = "Entity type (e.g., User)") @PathVariable("entityType") String entityType,
+            @Parameter(description = "Entity ID") @PathVariable("entityId") Long entityId,
             @PageableDefault(size = 20, sort = "timestamp", direction = Sort.Direction.DESC) Pageable pageable) {
         
         Page<AuditLog> logs = auditLogRepository.findByEntityTypeAndEntityIdOrderByTimestampDesc(entityType, entityId, pageable);
@@ -199,7 +199,7 @@ public class AdminController {
     )
     @GetMapping("/audit/actor/{actorId}")
     public ResponseEntity<Page<AuditLog>> getAuditByActor(
-            @Parameter(description = "Actor user ID") @PathVariable Long actorId,
+            @Parameter(description = "Actor user ID") @PathVariable("actorId") Long actorId,
             @PageableDefault(size = 20, sort = "timestamp", direction = Sort.Direction.DESC) Pageable pageable) {
         
         Page<AuditLog> logs = auditLogRepository.findByActorIdOrderByTimestampDesc(actorId, pageable);
@@ -220,9 +220,9 @@ public class AdminController {
     @GetMapping("/audit/range")
     public ResponseEntity<Page<AuditLog>> getAuditByDateRange(
             @Parameter(description = "Start date (ISO format)") 
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @Parameter(description = "End date (ISO format)") 
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             @PageableDefault(size = 20, sort = "timestamp", direction = Sort.Direction.DESC) Pageable pageable) {
         
         Page<AuditLog> logs = auditLogRepository.findByTimestampBetween(startDate, endDate, pageable);
