@@ -10,12 +10,16 @@ CREATE TABLE users (
   full_name VARCHAR(100) NOT NULL,
   role VARCHAR(50) NOT NULL,
   status VARCHAR(20) NOT NULL, -- ACTIVE, LOCKED
+  jira_account_id VARCHAR(100) NULL UNIQUE, -- External account mapping for Jira
+  github_username VARCHAR(100) NULL UNIQUE, -- External account mapping for GitHub
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_status ON users(status);
+CREATE INDEX idx_users_jira_account ON users(jira_account_id);
+CREATE INDEX idx_users_github_username ON users(github_username);
 ```
 
 ### Columns
@@ -26,8 +30,10 @@ CREATE INDEX idx_users_status ON users(status);
 | `email`        | VARCHAR(255)  | NOT NULL, UNIQUE    | User email (login username)     |
 | `password_hash`| VARCHAR(255)  | NOT NULL            | BCrypt hashed password          |
 | `full_name`    | VARCHAR(100)  | NOT NULL            | User full name                  |
-| `role`         | VARCHAR(50)   | NOT NULL            | User role (ADMIN, STUDENT, etc.)|
+| `role`         | VARCHAR(50)   | NOT NULL            | User role: `ADMIN`, `STUDENT`, `LECTURER` (no `ROLE_` prefix) |
 | `status`       | VARCHAR(20)   | NOT NULL            | Account status (ACTIVE, LOCKED) |
+| `jira_account_id` | VARCHAR(100) | NULL, UNIQUE     | Jira Account ID for assignee mapping. Set by: (1) Auto-sync process, (2) Admin via UC-MAP-EXTERNAL-ACCOUNTS |
+| `github_username` | VARCHAR(100) | NULL, UNIQUE     | GitHub Username for commit author mapping. Set by: (1) Auto-sync process, (2) Admin via UC-MAP-EXTERNAL-ACCOUNTS |
 | `created_at`   | TIMESTAMP     | NOT NULL, DEFAULT   | Account creation timestamp      |
 | `updated_at`   | TIMESTAMP     | NOT NULL, DEFAULT   | Last update timestamp           |
 
@@ -259,7 +265,73 @@ CREATE INDEX idx_audit_outcome ON audit_logs(outcome);
 
 ---
 
-## 7. Updated Entity Relationship Diagram
+## 7. Table: `oauth_providers`
+
+```sql
+CREATE TABLE oauth_providers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id BIGINT NOT NULL,
+  provider VARCHAR(20) NOT NULL,  -- 'GOOGLE' or 'GITHUB'
+  provider_user_id VARCHAR(255) NOT NULL,  -- Google sub or GitHub user ID
+  provider_email VARCHAR(255) NULL,
+  provider_username VARCHAR(255) NULL,  -- GitHub username
+  access_token TEXT NULL,  -- Encrypted with AES-256-GCM
+  refresh_token TEXT NULL,  -- Encrypted (Google only)
+  token_expires_at TIMESTAMP NULL,
+  linked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_used_at TIMESTAMP NULL,  -- Updated on each OAuth login
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  
+  CONSTRAINT fk_oauth_user FOREIGN KEY (user_id) 
+    REFERENCES users(id) ON DELETE CASCADE,
+  
+  UNIQUE(provider, provider_user_id),
+  UNIQUE(provider, provider_email)
+);
+
+CREATE INDEX idx_oauth_user ON oauth_providers(user_id);
+CREATE INDEX idx_oauth_provider ON oauth_providers(provider);
+CREATE INDEX idx_oauth_provider_user ON oauth_providers(provider, provider_user_id);
+```
+
+### Columns
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | UUID | PRIMARY KEY | Unique OAuth provider link ID |
+| `user_id` | BIGINT | NOT NULL, FK | Reference to users.id |
+| `provider` | VARCHAR(20) | NOT NULL | OAuth provider: 'GOOGLE' or 'GITHUB' |
+| `provider_user_id` | VARCHAR(255) | NOT NULL | Google `sub` claim or GitHub user ID |
+| `provider_email` | VARCHAR(255) | NULL | Email from OAuth provider |
+| `provider_username` | VARCHAR(255) | NULL | GitHub username (NULL for Google) |
+| `access_token` | TEXT | NULL | Encrypted OAuth access token |
+| `refresh_token` | TEXT | NULL | Encrypted OAuth refresh token (Google only) |
+| `token_expires_at` | TIMESTAMP | NULL | Token expiration (Google: 1 hour, GitHub: never) |
+| `linked_at` | TIMESTAMP | NOT NULL | When provider was linked to account |
+| `last_used_at` | TIMESTAMP | NULL | Last OAuth login timestamp |
+| `created_at` | TIMESTAMP | NOT NULL | Record creation timestamp |
+| `updated_at` | TIMESTAMP | NOT NULL | Last update timestamp |
+
+### Business Rules
+
+- ✅ **One user can have multiple OAuth providers** (Google + GitHub)
+- ⚠️ **One OAuth account can link to only one SAMT user** (UNIQUE constraints)
+- 🔒 **Cascade delete when user is deleted** (ON DELETE CASCADE)
+- 🔐 **OAuth tokens encrypted at rest** (AES-256-GCM, same as project config tokens)
+
+### Security Rules
+
+1. **Token Encryption**: All OAuth access/refresh tokens encrypted before storage
+2. **Unique Provider Accounts**: One Google/GitHub account → one SAMT user
+3. **CSRF Protection**: OAuth state token validated in callback
+4. **Token Expiration**:
+   - Google access tokens expire after 1 hour (auto-refreshed)
+   - GitHub tokens never expire (valid until manually revoked)
+
+---
+
+## 8. Updated Entity Relationship Diagram
 
 ```
 ┌─────────────────────────────────┐
@@ -271,30 +343,38 @@ CREATE INDEX idx_audit_outcome ON audit_logs(outcome);
 │ full_name                       │
 │ role                            │
 │ status                          │
+│ jira_account_id (UNIQUE)        │
+│ github_username (UNIQUE)        │
 │ created_at                      │
 │ updated_at                      │
-│ deleted_at          ← NEW       │
-│ deleted_by (FK→users.id) ← NEW  │
+│ deleted_at                      │
+│ deleted_by (FK→users.id)        │
 └──────────┬──────────────────────┘
            │ 1
            │
-           │ has many
-           │
-           │ n
-┌──────────▼──────────────┐
-│    refresh_tokens       │
-├─────────────────────────┤
-│ id (PK)                 │
-│ user_id (FK)            │
-│ token (UNIQUE)          │
-│ expires_at              │
-│ revoked                 │
-│ created_at              │
-└─────────────────────────┘
+           ├──────────────────────┐
+           │ has many             │ has many
+           │                      │
+           │ n                    │ n
+┌──────────▼──────────────┐  ┌───▼──────────────────┐
+│    refresh_tokens       │  │   oauth_providers    │ ← NEW TABLE
+├─────────────────────────┤  ├──────────────────────┤
+│ id (PK)                 │  │ id (PK)              │
+│ user_id (FK)            │  │ user_id (FK)         │
+│ token (UNIQUE)          │  │ provider             │
+│ expires_at              │  │ provider_user_id     │
+│ revoked                 │  │ provider_email       │
+│ created_at              │  │ provider_username    │
+└─────────────────────────┘  │ access_token (enc)   │
+                             │ refresh_token (enc)  │
+                             │ token_expires_at     │
+                             │ linked_at            │
+                             │ last_used_at         │
+                             └──────────────────────┘
 
 
 ┌─────────────────────────────────┐
-│          audit_logs             │  ← NEW TABLE
+│          audit_logs             │
 ├─────────────────────────────────┤
 │ id (PK)                         │
 │ entity_type                     │
@@ -312,12 +392,13 @@ CREATE INDEX idx_audit_outcome ON audit_logs(outcome);
        ↑
        │ (No FK - intentional for audit integrity)
        │
-       │ Logs actions on: users, refresh_tokens
+       │ Logs actions on: users, refresh_tokens, oauth_providers
 ```
 
 ---
 
 ## ✅ Updated Status
 
-**READY FOR JPA MAPPING** (including Soft Delete + Audit Log)
+**READY FOR JPA MAPPING** (including OAuth Providers + Soft Delete + Audit Log)
+
 

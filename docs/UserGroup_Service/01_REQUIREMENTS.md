@@ -223,6 +223,94 @@
 
 ---
 
+### UC27 – Update Group Lecturer
+
+**Actor:** ADMIN
+
+**Description:** Thay đổi lecturer phụ trách nhóm
+
+#### Preconditions
+
+- Admin đăng nhập
+- Group tồn tại và không bị soft delete
+- Lecturer mới tồn tại và có role LECTURER
+
+#### Main Flow
+
+1. Admin gửi request với lecturerId mới
+2. System xác minh ROLE_ADMIN
+3. System verify lecturer mới tồn tại và có role LECTURER (via Identity Service gRPC)
+4. System update groups.lecturer_id
+5. System ghi audit log (old_value, new_value)
+6. System trả về group info cập nhật
+
+#### API
+
+**Endpoint:** `PATCH /api/groups/{groupId}/lecturer`
+
+#### Request DTO
+
+```json
+{
+  "lecturerId": "uuid"
+}
+```
+
+#### Response
+
+```json
+{
+  "groupId": "uuid",
+  "groupName": "SE1705-G1",
+  "semester": "Spring2026",
+  "lecturerId": "new-lecturer-uuid",
+  "updatedAt": "2026-01-30T10:30:00Z"
+}
+```
+
+#### Business Rules
+
+| Rule ID | Rule | Validation |
+|---------|------|------------|
+| BR-UG-27-01 | Lecturer mới phải tồn tại | Call Identity Service gRPC: `VerifyUserExists(lecturerId)` |
+| BR-UG-27-02 | Lecturer mới phải có role LECTURER | Call Identity Service gRPC: `GetUserRole(lecturerId)` → must return LECTURER |
+| BR-UG-27-03 | Group không bị soft delete | Check `deleted_at IS NULL` |
+| BR-UG-27-04 | Phải audit log thay đổi | Log old_value (old lecturerId), new_value (new lecturerId) |
+
+#### Error Codes
+
+- `401 UNAUTHORIZED` - Not authenticated
+- `403 FORBIDDEN` - Not ADMIN role
+- `404 GROUP_NOT_FOUND` - Group không tồn tại
+- `404 LECTURER_NOT_FOUND` - Lecturer mới không tồn tại
+- `400 INVALID_ROLE` - User không phải LECTURER
+- `400 GROUP_DELETED` - Group đã bị soft delete
+
+#### Audit Log
+
+**Action:** `UPDATE_GROUP_LECTURER`
+
+```json
+{
+  "entityType": "Group",
+  "entityId": "group-uuid",
+  "action": "UPDATE_GROUP_LECTURER",
+  "outcome": "SUCCESS",
+  "actorId": "admin-uuid",
+  "actorEmail": "admin@university.edu",
+  "oldValue": {
+    "lecturerId": "old-lecturer-uuid"
+  },
+  "newValue": {
+    "lecturerId": "new-lecturer-uuid"
+  },
+  "timestamp": "2026-01-30T10:30:00Z",
+  "serviceName": "UserGroupService"
+}
+```
+
+---
+
 ## 3. Security Architecture
 
 ### 3.1 JWT Claims

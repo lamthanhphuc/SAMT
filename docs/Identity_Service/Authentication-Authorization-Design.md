@@ -60,14 +60,19 @@ sequenceDiagram
    - ✅ Exists in DB
    - ✅ Not revoked
    - ✅ Not expired
-3. **Server checks user account status**
-   - If LOCKED → Revoke all tokens, return 403
-4. Server revokes old token
-5. Generate new refresh token
-6. Persist new token
-7. Issue new access token
+3. **Server checks user account status** ⚠️ CRITICAL
+   - Fetch user from token: `User user = refreshToken.getUser()`
+   - Check status: `if (user.getStatus() == LOCKED)`
+   - If LOCKED → Revoke ALL tokens (`revokeAllByUser()`), throw 403 AccountLockedException
+4. Server revokes old token (set `revoked = true`)
+5. Generate new refresh token (new UUID, new expiration)
+6. Persist new token to database
+7. Issue new access token (new JWT, 15min TTL)
+8. Return both new tokens to client
 
-> **Design Decision:** Account status is checked during token refresh to ensure locked users cannot obtain new access tokens even with a valid refresh token issued before the lock.
+> **Design Decision (CRITICAL SECURITY FIX):** Account status MUST be checked during token refresh to ensure locked users cannot obtain new access tokens even with a valid refresh token issued before the lock. Without this check, locked accounts can bypass the lockout by refreshing tokens.
+
+> **Implementation Note:** This check was initially missing in RefreshTokenService and was added after security review. See Security-Review.md § 3.
 
 ### Reuse Detection
 
@@ -84,8 +89,62 @@ sequenceDiagram
 
 ## 5. Roles & Authorities
 
-- **Role Format**: `ROLE_ADMIN`, `ROLE_STUDENT`, `ROLE_LECTURER`
-- **Storage**: Stored in DB as enum
+### 5.1 Role Format at Different Layers
+
+**IMPORTANT**: Role format varies depending on where it's used:
+
+| Layer | Format | Example | Notes |
+|-------|--------|---------|-------|
+| **Database** | Plain enum | `ADMIN`, `STUDENT`, `LECTURER` | No prefix in `users.role` column |
+| **Java Entity** | Enum | `Role.ADMIN`, `Role.STUDENT` | Direct mapping from DB |
+| **JWT Claims** | Array of strings | `["ADMIN"]`, `["STUDENT"]` | No prefix in token |
+| **Spring Security** | Granted Authority | `ROLE_ADMIN`, `ROLE_STUDENT` | Prefix added internally |
+| **@PreAuthorize** | hasRole() argument | `hasRole('ADMIN')` | Spring auto-adds `ROLE_` prefix |
+
+### 5.2 Implementation Details
+
+**Database Schema:**
+```sql
+CREATE TABLE users (
+  ...
+  role VARCHAR(50) NOT NULL,  -- Values: 'ADMIN', 'STUDENT', 'LECTURER'
+  ...
+);
+```
+
+**JWT Token Payload:**
+```json
+{
+  "sub": "1",
+  "email": "user@example.com",
+  "roles": ["ADMIN"],  // No ROLE_ prefix
+  "iat": 1234567890,
+  "exp": 1234567890
+}
+```
+
+**Spring Security Internal:**
+```java
+// JwtAuthenticationFilter adds ROLE_ prefix when creating authority
+UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+    user,
+    null,
+    List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
+);
+```
+
+**Controller Authorization:**
+```java
+@PreAuthorize("hasRole('ADMIN')")  // Spring automatically looks for ROLE_ADMIN
+public ResponseEntity<?> adminEndpoint() { ... }
+```
+
+### 5.3 Key Points
+
+✅ **Database & JWT**: Store plain role names without prefix  
+✅ **Spring Security**: Automatically adds `ROLE_` prefix internally  
+✅ **@PreAuthorize**: Use `hasRole('ADMIN')` NOT `hasRole('ROLE_ADMIN')`  
+⚠️ **Never store** `ROLE_` prefix in database or JWT claims
 
 ---
 

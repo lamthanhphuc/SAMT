@@ -604,6 +604,394 @@ public ProjectConfig createConfig(CreateConfigRequest request, UUID createdBy) {
 
 ---
 
+---
+
+## 11. Transaction & Consistency Rules
+
+### BR-PC-025: Create Config Transaction Behavior
+**Rule:** Create config MUST execute in a single transaction with specific consistency guarantees.
+
+**Transaction Steps:**
+1. Validate group existence
+2. Check unique constraint (group doesn't have config)
+3. Encrypt tokens (Jira + GitHub)
+4. Save config entity to database
+5. (Optional) Verify connection - **NOT** in same transaction
+
+**Consistency Guarantee:**
+```java
+@Transactional
+public ProjectConfigDTO createConfig(CreateConfigRequest request, UUID userId) {
+    // Step 1-4: In transaction
+    ProjectConfig config = performCreateInTransaction(request, userId);
+    
+    // Step 5: Verify AFTER transaction committed (separate)
+    // This allows config to be saved even if verification fails
+    if (request.isAutoVerify()) {
+        verifyConfigAsync(config.getConfigId());
+    }
+    
+    return projectConfigMapper.toDTO(config);
+}
+```
+
+**Rationale:**
+- Config được lưu với state = `DRAFT` nếu chưa verify
+- Nếu verification fails, config vẫn tồn tại với state = `UNVERIFIED`
+- User có thể re-verify hoặc update tokens sau
+
+**Example:**
+```
+User creates config with Jira token + GitHub token
+→ Transaction commits → config saved with state=DRAFT
+→ Async verify starts
+  → Jira connection: SUCCESS
+  → GitHub connection: FAILED (401 Unauthorized)
+→ Config state updated to INVALID
+→ User receives notification: "Config saved but verification failed"
+```
+
+---
+
+### BR-PC-026: Verify Failure Does NOT Rollback Config
+**Rule:** Connection verification là **separate operation** không ảnh hưởng đến transaction lưu config.
+
+**Implementation:**
+```java
+@Transactional
+public ProjectConfig createConfig(CreateConfigRequest request) {
+    // Encrypt & save config - ALWAYS succeeds if validation passes
+    ProjectConfig config = buildAndSaveConfig(request);
+    return config;
+}
+
+// Separate transaction
+@Async
+@Transactional(propagation = Propagation.REQUIRES_NEW)
+public void verifyConfigAsync(UUID configId) {
+    try {
+        VerificationResult result = verificationService.verify(configId);
+        
+        // Update config state based on result
+        if (result.isSuccess()) {
+            updateConfigState(configId, ProjectConfigState.VERIFIED);
+        } else {
+            updateConfigState(configId, ProjectConfigState.INVALID);
+        }
+    } catch (Exception e) {
+        logger.error("Verification failed for config {}", configId, e);
+        updateConfigState(configId, ProjectConfigState.INVALID);
+    }
+}
+```
+
+**Behavior Matrix:**
+
+| Scenario | Config Saved? | State | User Action |
+|----------|---------------|-------|-------------|
+| Validation fails | ❌ NO | N/A | Fix validation errors |
+| Encryption fails | ❌ NO | N/A | Check encryption service |
+| Verify not requested | ✅ YES | `DRAFT` | Can verify later |
+| Verify success | ✅ YES | `VERIFIED` | Ready to use |
+| Verify failed | ✅ YES | `INVALID` | Update tokens & re-verify |
+
+---
+
+### BR-PC-027: Update Partial - Re-verification Trigger Rules
+**Rule:** Chỉ update các fields cụ thể sẽ trigger re-verification.
+
+**Re-verification Triggers:**
+
+| Field Updated | Trigger Re-verify? | New State | Reason |
+|---------------|-------------------|-----------|---------|
+| `jiraHostUrl` | ✅ YES | `DRAFT` | Connection endpoint changed |
+| `jiraApiToken` | ✅ YES | `DRAFT` | Credentials changed |
+| `githubRepoUrl` | ✅ YES | `DRAFT` | Repository changed |
+| `githubToken` | ✅ YES | `DRAFT` | Credentials changed |
+
+**Implementation:**
+```java
+@Transactional
+public ProjectConfigDTO updateConfig(UUID configId, UpdateConfigRequest request) {
+    ProjectConfig config = findConfigOrThrow(configId);
+    
+    boolean criticalFieldsChanged = false;
+    
+    // Track which fields changed
+    if (request.getJiraHostUrl() != null && 
+        !request.getJiraHostUrl().equals(config.getJiraHostUrl())) {
+        config.setJiraHostUrl(request.getJiraHostUrl());
+        criticalFieldsChanged = true;
+    }
+    
+    if (request.getJiraApiToken() != null) {
+        config.setEncryptedJiraToken(encryptionService.encrypt(request.getJiraApiToken()));
+        criticalFieldsChanged = true;
+    }
+    
+    if (request.getGithubRepoUrl() != null && 
+        !request.getGithubRepoUrl().equals(config.getGithubRepoUrl())) {
+        config.setGithubRepoUrl(request.getGithubRepoUrl());
+        criticalFieldsChanged = true;
+    }
+    
+    if (request.getGithubToken() != null) {
+        config.setEncryptedGithubToken(encryptionService.encrypt(request.getGithubToken()));
+        criticalFieldsChanged = true;
+    }
+    
+    // If critical fields changed, reset state to DRAFT
+    if (criticalFieldsChanged && config.getState() == ProjectConfigState.VERIFIED) {
+        config.setState(ProjectConfigState.DRAFT);
+        config.setLastVerifiedAt(null);
+        
+        // Audit log
+        auditService.log(AuditEvent.builder()
+            .action("CONFIG_UPDATED_REQUIRES_REVERIFY")
+            .entityId(configId)
+            .metadata(Map.of("reason", "Critical fields updated"))
+            .build());
+    }
+    
+    config.setUpdatedAt(LocalDateTime.now());
+    ProjectConfig savedConfig = projectConfigRepository.save(config);
+    
+    return projectConfigMapper.toDTO(savedConfig);
+}
+```
+
+**Example:**
+```
+Config state = VERIFIED
+→ User updates jiraApiToken (new token)
+→ State transitions to DRAFT
+→ last_verified_at cleared
+→ User must re-verify to return to VERIFIED state
+```
+
+---
+
+### BR-PC-028: Transaction Rollback on Critical Errors
+**Rule:** Transaction chỉ rollback khi có critical errors, không rollback khi verify fails.
+
+**Rollback Scenarios:**
+
+| Error Type | Rollback? | HTTP Status | Example |
+|------------|-----------|-------------|---------|
+| Validation Error | ✅ YES | 400 | Invalid Jira URL format |
+| Database Constraint Violation | ✅ YES | 409 | Group already has config |
+| Encryption Service Down | ✅ YES | 500 | Cannot encrypt tokens |
+| Verification Failed | ❌ NO | 200 | Jira token invalid (config still saved) |
+| External Service Timeout | ❌ NO | 200 | GitHub API timeout (config still saved) |
+
+**Implementation:**
+```java
+@Transactional(rollbackFor = {
+    ValidationException.class,
+    DataIntegrityViolationException.class,
+    EncryptionException.class
+})
+public ProjectConfig createConfig(CreateConfigRequest request) {
+    // This will rollback on critical errors only
+    return performCreateConfig(request);
+}
+
+// Verification does NOT participate in main transaction
+@Transactional(propagation = Propagation.REQUIRES_NEW)
+public void verifyConfig(UUID configId) {
+    // Separate transaction - failures here don't affect saved config
+}
+```
+
+---
+
+### BR-PC-029: Consistency Check - State Transitions Must Be Valid
+**Rule:** State transitions phải tuân theo state machine (xem `10_CONFIG_STATE_MACHINE.md`).
+
+**Valid Transitions:**
+- `DRAFT` → `VERIFIED` (verify success)
+- `DRAFT` → `INVALID` (verify failed)
+- `VERIFIED` → `DRAFT` (update critical fields)
+- `VERIFIED` → `INVALID` (token revoked)
+- `INVALID` → `DRAFT` (update tokens)
+- `ANY` → `DELETED` (soft delete)
+
+**Invalid Transitions:**
+- `DELETED` → `VERIFIED` (must restore to DRAFT first)
+- `INVALID` → `VERIFIED` (must re-verify explicitly)
+
+**Enforcement:**
+```java
+public void setState(ProjectConfig config, ProjectConfigState newState) {
+    ProjectConfigState currentState = config.getState();
+    
+    // Validate transition
+    if (!isValidTransition(currentState, newState)) {
+        throw new IllegalStateTransitionException(
+            String.format("Cannot transition from %s to %s", currentState, newState)
+        );
+    }
+    
+    // Apply transition
+    config.setState(newState);
+    
+    // Audit log
+    auditService.logStateTransition(config.getConfigId(), currentState, newState);
+}
+
+private boolean isValidTransition(ProjectConfigState from, ProjectConfigState to) {
+    return VALID_TRANSITIONS.get(from).contains(to);
+}
+```
+
+---
+
+### BR-PC-030: Atomic Encryption Operations
+**Rule:** Encrypt cả 2 tokens (Jira + GitHub) trong 1 operation, fail-fast nếu 1 trong 2 fails.
+
+**Implementation:**
+```java
+@Transactional
+public EncryptedTokens encryptTokens(String jiraToken, String githubToken) {
+    try {
+        // Encrypt Jira token
+        String encryptedJira = encryptionService.encrypt(jiraToken);
+        
+        // Encrypt GitHub token
+        String encryptedGithub = encryptionService.encrypt(githubToken);
+        
+        return new EncryptedTokens(encryptedJira, encryptedGithub);
+        
+    } catch (EncryptionException e) {
+        // If either fails, throw exception → rollback transaction
+        throw new TokenEncryptionFailedException("Failed to encrypt tokens", e);
+    }
+}
+```
+
+**Rationale:**
+- Không lưu config với chỉ 1 token encrypted
+- Đảm bảo consistency: either both encrypted or none
+
+---
+
+### BR-PC-031: Create Config with Verification Example
+**Rule:** Complete create config flow với verification.
+
+**Example Implementation:**
+```java
+@Service
+public class ProjectConfigService {
+    
+    /**
+     * Create config - Step 1: Save to database
+     * This ALWAYS succeeds if validation passes
+     */
+    @Transactional
+    public ProjectConfig createConfig(CreateConfigRequest request, UUID userId) {
+        // 1. Validate group exists
+        if (!groupRepository.existsById(request.getGroupId())) {
+            throw new GroupNotFoundException(request.getGroupId());
+        }
+        
+        // 2. Check unique constraint
+        if (projectConfigRepository.existsByGroupId(request.getGroupId())) {
+            throw new ConfigAlreadyExistsException(request.getGroupId());
+        }
+        
+        // 3. Encrypt tokens (atomic operation)
+        EncryptedTokens tokens = encryptTokens(
+            request.getJiraApiToken(),
+            request.getGithubToken()
+        );
+        
+        // 4. Create config entity
+        ProjectConfig config = ProjectConfig.builder()
+            .configId(UUID.randomUUID())
+            .groupId(request.getGroupId())
+            .jiraHostUrl(request.getJiraHostUrl())
+            .encryptedJiraToken(tokens.getJiraToken())
+            .githubRepoUrl(request.getGithubRepoUrl())
+            .encryptedGithubToken(tokens.getGithubToken())
+            .state(ProjectConfigState.DRAFT)
+            .createdBy(userId)
+            .createdAt(LocalDateTime.now())
+            .build();
+        
+        // 5. Save to database
+        ProjectConfig savedConfig = projectConfigRepository.save(config);
+        
+        // 6. Audit log
+        auditService.log(AuditEvent.builder()
+            .action("CONFIG_CREATED")
+            .entityId(savedConfig.getConfigId())
+            .build());
+        
+        return savedConfig;
+    }
+    
+    /**
+     * Create config - Step 2 (Optional): Verify connection
+     * This runs AFTER config is saved, in separate transaction
+     */
+    @Async
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void verifyConfigAsync(UUID configId) {
+        try {
+            // Verify connection
+            VerificationResult result = verificationService.verify(configId);
+            
+            // Update state based on result
+            ProjectConfig config = projectConfigRepository.findById(configId)
+                .orElseThrow(() -> new ConfigNotFoundException(configId));
+            
+            if (result.isSuccess()) {
+                config.setState(ProjectConfigState.VERIFIED);
+                config.setLastVerifiedAt(LocalDateTime.now());
+            } else {
+                config.setState(ProjectConfigState.INVALID);
+                config.setInvalidReason(result.getErrorMessage());
+            }
+            
+            projectConfigRepository.save(config);
+            
+            // Notify user
+            notificationService.sendVerificationResult(config, result);
+            
+        } catch (Exception e) {
+            logger.error("Verification failed for config {}", configId, e);
+            // Config still exists in DRAFT state
+        }
+    }
+}
+```
+
+**Flow:**
+```
+POST /api/project-configs
+↓
+1. Validate request
+2. Encrypt tokens           } Transaction 1
+3. Save config (state=DRAFT)
+4. Commit transaction
+↓
+Response 201 Created
+{
+  "configId": "...",
+  "state": "DRAFT",
+  "message": "Config created. Verification in progress..."
+}
+↓
+[Async] Verify connection    } Transaction 2 (separate)
+↓
+If success: state → VERIFIED
+If failed:  state → INVALID
+↓
+Send notification to user
+```
+
+---
+
 ## Summary Table
 
 | Rule ID | Rule Name | Category | Priority |
@@ -632,3 +1020,10 @@ public ProjectConfig createConfig(CreateConfigRequest request, UUID createdBy) {
 | BR-PC-022 | GitHub Token Format | Validation | MEDIUM |
 | BR-PC-023 | Graceful Degradation | Reliability | MEDIUM |
 | BR-PC-024 | Transaction Boundaries | Integrity | HIGH |
+| **BR-PC-025** | **Create Config Transaction Behavior** | **Transaction** | **CRITICAL** |
+| **BR-PC-026** | **Verify Failure Does NOT Rollback** | **Transaction** | **CRITICAL** |
+| **BR-PC-027** | **Update Partial Re-verification Triggers** | **Consistency** | **HIGH** |
+| **BR-PC-028** | **Transaction Rollback on Critical Errors** | **Transaction** | **CRITICAL** |
+| **BR-PC-029** | **Consistency Check - Valid State Transitions** | **Consistency** | **HIGH** |
+| **BR-PC-030** | **Atomic Encryption Operations** | **Transaction** | **HIGH** |
+| **BR-PC-031** | **Create Config with Verification Example** | **Implementation** | **HIGH** |

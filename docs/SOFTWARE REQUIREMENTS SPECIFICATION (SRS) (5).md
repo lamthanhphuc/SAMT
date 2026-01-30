@@ -29,17 +29,62 @@ Tài liệu này xác định các yêu cầu kỹ thuật và nghiệp vụ cho
 
 Hệ thống triển khai theo mô hình **Microservices** trên nền tảng **Docker**, bao gồm:
 
-1. **Identity Service:** Quản lý xác thực OAuth2 (Google/GitHub).  
-2. **Sync Service:** Đảm nhận việc crawl dữ liệu từ Jira/GitHub.  
-3. **AI Analysis Service:** Phân tích ngôn ngữ tự nhiên và chất lượng code.  
-4. **Reporting Service:** Xuất dữ liệu ra các định dạng văn bản học thuật.
+1. **Identity Service:** Quản lý xác thực, phân quyền, và thông tin người dùng (authentication, users, roles, refresh tokens).
+2. **User/Group Service:** Quản lý nhóm dự án và membership. Lấy thông tin user từ Identity Service qua **gRPC**.
+3. **Project Config Service:** Quản lý cấu hình tích hợp Jira/GitHub cho từng nhóm.
+4. **Sync Service (Planned):** Đảm nhận việc crawl dữ liệu từ Jira/GitHub.
+5. **AI Analysis Service (Planned):** Phân tích ngôn ngữ tự nhiên và chất lượng code.
+6. **Reporting Service (Planned):** Xuất dữ liệu ra các định dạng văn bản học thuật.
+
+**Inter-Service Communication:**
+- **gRPC:** User/Group Service ↔ Identity Service (synchronous, type-safe, high-performance)
+- **REST API:** Client ↔ All Services (qua API Gateway)
+- **Internal API:** Sync Service ↔ Project Config Service (service-to-service authentication với X-Service-Name/X-Service-Key headers)
 
    ### **2.2 Các tác nhân (User Classes) \[CLO7\]**
 
-* **Admin:** Cấu hình hệ thống và quản lý danh sách lớp học.  
-* **Lecturer:** Giám sát, đánh giá chất lượng và chấm điểm dựa trên dữ liệu thực tế.  
-* **Team Leader:** Quản lý yêu cầu nhóm, phân công và xuất file SRS.  
-* **Team Member:** Theo dõi task cá nhân và xem đánh giá đóng góp.  
+#### **2.2.1 System Roles (Vai trò hệ thống)**
+
+Hệ thống quản lý 3 vai trò cấp hệ thống (managed by Identity Service):
+
+* **ADMIN:** Quản trị viên hệ thống
+  - Quản lý người dùng (tạo, khóa, mở khóa, soft delete, restore)
+  - Tạo và quản lý nhóm sinh viên
+  - Phân công Giảng viên cho nhóm
+  - Cấu hình tích hợp hệ thống
+  - Truy cập mọi dữ liệu trong hệ thống
+
+* **LECTURER:** Giảng viên hướng dẫn
+  - Xem danh sách nhóm phụ trách
+  - Theo dõi yêu cầu và công việc của nhóm
+  - Xem báo cáo tiến độ và thống kê đóng góp
+  - Đánh giá chất lượng đóng góp sinh viên
+  - Xem thông tin profile của sinh viên (chỉ role STUDENT)
+
+* **STUDENT:** Sinh viên
+  - Quản lý thông tin cá nhân
+  - Theo dõi task được giao
+  - Cập nhật trạng thái công việc
+  - Xem thống kê đóng góp cá nhân
+  - Nếu là **Group Leader**: Quản lý cấu hình dự án, tạo SRS, phân công công việc
+  - Nếu là **Group Member**: Chỉ xem và cập nhật task cá nhân
+
+#### **2.2.2 Group Roles (Vai trò trong nhóm)**
+
+Bên cạnh System Role, sinh viên còn có vai trò trong nhóm dự án:
+
+* **LEADER:** Trưởng nhóm (1 nhóm chỉ có 1 LEADER)
+  - Tạo và quản lý cấu hình tích hợp Jira/GitHub
+  - Đồng bộ dữ liệu dự án
+  - Tạo tài liệu SRS tự động
+  - Phân công công việc cho thành viên
+
+* **MEMBER:** Thành viên nhóm
+  - Theo dõi task cá nhân
+  - Cập nhật trạng thái công việc
+  - Xem thống kê cá nhân
+
+**Lưu ý:** Group Role KHÔNG thay thế System Role. Một sinh viên có `System Role = STUDENT` và `Group Role = LEADER` hoặc `MEMBER`.  
   ---
 
   ## **3\. YÊU CẦU CHỨC NĂNG (FUNCTIONAL REQUIREMENTS) \[CLO1\]**
@@ -52,108 +97,133 @@ Hệ thống bao gồm 4 tác nhân chính tương tác với các nhóm chức 
 
 ### **3.2 DANH SÁCH USE CASE THEO TỪNG VAI TRÒ (ROLES)**
 
-#### **3.2.1 Nhóm chức năng dành cho Admin (Quản trị viên)**
-
-* **UC01: Quản lý người dùng:** Thêm, sửa, xóa thông tin Sinh viên và Giảng viên.
-
-  ## **Software Requirements Specification – Identity Service**
-
-  ---
-
-  ## **UC01 – User Login**
-
-  ### **Description**
-
-Cho phép người dùng đăng nhập hệ thống bằng email và mật khẩu.
+> **Lưu ý quan trọng:** Các Use Case dưới đây đã được thiết kế và triển khai ở các microservices cụ thể. Mỗi UC được đánh số theo service:
+> - **UC-xxx:** Identity Service (Authentication & Authorization)
+> - **UC2x:** User/Group Service 
+> - **UC3x:** Project Config Service
+> - **UC4x-5x:** Sync Service, AI Service, Reporting Service (chưa implement)
 
 ---
 
-### **Primary Actor**
+#### **3.2.1 Nhóm chức năng dành cho Admin (Quản trị viên)**
 
-* User
+##### **A. Quản lý Xác thực & Người dùng (Identity Service)**
 
-  ---
+* **UC-REGISTER:** Đăng ký tài khoản mới (STUDENT tự đăng ký, LECTURER/ADMIN do Admin tạo)
+* **UC-LOGIN:** Đăng nhập hệ thống bằng email/password
+* **UC-REFRESH-TOKEN:** Làm mới access token bằng refresh token
+* **UC-LOGOUT:** Đăng xuất và thu hồi refresh token
+* **UC-SOFT-DELETE:** Admin soft delete user (đánh dấu deleted_at, thu hồi tokens)
+* **UC-RESTORE:** Admin khôi phục user đã bị soft delete
+* **UC-LOCK-ACCOUNT:** Admin khóa tài khoản người dùng (status = LOCKED)
+* **UC-UNLOCK-ACCOUNT:** Admin mở khóa tài khoản người dùng
+* **UC-MAP-EXTERNAL-ACCOUNTS:** Admin map/unmap Jira Account ID và GitHub Username cho user
 
-  ### **Preconditions**
+##### **B. Quản lý User & Group (User/Group Service)**
 
-* User đã tồn tại trong hệ thống
+* **UC21: Get User Profile:** Lấy thông tin user (Admin xem tất cả, Lecturer chỉ xem STUDENT)
+* **UC22: Update User Profile:** Cập nhật thông tin user (Admin update tất cả, Student tự update)
+* **UC23: Create Group:** Admin tạo nhóm dự án cho học kỳ
+* **UC24: Add User to Group:** Admin thêm sinh viên vào nhóm
+* **UC25: Assign Group Role:** Admin gán LEADER/MEMBER cho thành viên nhóm
+* **UC26: Remove User from Group:** Admin xóa sinh viên khỏi nhóm
+* **UC27: Update Group Lecturer:** Admin thay đổi lecturer phụ trách nhóm
 
-* status \= ACTIVE
+##### **C. Quản lý Cấu hình Hệ thống**
 
-  ---
+* **UC-SYSTEM-CONFIG:** Cấu hình tham số toàn cục (encryption keys, API rate limits, etc.)
 
-  ### **Main Flow**
+---
 
-1. User gửi request login với email và password
+#### **3.2.2 Nhóm chức năng dành cho Lecturer (Giảng viên)**
 
-2. System kiểm tra user tồn tại
+##### **A. Quản lý Thông tin Cá nhân**
 
-3. System kiểm tra status
+* **UC-LOGIN:** Đăng nhập hệ thống
+* **UC-LOGOUT:** Đăng xuất hệ thống
+* **UC21: Get User Profile:** Xem thông tin sinh viên (chỉ role STUDENT)
 
-4. System verify password
+> **Lưu ý:** Lecturer KHÔNG được phép update profile qua UC22 (Update User Profile). Lecturer muốn đổi thông tin phải liên hệ Admin.
 
-5. System sinh access token & refresh token
+##### **B. Giám sát Nhóm Phụ trách**
 
-6. System trả response thành công
+* **UC-VIEW-SUPERVISED-GROUPS:** Xem danh sách các nhóm được phân công hướng dẫn
+* **UC-VIEW-GROUP-MEMBERS:** Xem thông tin thành viên của nhóm phụ trách
 
-   ---
+##### **C. Theo dõi Tiến độ & Đánh giá (Chưa implement)**
 
-   ### **Alternate Flows**
+* **UC-VIEW-GROUP-PROGRESS:** Xem báo cáo tiến độ dự án (Burndown chart, velocity)
+* **UC-VIEW-TASKS:** Xem danh sách Epics, Stories, Tasks từ Jira
+* **UC-VIEW-GITHUB-STATS:** Xem thống kê commit, LOC, chất lượng code
+* **UC-GRADE-CONTRIBUTION:** Đánh giá và chấm điểm dựa trên dữ liệu thực tế
 
-* **User không tồn tại** → Authentication failed
+---
 
-* **Password sai** → Authentication failed
+#### **3.2.3 Nhóm chức năng dành cho Student - Group Leader (Trưởng nhóm)**
 
-* **Status \= INACTIVE | LOCKED** → Access denied
+##### **A. Quản lý Thông tin Cá nhân**
 
-  ---
+* **UC-REGISTER:** Đăng ký tài khoản (self-service)
+* **UC-LOGIN:** Đăng nhập hệ thống
+* **UC-LOGOUT:** Đăng xuất hệ thống
+* **UC22: Update User Profile:** Cập nhật thông tin cá nhân
 
-  ### **Response (Success)**
+##### **B. Quản lý Cấu hình Dự án (Project Config Service)**
 
-  {  
-    "accessToken": "jwt-token",  
-    "refreshToken": "refresh-token",  
-    "expiresIn": 900  
-  }  
-    
-  ---
+* **UC30: Create Project Config:** Tạo cấu hình tích hợp Jira/GitHub cho nhóm
+* **UC31: Get Project Config:** Lấy thông tin cấu hình (tokens được mask)
+* **UC32: Update Project Config:** Cập nhật Jira/GitHub credentials
+* **UC33: Delete Project Config:** Xóa cấu hình (soft delete)
+* **UC34: Verify Config Connection:** Kiểm tra tính hợp lệ của cấu hình trước/sau khi lưu
 
-  ### **Postconditions**
+##### **C. Quản lý Dự án & Tạo SRS (Chưa implement)**
 
-* Refresh token được lưu DB
+* **UC-SYNC-PROJECT-DATA:** Đồng bộ dữ liệu từ Jira và GitHub về SAMT
+* **UC-MAP-REQUIREMENTS:** Ánh xạ Jira Issues vào cấu trúc SRS
+* **UC-GENERATE-SRS:** Tạo tài liệu SRS tự động theo chuẩn IEEE 830/29148
+* **UC-ASSIGN-TASKS:** Phân công Task cho thành viên (đồng bộ với Jira)
+* **UC-VIEW-TEAM-REPORT:** Xem báo cáo tổng hợp hiệu suất nhóm
 
-* Access token được dùng cho các request tiếp theo  
-    
-* **UC02: Quản lý nhóm sinh viên:** Tạo nhóm dự án cho môn học SWP391.  
-* **UC03: Phân công Giảng viên:** Gán Giảng viên hướng dẫn (Supervisor) cho từng nhóm dự án cụ thể.  
-* **UC04: Cấu hình tích hợp hệ thống:** Thiết lập thông số API toàn cục, quản lý các kết nối OAuth với Jira Software và GitHub.
+---
 
-  #### **3.2.2 Nhóm chức năng dành cho Lecturer (Giảng viên)**
+#### **3.2.4 Nhóm chức năng dành cho Student - Group Member (Thành viên)**
 
-* **UC05: Xem danh sách nhóm phụ trách:** Quản lý thông tin và thành viên của các nhóm được phân công hướng dẫn.  
-* **UC06: Theo dõi yêu cầu và công việc:** Xem danh sách Epics, Stories và Tasks của nhóm từ Jira.  
-* **UC07: Xem báo cáo tiến độ dự án:** Theo dõi biểu đồ Burndown chart và tốc độ hoàn thành công việc của nhóm.  
-* **UC08: Xem thống kê đóng góp GitHub:** Xem báo cáo chi tiết về tần suất commit, số dòng code (LOC) và chất lượng mã nguồn của từng sinh viên.  
-* **UC09: Đánh giá chất lượng đóng góp:** Hệ thống hỗ trợ chấm điểm dựa trên dữ liệu thực tế từ Jira và GitHub.
+##### **A. Quản lý Thông tin Cá nhân**
 
-  #### **3.2.3 Nhóm chức năng dành cho Team Leader (Trưởng nhóm)**
+* **UC-REGISTER:** Đăng ký tài khoản (self-service)
+* **UC-LOGIN:** Đăng nhập hệ thống
+* **UC-LOGOUT:** Đăng xuất hệ thống
+* **UC22: Update User Profile:** Cập nhật thông tin cá nhân
 
-* **UC10: Đồng bộ dữ liệu dự án:** Kết nối và lấy dữ liệu yêu cầu từ Jira, dữ liệu mã nguồn từ GitHub về hệ thống SAMT.  
-* **UC11: Quản lý yêu cầu nhóm:** Ánh xạ (Map) các Jira Issues vào các mục tương ứng trong cấu trúc tài liệu SRS.  
-* **UC12: Tạo tài liệu SRS tự động:** Hệ thống tổng hợp dữ liệu để xuất file SRS theo chuẩn IEEE 830/29148.  
-* **UC13: Phân công công việc:** Gán Task cho các thành viên (dữ liệu được đồng bộ hai chiều với Jira).  
-* **UC14: Xem báo cáo tổng hợp nhóm:** Theo dõi hiệu suất làm việc của toàn team để điều chỉnh kế hoạch.
+##### **B. Quản lý Công việc Cá nhân (Chưa implement)**
 
-  #### **3.2.4 Nhóm chức năng dành cho Team Member (Thành viên)**
+* **UC-VIEW-MY-TASKS:** Xem danh sách công việc được giao
+* **UC-UPDATE-TASK-STATUS:** Cập nhật trạng thái Task (To-do, In Progress, Done)
+* **UC-VIEW-MY-STATS:** Xem thống kê đóng góp cá nhân (commits, LOC, chất lượng)
 
-* **UC15: Xem danh sách công việc cá nhân:** Theo dõi các Task được giao trên giao diện tập trung của SAMT.  
-* **UC16: Cập nhật trạng thái công việc:** Thay đổi trạng thái Task (To-do, In Progress, Done) – đồng bộ ngược lại Jira.  
-* **UC17: Xem thống kê cá nhân:** Theo dõi chỉ số commit cá nhân và mức độ đóng góp so với trung bình của nhóm.
+---
 
 #### **3.2.5 Nhóm chức năng dùng chung (Common Use Cases)**
 
-* **UC18: Đăng nhập (Login):** Xác thực thông qua tài khoản Google hoặc tài khoản nội bộ.  
-* **UC19: Quản lý thông tin cá nhân:** Cập nhật email, liên kết tài khoản Jira ID và GitHub Username.
+Tất cả vai trò đều có thể:
+
+* **UC-LOGIN:** Đăng nhập hệ thống
+* **UC-LOGOUT:** Đăng xuất hệ thống
+* **UC-REFRESH-TOKEN:** Làm mới access token
+* **UC21: Get User Profile:** Xem thông tin cá nhân (với quyền hạn tương ứng)
+
+---
+
+### **3.3 TRẠNG THÁI TRIỂN KHAI CÁC USE CASE**
+
+| Service | Use Cases | Status |
+|---------|-----------|--------|
+| **Identity Service** | UC-REGISTER, UC-LOGIN, UC-REFRESH-TOKEN, UC-LOGOUT, UC-SOFT-DELETE, UC-RESTORE, UC-LOCK-ACCOUNT, UC-UNLOCK-ACCOUNT, UC-MAP-EXTERNAL-ACCOUNTS | ✅ **IMPLEMENTED** |
+| **User/Group Service** | UC21-UC27 | ✅ **IMPLEMENTED** |
+| **Project Config Service** | UC30-UC35 | ✅ **IMPLEMENTED** |
+| **Sync Service** | UC-SYNC-PROJECT-DATA, UC-MAP-REQUIREMENTS, UC-ASSIGN-TASKS | ⏳ **PLANNED** |
+| **AI Analysis Service** | UC-ANALYZE-CODE-QUALITY, UC-POLISH-REQUIREMENTS | ⏳ **PLANNED** |
+| **Reporting Service** | UC-GENERATE-SRS, UC-VIEW-TEAM-REPORT, UC-VIEW-GITHUB-STATS | ⏳ **PLANNED** |
 
 ---
 
@@ -165,9 +235,81 @@ https://app.diagrams.net/\#G1dIYlz7NYFMqShsOqYqw3pEyXYfOpgjYT\#%7B%22pageId%22%3
 
 ## **4\. YÊU CẦU PHI CHỨC NĂNG (NON-FUNCTIONAL REQUIREMENTS) \[CLO2\]**
 
-* **Hiệu năng:** Phản hồi truy vấn dữ liệu báo cáo trong vòng \< 5 giây.  
-* **Bảo mật:** Mã hóa API Keys của Jira/GitHub bằng chuẩn AES-256.  
-* **Khả dụng:** Giao diện tối ưu hóa cho cả trình duyệt desktop và thiết bị di động.  
+### **4.1 Hiệu năng (Performance)**
+
+* **Phản hồi truy vấn:** Phản hồi truy vấn dữ liệu báo cáo trong vòng < 5 giây.
+* **Token generation:** Access token và refresh token được sinh trong < 100ms.
+* **Database queries:** Tất cả truy vấn database có index thích hợp, response time < 200ms.
+
+### **4.2 Bảo mật (Security)**
+
+#### **4.2.1 Authentication & Authorization**
+
+* **JWT Tokens:**
+  - Access Token: JWT với HS256, TTL = 15 minutes
+  - Refresh Token: Opaque UUID, TTL = 7 days, stored in database
+  - Token Rotation: Refresh token bị revoke và sinh token mới mỗi lần refresh
+  - Reuse Detection: Nếu revoked token bị reuse → thu hồi TẤT CẢ tokens của user (force re-login)
+
+* **Password Security:**
+  - Hash algorithm: BCrypt with strength 10
+  - Password requirements:
+    - Min 8 characters, max 128 characters
+    - ≥1 uppercase, ≥1 lowercase, ≥1 digit, ≥1 special char (@$!%*?&)
+
+* **Account Protection:**
+  - Status: ACTIVE, INACTIVE, LOCKED
+  - Admin có thể LOCK tài khoản (revoke all tokens)
+  - Soft delete: User không bị xóa vĩnh viễn, có thể restore
+
+#### **4.2.2 Token Encryption**
+
+* **API Credentials:**
+  - Algorithm: AES-256-GCM
+  - Key management: Encryption key stored in environment variable
+  - Rotation policy: 90 days (configurable)
+  - Atomic encryption: Cả 2 tokens (Jira + GitHub) phải encrypt thành công, nếu 1 token fail → rollback transaction
+
+* **Token Masking:**
+  - Jira token: Hiển thị 6 ký tự đầu + `***...`
+  - GitHub token: Hiển thị 4 ký tự đầu + `***...`
+  - Decrypted tokens chỉ được trả về cho internal services qua authenticated endpoints
+
+#### **4.2.3 Service-to-Service Authentication**
+
+* **Internal API Security:**
+  - Headers required: `X-Service-Name`, `X-Service-Key`
+  - Service Key: 256-bit random hex string
+  - Validation: Constant-time comparison để tránh timing attacks
+  - Audit logging: Mọi internal API call được ghi log (serviceName, action, resourceId, outcome, sourceIp)
+
+* **Permission Model:**
+  - SYNC_SERVICE, AI_SERVICE: READ_DECRYPTED_TOKENS
+  - REPORTING_SERVICE: READ_ONLY (masked tokens)
+  - NO DEFAULT PERMISSIONS: Phải explicit mapping trong ServicePermissionRegistry
+
+### **4.3 Khả dụng (Availability)**
+
+* Giao diện tối ưu hóa cho cả trình duyệt desktop và thiết bị di động.
+* Microservices architecture cho phép scaling độc lập từng service.
+* Soft delete đảm bảo data integrity và khả năng recovery.
+
+### **4.4 Data Integrity**
+
+* **Transaction Management:**
+  - Create config: Encrypt + Save trong 1 transaction
+  - Verify connection: Separate async transaction (không rollback config nếu verify failed)
+  - Update critical fields (tokens, URLs): Trigger re-verification, clear last_verified_at
+
+* **Soft Delete:**
+  - Users, Groups, User_Groups, Project_Configs: Chỉ soft delete, không hard delete
+  - Hibernate `@SQLRestriction("deleted_at IS NULL")` auto-filter deleted records
+  - Admin có quyền restore deleted records
+
+* **Consistency:**
+  - 1 group chỉ có 1 LEADER (enforced bằng pessimistic lock)
+  - 1 group chỉ có 1 config (UNIQUE constraint)
+  - 1 user chỉ thuộc 1 group mỗi semester (enforced ở service layer)
   ---
 
 Dựa trên tài liệu SRS đã cung cấp, dưới đây là nội dung mở rộng chi tiết cho **Mục 5: THIẾT KẾ KIẾN TRÚC VÀ MÔ HÌNH PHÂN TÍCH**, tập trung vào việc áp dụng các Design Patterns để giải quyết các bài toán kỹ thuật cụ thể của hệ thống SAMT.
@@ -292,51 +434,123 @@ Nhóm này giải quyết các vấn đề về phân công trách nhiệm và g
 
 #### **6.3.1 Bảng Users**
 
-Lưu trữ thông tin người dùng hệ thống. Bảng này đóng vai trò trung tâm để ánh xạ (map) giữa tài khoản sinh viên FPT và tài khoản trên Jira/GitHub.
+Lưu trữ thông tin người dùng hệ thống với khả năng soft delete và khóa tài khoản.
 
 | Tên thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
 | :---- | :---- | :---- | :---- |
 | **user\_id** | UUID | **PK** | Định danh duy nhất của người dùng. |
-| email | VARCHAR(255) | UNIQUE, NOT NULL | Email đăng nhập (sử dụng OAuth Google). |
+| email | VARCHAR(255) | UNIQUE, NOT NULL | Email đăng nhập. |
+| password_hash | VARCHAR(255) | NOT NULL | Mật khẩu đã hash (BCrypt strength 10). |
 | full\_name | VARCHAR(100) | NOT NULL | Tên hiển thị đầy đủ. |
-| role | VARCHAR(20) | CHECK (Admin, Lecturer, Student) | Phân quyền truy cập hệ thống. |
-| jira\_account\_id | VARCHAR(100) | NULL | ID tài khoản Jira (dùng để map assignee). |
-| github\_username | VARCHAR(100) | NULL | Username GitHub (dùng để map author). |
+| role | ENUM | CHECK (ADMIN, LECTURER, STUDENT) | System role (quản lý bởi Identity Service). |
+| status | ENUM | CHECK (ACTIVE, INACTIVE, LOCKED), DEFAULT ACTIVE | Trạng thái tài khoản. |
+| jira\_account\_id | VARCHAR(100) | NULL, UNIQUE | ID tài khoản Jira (dùng để map assignee). **KHÔNG được update qua UC22**. Chỉ ghi bởi: (1) Auto-sync process, (2) UC-MAP-EXTERNAL-ACCOUNTS (Admin). |
+| github\_username | VARCHAR(100) | NULL, UNIQUE | Username GitHub (dùng để map author). **KHÔNG được update qua UC22**. Chỉ ghi bởi: (1) Auto-sync process, (2) UC-MAP-EXTERNAL-ACCOUNTS (Admin). |
+| **deleted\_at** | TIMESTAMP | NULL | Thời điểm soft delete (NULL = chưa xóa). |
+| **deleted\_by** | UUID | FK (Ref Users.user\_id), NULL | Admin đã thực hiện soft delete. |
+| created\_at | TIMESTAMP | DEFAULT NOW() | Thời điểm tạo tài khoản. |
+| updated\_at | TIMESTAMP | DEFAULT NOW() | Thời điểm cập nhật cuối cùng. |
+
+**Lưu ý về Soft Delete:**
+- Users có `deleted_at IS NOT NULL` bị ẩn khỏi các query thông thường (via `@SQLRestriction`)
+- Chỉ Admin mới có quyền soft delete và restore users
+- Khi soft delete, tất cả refresh tokens của user bị thu hồi
+
+---
+
+#### **6.3.1.1 Bảng Refresh_Tokens (Identity Service)**
+
+Lưu trữ refresh tokens với khả năng rotation và reuse detection.
+
+| Tên thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
+| :---- | :---- | :---- | :---- |
+| **token\_id** | UUID | **PK** | Định danh duy nhất của token. |
+| **user\_id** | UUID | **FK** (Ref Users.user\_id), NOT NULL | User sở hữu token. |
+| token | VARCHAR(255) | UNIQUE, NOT NULL | Refresh token (UUID string). |
+| revoked | BOOLEAN | DEFAULT FALSE | Token đã bị thu hồi chưa. |
+| expires\_at | TIMESTAMP | NOT NULL | Thời điểm hết hạn (7 days from issue). |
+| issued\_at | TIMESTAMP | DEFAULT NOW() | Thời điểm phát hành token. |
+
+**Security Features:**
+- Token rotation: Mỗi lần refresh, token cũ bị revoke và sinh token mới
+- Reuse detection: Nếu token đã revoke bị dùng lại → thu hồi TẤT CẢ tokens của user (force re-login)
+- Logout: Thu hồi token cụ thể
+- Lock/Delete account: Thu hồi tất cả tokens
 
 #### **6.3.2 Bảng Groups**
 
-Quản lý thông tin nhóm dự án (Capstone/SWP Project).
+Quản lý thông tin nhóm dự án (Capstone/SWP Project) với soft delete.
 
 | Tên thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
 | :---- | :---- | :---- | :---- |
 | **group\_id** | UUID | **PK** | Định danh nhóm. |
 | group\_name | VARCHAR(100) | NOT NULL | Tên nhóm (VD: SE1705-G1). |
 | semester | VARCHAR(20) | NOT NULL | Học kỳ (VD: Spring2026). |
-| **lecturer\_id** | UUID | **FK** (Ref Users.user\_id) | Giảng viên hướng dẫn (Supervisor). |
+| **lecturer\_id** | UUID | **FK** (Ref Users.user\_id), NULL | Giảng viên hướng dẫn (Supervisor). |
+| **deleted\_at** | TIMESTAMP | NULL | Thời điểm soft delete (NULL = chưa xóa). |
 | created\_at | TIMESTAMP | DEFAULT NOW() | Thời điểm tạo nhóm. |
 
-#### **6.3.3 Bảng Group\_Members (Bảng nối)**
+**Ràng buộc:**
+- UNIQUE (group\_name, semester): Tên nhóm phải unique trong mỗi học kỳ
 
-Giải quyết mối quan hệ N-N giữa Sinh viên và Nhóm, đồng thời xác định vai trò Leader.
+---
+
+#### **6.3.3 Bảng User_Groups (Bảng nối với Group Roles)**
+
+Giải quyết mối quan hệ N-N giữa Sinh viên và Nhóm, đồng thời xác định vai trò LEADER/MEMBER.
 
 | Tên thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
 | :---- | :---- | :---- | :---- |
-| **group\_id** | UUID | **PK, FK** (Ref Groups) | Thuộc về nhóm nào. |
-| **student\_id** | UUID | **PK, FK** (Ref Users) | Sinh viên nào. |
-| is\_leader | BOOLEAN | DEFAULT FALSE | Xác định TRUE nếu là Trưởng nhóm. |
+| **user\_id** | UUID | **PK, FK** (Ref Users.user\_id) | Sinh viên nào. |
+| **group\_id** | UUID | **PK, FK** (Ref Groups.group\_id) | Thuộc về nhóm nào. |
+| role | ENUM | CHECK (LEADER, MEMBER), DEFAULT MEMBER | Vai trò trong nhóm. |
+| **deleted\_at** | TIMESTAMP | NULL | Thời điểm soft delete (NULL = chưa xóa). |
+| joined\_at | TIMESTAMP | DEFAULT NOW() | Thời điểm tham gia nhóm. |
+
+**Business Rules:**
+- Mỗi group CHỈ có duy nhất 1 LEADER (enforced ở service layer + pessimistic lock)
+- Mỗi user chỉ thuộc 1 group trong 1 semester (enforced ở service layer)
+- Khi assign LEADER mới, LEADER cũ tự động demote xuống MEMBER
+
+**Lưu ý:** Group Role (LEADER/MEMBER) KHÁC với System Role (ADMIN/LECTURER/STUDENT)
 
 #### **6.3.4 Bảng Project\_Configs**
 
-Lưu trữ cấu hình tích hợp. Tách riêng bảng này để tăng cường bảo mật cho các Token API (có thể mã hóa cột token).
+Lưu trữ cấu hình tích hợp với soft delete và state machine. Tokens được mã hóa AES-256-GCM.
 
 | Tên thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
 | :---- | :---- | :---- | :---- |
 | **config\_id** | UUID | **PK** | Định danh cấu hình. |
-| **group\_id** | UUID | **FK**, UNIQUE | Mỗi nhóm chỉ có 1 cấu hình tích hợp. |
+| **group\_id** | UUID | **FK** (Ref Groups.group\_id), UNIQUE, NOT NULL | Mỗi nhóm chỉ có 1 cấu hình tích hợp. |
 | jira\_host\_url | VARCHAR(255) | NOT NULL | URL dự án Jira (VD: projects.atlassian.net). |
-| jira\_api\_token | TEXT | NOT NULL | Token xác thực Jira (Encrypted). |
+| jira\_api\_token\_encrypted | TEXT | NOT NULL | Token xác thực Jira (Encrypted với AES-256-GCM). |
 | github\_repo\_url | VARCHAR(255) | NOT NULL | URL GitHub Repository. |
-| github\_token | TEXT | NOT NULL | Token xác thực GitHub (Encrypted). |
+| github\_token\_encrypted | TEXT | NOT NULL | Token xác thực GitHub (Encrypted với AES-256-GCM). |
+| **state** | ENUM | CHECK (DRAFT, VERIFIED, INVALID, DELETED), DEFAULT DRAFT | Trạng thái config (State Machine). |
+| last\_verified\_at | TIMESTAMP | NULL | Lần cuối verify thành công. |
+| invalid\_reason | TEXT | NULL | Lý do config INVALID (nếu verify failed). |
+| **deleted\_at** | TIMESTAMP | NULL | Thời điểm soft delete (NULL = chưa xóa). |
+| **deleted\_by** | UUID | FK (Ref Users.user\_id), NULL | User đã thực hiện soft delete. |
+| created\_at | TIMESTAMP | DEFAULT NOW() | Thời điểm tạo config. |
+| updated\_at | TIMESTAMP | DEFAULT NOW() | Thời điểm cập nhật cuối cùng. |
+
+**State Machine (Config Lifecycle):**
+- **DRAFT:** Config mới tạo, chưa verify hoặc đã update cần re-verify
+- **VERIFIED:** Connection đã test thành công
+- **INVALID:** Verify failed hoặc token bị thu hồi
+- **DELETED:** Soft delete
+
+**State Transitions:**
+- DRAFT → VERIFIED: Verify success
+- DRAFT → INVALID: Verify failed
+- VERIFIED → DRAFT: Update critical fields (jiraApiToken, githubToken, URLs)
+- VERIFIED → INVALID: Token revoked hoặc periodic check failed
+- ANY → DELETED: Soft delete
+
+**Security:**
+- Tokens luôn được mã hóa AES-256-GCM trước khi lưu database
+- Khi trả về client, tokens được mask (VD: `ghp_***...`)
+- Internal service (Sync Service) lấy decrypted tokens qua endpoint `/internal/project-configs/{id}/tokens`
 
 #### **6.3.5 Bảng Jira\_Issues**
 
@@ -384,13 +598,30 @@ Lưu trữ lịch sử các báo cáo đã tạo để Giảng viên/Sinh viên 
 
 ### **6.4 Phân tích mối quan hệ (Relationships)**
 
-1. **Users \- Groups (1 \- N):** Một Giảng viên có thể hướng dẫn nhiều Nhóm (Groups.lecturer\_id).  
-2. **Users \- Groups (N \- N):** Một Sinh viên có thể thuộc một Nhóm (được giải quyết qua bảng trung gian Group\_Members).  
-3. **Groups \- Project\_Configs (1 \- 1):** Một Nhóm có duy nhất một bộ cấu hình API.  
-4. **Groups \- Jira\_Issues (1 \- N):** Một Nhóm có nhiều Task/Story trên Jira.  
-5. **Groups \- Github\_Commits (1 \- N):** Một Nhóm có nhiều Commit mã nguồn.  
-6. **Users \- Jira\_Issues (1 \- N):** Một Sinh viên được assign nhiều Task.  
-7. **Users \- Github\_Commits (1 \- N):** Một Sinh viên thực hiện nhiều Commit.  
+**Lưu ý:** Hệ thống tuân theo **Database-per-Service pattern**. Mỗi service có database riêng, giao tiếp qua gRPC/REST API.
+
+**Identity Service Database:**
+1. **Users \- Refresh\_Tokens (1 \- N):** Một User có nhiều Refresh Tokens.
+
+**User/Group Service Database:**
+2. **Groups \- User\_Groups (1 \- N):** Một Nhóm có nhiều thành viên (qua bảng nối User\_Groups).
+3. **User\_Groups references Users (via Identity Service gRPC):** User\_Groups.user\_id tham chiếu đến User trong Identity Service (không có FK constraint trong database, verify qua gRPC `VerifyUserExists()`).
+4. **Groups.lecturer\_id references Users (via Identity Service gRPC):** Lecturer ID tham chiếu đến User trong Identity Service với role LECTURER (verify qua gRPC `GetUserRole()`).
+
+**Project Config Service Database:**
+5. **Groups \- Project\_Configs (1 \- 1):** Một Nhóm có duy nhất một bộ cấu hình API (Groups.group\_id được reference từ Project Config Service, verify existence qua User/Group Service API).
+
+**Sync Service Database (Planned):**
+6. **Groups \- Jira\_Issues (1 \- N):** Một Nhóm có nhiều Task/Story trên Jira.
+7. **Groups \- Github\_Commits (1 \- N):** Một Nhóm có nhiều Commit mã nguồn.
+8. **Users \- Jira\_Issues (1 \- N):** Một Sinh viên được assign nhiều Task (verify user qua Identity Service gRPC).
+9. **Users \- Github\_Commits (1 \- N):** Một Sinh viên thực hiện nhiều Commit (verify user qua Identity Service gRPC).
+
+**Cross-Service Data Integrity:**
+- **No database-level foreign keys** across services
+- **Runtime validation** via gRPC/REST API calls
+- **Eventual consistency** for cross-service references
+- **Soft delete propagation:** Khi Identity Service soft delete user, các services khác check `deleted` flag qua gRPC  
      
    ---
 

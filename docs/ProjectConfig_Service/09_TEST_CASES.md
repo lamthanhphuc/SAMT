@@ -2823,6 +2823,785 @@ X-RateLimit-Reset: <timestamp>
 
 ---
 
+## 11. INTERNAL API - SERVICE AUTHENTICATION (09_SECURITY_MODEL.md)
+
+### TC-PC-101: Internal API - Get decrypted tokens with valid service key
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-101 |
+| **Tên Test Case** | Internal API - Get decrypted tokens successfully |
+| **Mô tả** | Sync Service lấy decrypted tokens với valid service key |
+| **Độ ưu tiên** | CRITICAL |
+| **Loại test** | Positive - Service Auth |
+
+**Điều kiện tiên quyết:**
+- Config C1 tồn tại
+- Sync Service có valid service key
+
+**Các bước thực hiện:**
+1. Gửi GET request đến `/internal/project-configs/{configId}/tokens`
+2. Header: `X-Service-Name: SYNC_SERVICE`
+3. Header: `X-Service-Key: <valid_sync_service_key>`
+
+**Kết quả mong đợi:**
+- HTTP Status: `200 OK`
+- Response:
+```json
+{
+  "configId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "groupId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "jiraHostUrl": "https://testproject.atlassian.net",
+  "jiraApiToken": "ATATT3xFfGF0T1234567890abcdefghijklmnop",
+  "githubRepoUrl": "https://github.com/testorg/testrepo",
+  "githubToken": "ghp_abc123xyz456def789ghi012jkl345mno678"
+}
+```
+- Tokens are **DECRYPTED** (not masked)
+- Audit log: Event `INTERNAL_ACCESS_SUCCESS` được ghi
+
+---
+
+### TC-PC-102: Internal API - Missing service headers
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-102 |
+| **Tên Test Case** | Internal API fails - Missing service authentication headers |
+| **Mô tả** | Request thiếu X-Service-Name hoặc X-Service-Key |
+| **Độ ưu tiên** | CRITICAL |
+| **Loại test** | Negative - Security |
+
+**Các bước thực hiện:**
+1. Gửi GET request đến `/internal/project-configs/{configId}/tokens`
+2. KHÔNG gửi headers `X-Service-Name` và `X-Service-Key`
+
+**Kết quả mong đợi:**
+- HTTP Status: `401 UNAUTHORIZED`
+- Response:
+```json
+{
+  "error": "PC-401-01",
+  "message": "Missing service authentication headers",
+  "timestamp": "2026-01-29T15:00:00Z",
+  "path": "/internal/project-configs/7c9e6679-7425-40de-944b-e07fc1f90ae7/tokens",
+  "requiredHeaders": ["X-Service-Name", "X-Service-Key"]
+}
+```
+- Audit log: Event `INTERNAL_AUTH_FAILED` được ghi
+
+---
+
+### TC-PC-103: Internal API - Invalid service key
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-103 |
+| **Tên Test Case** | Internal API fails - Invalid service key |
+| **Mô tả** | Service key không đúng |
+| **Độ ưu tiên** | CRITICAL |
+| **Loại test** | Negative - Security |
+
+**Các bước thực hiện:**
+1. Gửi GET request đến `/internal/project-configs/{configId}/tokens`
+2. Header: `X-Service-Name: SYNC_SERVICE`
+3. Header: `X-Service-Key: invalid_key_12345`
+
+**Kết quả mong đợi:**
+- HTTP Status: `401 UNAUTHORIZED`
+- Response:
+```json
+{
+  "error": "PC-401-02",
+  "message": "Invalid service key",
+  "timestamp": "2026-01-29T15:00:00Z",
+  "path": "/internal/project-configs/7c9e6679-7425-40de-944b-e07fc1f90ae7/tokens"
+}
+```
+- Audit log: Event `INTERNAL_AUTH_FAILED` với serviceName = SYNC_SERVICE
+
+---
+
+### TC-PC-104: Internal API - Unknown service name
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-104 |
+| **Tên Test Case** | Internal API fails - Unknown service name |
+| **Mô tả** | Service name không trong whitelist |
+| **Độ ưu tiên** | CRITICAL |
+| **Loại test** | Negative - Security |
+
+**Các bước thực hiện:**
+1. Gửi GET request đến `/internal/project-configs/{configId}/tokens`
+2. Header: `X-Service-Name: UNKNOWN_SERVICE`
+3. Header: `X-Service-Key: any_key`
+
+**Kết quả mong đợi:**
+- HTTP Status: `401 UNAUTHORIZED`
+- Response:
+```json
+{
+  "error": "PC-401-03",
+  "message": "Unknown service name",
+  "timestamp": "2026-01-29T15:00:00Z",
+  "path": "/internal/project-configs/7c9e6679-7425-40de-944b-e07fc1f90ae7/tokens"
+}
+```
+
+---
+
+### TC-PC-105: Internal API - Service lacks permission
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-105 |
+| **Tên Test Case** | Internal API fails - Service lacks READ_DECRYPTED_TOKENS permission |
+| **Mô tả** | Reporting Service (chỉ có READ_ONLY) cố access decrypted tokens |
+| **Độ ưu tiên** | CRITICAL |
+| **Loại test** | Negative - Authorization |
+
+**Các bước thực hiện:**
+1. Gửi GET request đến `/internal/project-configs/{configId}/tokens`
+2. Header: `X-Service-Name: REPORTING_SERVICE`
+3. Header: `X-Service-Key: <valid_reporting_service_key>`
+
+**Kết quả mong đợi:**
+- HTTP Status: `403 FORBIDDEN`
+- Response:
+```json
+{
+  "error": "PC-403-02",
+  "message": "Service does not have READ_DECRYPTED_TOKENS permission",
+  "timestamp": "2026-01-29T15:00:00Z",
+  "path": "/internal/project-configs/7c9e6679-7425-40de-944b-e07fc1f90ae7/tokens",
+  "details": {
+    "serviceName": "REPORTING_SERVICE",
+    "currentPermission": "READ_ONLY",
+    "requiredPermission": "READ_DECRYPTED_TOKENS"
+  }
+}
+```
+- Audit log: Event `INTERNAL_ACCESS_DENIED`
+
+---
+
+### TC-PC-106: Internal API - AI Service gets decrypted tokens
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-106 |
+| **Tên Test Case** | Internal API - AI Service gets decrypted tokens successfully |
+| **Mô tả** | AI Service (có READ_DECRYPTED_TOKENS) lấy tokens thành công |
+| **Độ ưu tiên** | HIGH |
+| **Loại test** | Positive - Service Auth |
+
+**Các bước thực hiện:**
+1. Gửi GET request đến `/internal/project-configs/{configId}/tokens`
+2. Header: `X-Service-Name: AI_SERVICE`
+3. Header: `X-Service-Key: <valid_ai_service_key>`
+
+**Kết quả mong đợi:**
+- HTTP Status: `200 OK`
+- Response chứa decrypted tokens
+- Audit log: `serviceName = AI_SERVICE`, `action = READ_DECRYPTED_TOKENS`
+
+---
+
+### TC-PC-107: Internal API - Reporting Service gets masked config (READ_ONLY)
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-107 |
+| **Tên Test Case** | Internal API - Reporting Service gets masked config |
+| **Mô tả** | Reporting Service (READ_ONLY permission) chỉ nhận masked tokens |
+| **Độ ưu tiên** | HIGH |
+| **Loại test** | Positive - Permission Model |
+
+**Các bước thực hiện:**
+1. Gửi GET request đến `/internal/project-configs/{configId}` (NOT /tokens endpoint)
+2. Header: `X-Service-Name: REPORTING_SERVICE`
+3. Header: `X-Service-Key: <valid_reporting_service_key>`
+
+**Kết quả mong đợi:**
+- HTTP Status: `200 OK`
+- Response:
+```json
+{
+  "configId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "groupId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "jiraHostUrl": "https://testproject.atlassian.net",
+  "jiraApiToken": "ATATT3x***...",
+  "githubRepoUrl": "https://github.com/testorg/testrepo",
+  "githubToken": "ghp_***...",
+  "createdAt": "2026-01-29T10:00:00Z"
+}
+```
+- Tokens are **MASKED** (not decrypted)
+- Audit log: `serviceName = REPORTING_SERVICE`, `action = READ_CONFIG`
+
+---
+
+### TC-PC-108: Internal API - Audit log records service access
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-108 |
+| **Tên Test Case** | Internal API - Audit log records service access details |
+| **Mô tả** | Mỗi internal API call được audit log với service context |
+| **Độ ưu tiên** | HIGH |
+| **Loại test** | Positive - Audit |
+
+**Điều kiện tiên quyết:**
+- Sync Service calls internal API
+
+**Các bước thực hiện:**
+1. Sync Service calls `/internal/project-configs/{configId}/tokens`
+2. Query audit_logs table
+
+**Kết quả mong đợi:**
+- Audit log entry:
+```json
+{
+  "eventId": "uuid",
+  "eventType": "INTERNAL_ACCESS_SUCCESS",
+  "serviceName": "SYNC_SERVICE",
+  "action": "READ_DECRYPTED_TOKENS",
+  "resourceType": "PROJECT_CONFIG",
+  "resourceId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "timestamp": "2026-01-29T15:30:00Z",
+  "sourceIp": "10.0.2.15",
+  "outcome": "SUCCESS"
+}
+```
+
+---
+
+## 12. TRANSACTION & CONSISTENCY TESTS (BR-PC-025 to BR-PC-031)
+
+### TC-PC-109: Create config - Transaction behavior (BR-PC-025)
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-109 |
+| **Tén Test Case** | Create config transaction - Config saved even if verify fails |
+| **Mô tả** | Config được lưu với state=DRAFT, verification fails KHÔNG rollback config |
+| **Độ ưu tiên** | CRITICAL |
+| **Loại test** | Positive - Transaction |
+
+**Điều kiện tiên quyết:**
+- User login với role TEAM_LEADER
+- Group G1 tồn tại
+- Jira/GitHub API mock sẵn sàng (will return error for verification)
+
+**Các bước thực hiện:**
+1. Gửi POST request tạo config với auto-verify enabled
+2. Config validation passes
+3. Config saved to database
+4. Async verification starts
+5. Jira API returns 401 Unauthorized (invalid token)
+6. Verification fails
+
+**Kết quả mong đợi:**
+- HTTP Status: `201 CREATED` (config creation succeeds)
+- Response:
+```json
+{
+  "configId": "...",
+  "state": "DRAFT",
+  "message": "Config created. Verification in progress..."
+}
+```
+- Database: Config tồn tại với `state = DRAFT`
+- After async verify: `state` updated to `INVALID`
+- User receives notification: "Config saved but verification failed"
+
+---
+
+### TC-PC-110: Verify failure does NOT rollback config (BR-PC-026)
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-110 |
+| **Tén Test Case** | Verify failure does NOT rollback config creation |
+| **Mô tả** | Verification là separate transaction, không ảnh hưởng config |
+| **Độ ưu tiên** | CRITICAL |
+| **Loại test** | Positive - Transaction Isolation |
+
+**Các bước thực hiện:**
+1. Create config (transaction commits)
+2. Async verification starts (separate transaction)
+3. Jira connection timeout
+4. Verification transaction rollback
+
+**Kết quả mong đợi:**
+- Config vẫn tồn tại trong database
+- Config `state = INVALID`
+- `invalid_reason = "Jira connection timeout"`
+- User có thể update tokens và re-verify sau
+
+---
+
+### TC-PC-111: Update partial - Re-verification trigger (BR-PC-027)
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-111 |
+| **Tén Test Case** | Update critical fields triggers re-verification |
+| **Mô tả** | Update jiraApiToken → state transitions VERIFIED → DRAFT |
+| **Độ ưu tiên** | HIGH |
+| **Loại test** | Positive - State Transition |
+
+**Điều kiện tiên quyết:**
+- Config C1 tồn tại với `state = VERIFIED`
+- `last_verified_at = 2026-01-29T10:00:00Z`
+
+**Các bước thực hiện:**
+1. User updates `jiraApiToken` (new token)
+2. System detects critical field changed
+
+**Kết quả mong đợi:**
+- HTTP Status: `200 OK`
+- Config `state` transitions from `VERIFIED` → `DRAFT`
+- `last_verified_at` cleared (set to NULL)
+- Response includes warning: "Config requires re-verification"
+- Audit log: `action = CONFIG_UPDATED_REQUIRES_REVERIFY`
+
+---
+
+### TC-PC-112: Update non-critical field - State remains VERIFIED
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-112 |
+| **Tén Test Case** | Update non-critical field does NOT trigger re-verification |
+| **Mô tả** | Update metadata (không phải tokens/URLs) không đổi state |
+| **Độ ưu tiên** | MEDIUM |
+| **Loại test** | Positive - State Preservation |
+
+**Điều kiện tiên quyết:**
+- Config C1 tồn tại với `state = VERIFIED`
+
+**Các bước thực hiện:**
+1. User updates non-critical field (nếu có, ví dụ: description, alias)
+2. System detects NO critical field changed
+
+**Kết quả mong đợi:**
+- HTTP Status: `200 OK`
+- Config `state` remains `VERIFIED`
+- `last_verified_at` giữ nguyên
+- No re-verification required
+
+---
+
+### TC-PC-113: Transaction rollback on critical errors (BR-PC-028)
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-113 |
+| **Tén Test Case** | Transaction rollback on encryption service failure |
+| **Mô tả** | Encryption service down → transaction rollback, config không được tạo |
+| **Độ ưu tiên** | CRITICAL |
+| **Loại test** | Negative - Transaction Rollback |
+
+**Các bước thực hiện:**
+1. Mock encryption service to throw `EncryptionException`
+2. Gửi POST request tạo config
+
+**Kết quả mong đợi:**
+- HTTP Status: `422 UNPROCESSABLE_ENTITY` hoặc `500 INTERNAL_SERVER_ERROR`
+- Response:
+```json
+{
+  "error": "PC-422-01",
+  "message": "Token encryption failed",
+  "timestamp": "2026-01-29T15:00:00Z"
+}
+```
+- Database: NO config record created (transaction rolled back)
+- User phải retry sau khi encryption service recovered
+
+---
+
+### TC-PC-114: Transaction rollback on database constraint violation
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-114 |
+| **Tén Test Case** | Transaction rollback on UNIQUE constraint violation |
+| **Mô tả** | Config already exists → rollback, HTTP 409 |
+| **Độ ưu tiên** | HIGH |
+| **Loại test** | Negative - Transaction Rollback |
+
+**Các bước thực hiện:**
+1. Group G1 đã có config C1
+2. User cố tạo config thứ 2 cho group G1
+
+**Kết quả mong đợi:**
+- HTTP Status: `409 CONFLICT`
+- Response:
+```json
+{
+  "error": "PC-409-01",
+  "message": "Config already exists for group",
+  "timestamp": "2026-01-29T15:00:00Z",
+  "details": {
+    "groupId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "existingConfigId": "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+  }
+}
+```
+- Database: Transaction rolled back, no duplicate config
+
+---
+
+### TC-PC-115: Atomic encryption operations (BR-PC-030)
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-115 |
+| **Tén Test Case** | Atomic encryption - Both tokens encrypted or none |
+| **Mô tả** | Nếu 1 token encryption fails, cả 2 không được lưu |
+| **Độ ưu tiên** | HIGH |
+| **Loại test** | Negative - Atomicity |
+
+**Các bước thực hiện:**
+1. Mock encryption service:
+   - Jira token encryption: SUCCESS
+   - GitHub token encryption: FAILURE (throw exception)
+2. Gửi POST request tạo config
+
+**Kết quả mong đợi:**
+- HTTP Status: `422 UNPROCESSABLE_ENTITY`
+- Response: "Token encryption failed"
+- Database: NO config created
+- **Atomicity:** Cả 2 tokens phải succeed hoặc cả 2 fail
+
+---
+
+## 13. STATE MACHINE TESTS (10_CONFIG_STATE_MACHINE.md)
+
+### TC-PC-116: State machine - DRAFT → VERIFIED (verify success)
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-116 |
+| **Tén Test Case** | State transition DRAFT → VERIFIED on verify success |
+| **Mô tả** | Verify thành công → state chuyển từ DRAFT sang VERIFIED |
+| **Độ ưu tiên** | HIGH |
+| **Loại test** | Positive - State Transition |
+
+**Điều kiện tiên quyết:**
+- Config C1 tồn tại với `state = DRAFT`
+
+**Các bước thực hiện:**
+1. Call verify endpoint: `POST /api/project-configs/{configId}/verify`
+2. Jira connection: SUCCESS
+3. GitHub connection: SUCCESS
+
+**Kết quả mong đợi:**
+- HTTP Status: `200 OK`
+- Response: `overallStatus = SUCCESS`
+- Database: Config `state` updated to `VERIFIED`
+- `last_verified_at` set to NOW()
+- Audit log: State transition DRAFT → VERIFIED
+
+---
+
+### TC-PC-117: State machine - DRAFT → INVALID (verify failed)
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-117 |
+| **Tén Test Case** | State transition DRAFT → INVALID on verify failure |
+| **Mô tả** | Verify thất bại → state chuyển từ DRAFT sang INVALID |
+| **Độ ưu tiên** | HIGH |
+| **Loại test** | Positive - State Transition |
+
+**Điều kiện tiên quyết:**
+- Config C1 tồn tại với `state = DRAFT`
+
+**Các bước thực hiện:**
+1. Call verify endpoint
+2. Jira connection: FAILED (401 Unauthorized)
+
+**Kết quả mong đợi:**
+- HTTP Status: `200 OK`
+- Response: `overallStatus = FAILED`
+- Database: Config `state` updated to `INVALID`
+- `invalid_reason = "Jira authentication failed"`
+- Audit log: State transition DRAFT → INVALID
+
+---
+
+### TC-PC-118: State machine - VERIFIED → DRAFT (update tokens)
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-118 |
+| **Tén Test Case** | State transition VERIFIED → DRAFT on token update |
+| **Mô tả** | Update tokens → state reset về DRAFT, cần re-verify |
+| **Độ ưu tiên** | HIGH |
+| **Loại test** | Positive - State Transition |
+
+**Điều kiện tiên quyết:**
+- Config C1 tồn tại với `state = VERIFIED`
+
+**Các bước thực hiện:**
+1. Update `githubToken` (new value)
+
+**Kết quả mong đợi:**
+- Config `state` transitions from `VERIFIED` → `DRAFT`
+- `last_verified_at` cleared
+- User must re-verify to return to VERIFIED
+
+---
+
+### TC-PC-119: State machine - VERIFIED → INVALID (external event)
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-119 |
+| **Tén Test Case** | State transition VERIFIED → INVALID by periodic check |
+| **Mô tả** | Background job detect token revoked → auto transition to INVALID |
+| **Độ ưu tiên** | MEDIUM |
+| **Loại test** | Positive - Background Job |
+
+**Điều kiện tiên quyết:**
+- Config C1 tồn tại với `state = VERIFIED`
+- Periodic verification job running (mocked)
+
+**Các bước thực hiện:**
+1. Background job runs (every 4 hours)
+2. Re-verify all VERIFIED configs
+3. Jira connection for C1: FAILED (token revoked)
+
+**Kết quả mong đợi:**
+- Config `state` transitions from `VERIFIED` → `INVALID`
+- `invalid_reason = "Token revoked or expired"`
+- Notification sent to team leader
+- Audit log: `action = CONFIG_INVALIDATED`, `actorId = NULL` (system)
+
+---
+
+### TC-PC-120: State machine - ANY → DELETED (soft delete)
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-120 |
+| **Tén Test Case** | State transition ANY → DELETED on soft delete |
+| **Mô tả** | Bất kỳ state nào cũng có thể transition sang DELETED |
+| **Độ ưu tiên** | HIGH |
+| **Loại test** | Positive - State Transition |
+
+**Test Scenarios:**
+
+| From State | To State | Expected Result |
+|------------|----------|-----------------|
+| DRAFT | DELETED | ✅ SUCCESS |
+| VERIFIED | DELETED | ✅ SUCCESS |
+| INVALID | DELETED | ✅ SUCCESS |
+
+**Kết quả mong đợi:**
+- Config `state = DELETED`
+- `deleted_at` and `deleted_by` set
+- Config excluded from queries
+
+---
+
+### TC-PC-121: State machine - DELETED → DRAFT (restore)
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-121 |
+| **Tén Test Case** | State transition DELETED → DRAFT on restore |
+| **Mô tả** | Restore deleted config → state = DRAFT, cần re-verify |
+| **Độ ưu tiên** | MEDIUM |
+| **Loại test** | Positive - State Transition |
+
+**Điều kiện tiên quyết:**
+- Config C1 đã bị soft delete (state = DELETED)
+- Deleted within 30 days
+
+**Các bước thực hiện:**
+1. Call restore endpoint: `POST /api/project-configs/{configId}/restore`
+
+**Kết quả mong đợi:**
+- Config `state` transitions from `DELETED` → `DRAFT`
+- `deleted_at` and `deleted_by` cleared
+- `last_verified_at` cleared (must re-verify)
+- Config visible again in queries
+
+---
+
+### TC-PC-122: State machine - Invalid transition (DELETED → VERIFIED)
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-122 |
+| **Tén Test Case** | Invalid state transition DELETED → VERIFIED throws error |
+| **Mô tả** | Direct transition DELETED → VERIFIED không hợp lệ |
+| **Độ ưu tiên** | MEDIUM |
+| **Loại test** | Negative - State Machine Validation |
+
+**Các bước thực hiện:**
+1. Config C1 có state = DELETED
+2. Attempt direct state change to VERIFIED (bypass restore logic)
+
+**Kết quả mong đợi:**
+- HTTP Status: `422 UNPROCESSABLE_ENTITY`
+- Response:
+```json
+{
+  "error": "PC-422-03",
+  "message": "Invalid state transition",
+  "timestamp": "2026-01-29T15:00:00Z",
+  "details": {
+    "fromState": "DELETED",
+    "toState": "VERIFIED",
+    "validTransitions": ["DRAFT"]
+  }
+}
+```
+- **Rule:** Must restore to DRAFT first, then verify to reach VERIFIED
+
+---
+
+### TC-PC-123: State machine - Config state affects sync eligibility
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-123 |
+| **Tén Test Case** | Sync Service validates config state before using |
+| **Mô tả** | Sync Service chỉ sử dụng config VERIFIED, reject INVALID/DELETED |
+| **Độ ưu tiên** | HIGH |
+| **Loại test** | Positive - Business Rule |
+
+**Test Matrix:**
+
+| Config State | Sync Allowed? | Response |
+|--------------|---------------|----------|
+| DRAFT | ⚠️ YES (with warning) | "Config not verified - sync may fail" |
+| VERIFIED | ✅ YES | Full access |
+| INVALID | ❌ NO | "Config is invalid - cannot use for sync" |
+| DELETED | ❌ NO | "Config is deleted" |
+
+**Kết quả mong đợi:**
+- Sync Service queries state before proceeding
+- INVALID configs rejected with clear error message
+
+---
+
+## 14. ERROR CODE TESTS (06_VALIDATION_EXCEPTIONS.md)
+
+### TC-PC-124: Error code - PC-403-01 (User not leader)
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-124 |
+| **Tén Test Case** | Error code PC-403-01 - User is not leader of group |
+| **Mô tả** | Verify error code returned when authorization fails |
+| **Độ ưu tiên** | HIGH |
+| **Loại test** | Negative - Error Code Mapping |
+
+**Các bước thực hiện:**
+1. STUDENT user cố tạo config
+
+**Kết quả mong đợi:**
+- HTTP Status: `403 FORBIDDEN`
+- Response `error` field: `"PC-403-01"`
+- Response `message`: `"User is not leader of group"`
+
+---
+
+### TC-PC-125: Error code - PC-409-01 (Config already exists)
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-125 |
+| **Tén Test Case** | Error code PC-409-01 - Config already exists for group |
+| **Mô tả** | Verify error code for duplicate config |
+| **Độ ưu tiên** | HIGH |
+| **Loại test** | Negative - Error Code Mapping |
+
+**Các bước thực hiện:**
+1. Group G1 đã có config
+2. Cố tạo config thứ 2 cho G1
+
+**Kết quả mong đợi:**
+- HTTP Status: `409 CONFLICT`
+- Response `error`: `"PC-409-01"`
+- Response `message`: `"Config already exists for group"`
+- Response includes `existingConfigId`
+
+---
+
+### TC-PC-126: Error code - PC-422-02 (Decryption failed)
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-126 |
+| **Tén Test Case** | Error code PC-422-02 - Token decryption failed |
+| **Mô tả** | Verify error code when decryption fails (key mismatch) |
+| **Độ ưu tiên** | HIGH |
+| **Loại test** | Negative - Error Code Mapping |
+
+**Các bước thực hiện:**
+1. Config C1 tồn tại (encrypted với key A)
+2. Encryption service key changed to key B
+3. Attempt decrypt tokens
+
+**Kết quả mong đợi:**
+- HTTP Status: `422 UNPROCESSABLE_ENTITY`
+- Response `error`: `"PC-422-02"`
+- Response `message`: `"Token decryption failed"`
+- Response `details.reason`: `"Encryption key mismatch or data corrupted"`
+
+---
+
+### TC-PC-127: Error code - PC-401-01 (Missing service headers)
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-127 |
+| **Tén Test Case** | Error code PC-401-01 - Missing service authentication headers |
+| **Mô tả** | Internal API without headers returns PC-401-01 |
+| **Độ ưu tiên** | CRITICAL |
+| **Loại test** | Negative - Error Code Mapping |
+
+**Các bước thực hiện:**
+1. Call internal endpoint without X-Service-Name, X-Service-Key
+
+**Kết quả mong đợi:**
+- HTTP Status: `401 UNAUTHORIZED`
+- Response `error`: `"PC-401-01"`
+- Response `message`: `"Missing service authentication headers"`
+- Response includes `requiredHeaders` array
+
+---
+
+### TC-PC-128: Error code - PC-404-02 (Config not found for group)
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-PC-128 |
+| **Tén Test Case** | Error code PC-404-02 - Config not found for group |
+| **Mô tả** | Get config by group ID when group has no config |
+| **Độ ưu tiên** | HIGH |
+| **Loại test** | Negative - Error Code Mapping |
+
+**Các bước thực hiện:**
+1. Group G3 tồn tại nhưng chưa có config
+2. GET `/api/project-configs/group/{groupId}`
+
+**Kết quả mong đợi:**
+- HTTP Status: `404 NOT_FOUND`
+- Response `error`: `"PC-404-02"`
+- Response `message`: `"Config not found for group"`
+- Response includes `groupId`
+
+---
+
 ## Summary
 
 ### Test Coverage by Category
@@ -2840,7 +3619,11 @@ X-RateLimit-Reset: <timestamp>
 | Security | TC-PC-064 to TC-PC-073 | 10 tests |
 | Validation | TC-PC-074 to TC-PC-088 | 15 tests |
 | Business Rules | TC-PC-089 to TC-PC-100 | 12 tests |
-| **TOTAL** | | **100 tests** |
+| **Internal API - Service Auth** | **TC-PC-101 to TC-PC-108** | **8 tests** |
+| **Transaction & Consistency** | **TC-PC-109 to TC-PC-115** | **7 tests** |
+| **State Machine** | **TC-PC-116 to TC-PC-123** | **8 tests** |
+| **Error Code Mapping** | **TC-PC-124 to TC-PC-128** | **5 tests** |
+| **TOTAL** | | **128 tests** |
 
 ### Priority Breakdown
 
