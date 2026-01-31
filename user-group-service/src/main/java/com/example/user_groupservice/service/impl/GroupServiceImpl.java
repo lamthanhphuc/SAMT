@@ -278,14 +278,18 @@ public class GroupServiceImpl implements GroupService {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> ResourceNotFoundException.groupNotFound(groupId));
         
-        // Soft delete the group
+        // Business Rule: Prevent deletion if group has members
+        // This follows "least surprise" principle and prevents accidental data loss
+        long memberCount = userGroupRepository.countAllMembersByGroupId(groupId);
+        if (memberCount > 0) {
+            log.warn("Cannot delete group {} - has {} members", groupId, memberCount);
+            throw new ConflictException("CANNOT_DELETE_GROUP_WITH_MEMBERS",
+                    "Group has " + memberCount + " members. Remove all members first.");
+        }
+        
+        // Soft delete the group (only if empty)
         group.softDelete();
         groupRepository.save(group);
-        
-        // Also soft delete all memberships
-        List<UserGroup> memberships = userGroupRepository.findAllByGroupId(groupId);
-        memberships.forEach(UserGroup::softDelete);
-        userGroupRepository.saveAll(memberships);
         
         log.info("Group deleted successfully: groupId={}", groupId);
     }

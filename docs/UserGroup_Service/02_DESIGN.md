@@ -353,57 +353,61 @@ public Group createGroup(CreateGroupRequest request) {
 }
 ```
 
-#### Delete Group - Cascade Soft Delete Behavior
+#### Delete Group - Business Rule (IMPLEMENTED)
 
-**Current Implementation:**
+**Current Implementation:** ✅ **PREVENT DELETE IF HAS MEMBERS**
 
-When ADMIN deletes a group, system performs cascade soft delete:
+When ADMIN attempts to delete a group, system validates members first:
 
 ```java
 @Transactional
 public void deleteGroup(UUID groupId) {
-    // 1. Soft delete group
-    group.softDelete(); // Sets deleted_at = NOW()
-    groupRepository.save(group);
+    Group group = groupRepository.findById(groupId)
+        .orElseThrow(() -> ResourceNotFoundException.groupNotFound(groupId));
     
-    // 2. Cascade soft delete all memberships
-    List<UserGroup> memberships = userGroupRepository.findAllByGroupId(groupId);
-    memberships.forEach(UserGroup::softDelete);
-    userGroupRepository.saveAll(memberships);
+    // Business Rule: Prevent deletion if group has members
+    long memberCount = userGroupRepository.countAllMembersByGroupId(groupId);
+    if (memberCount > 0) {
+        throw new ConflictException("CANNOT_DELETE_GROUP_WITH_MEMBERS",
+                "Group has " + memberCount + " members. Remove all members first.");
+    }
+    
+    // Soft delete the group (only if empty)
+    group.softDelete();
+    groupRepository.save(group);
 }
 ```
 
-**Business Rule (Current):**
-- Delete group ALLOWED regardless of member count
-- All memberships automatically soft deleted (cascade)
-- No orphaned memberships remain
+**Business Rule:**
+- ❌ Delete group PREVENTED if has any members (LEADER or MEMBER)
+- ✅ Delete group ALLOWED only if empty (0 members)
+- ⚠️ Admin must explicitly remove all members first
 
 **Behavior:**
-- Group with 0 members → Soft delete group
-- Group with N members → Soft delete group + all N memberships
-- Students see group as "deleted" in their group list
-- Historical data preserved (soft delete, not hard delete)
+- Group with 0 members → 200 SUCCESS (soft delete)
+- Group with 1+ members → 409 CANNOT_DELETE_GROUP_WITH_MEMBERS
 
-**Recommendation (Optional - Requires Business Decision):**
-
-Consider preventing delete if group has active members:
-
-```java
-long memberCount = userGroupRepository.countAllMembersByGroupId(groupId);
-if (memberCount > 0) {
-    throw new ConflictException("CANNOT_DELETE_GROUP_WITH_MEMBERS", 
-            "Group has " + memberCount + " members. Remove all members first.");
+**Error Response:**
+```json
+{
+  "code": "CANNOT_DELETE_GROUP_WITH_MEMBERS",
+  "message": "Group has 5 members. Remove all members first.",
+  "timestamp": "2026-01-31T10:00:00Z"
 }
 ```
 
-**Rationale:** 
-- Prevents accidental data loss
-- Follows "least surprise" principle
-- Requires explicit member removal first
+**Rationale:**
+- ✅ Prevents accidental data loss
+- ✅ Follows "least surprise" principle
+- ✅ Requires explicit member removal (intentional workflow)
+- ✅ Safer for production use
 
-**Decision Needed:** Consult with product owner on preferred behavior.
-
-**Current Status:** Cascade delete implemented and working correctly.
+**Workflow:**
+1. Admin wants to delete group
+2. System checks member count
+3. If has members → 409 CONFLICT
+4. Admin removes all members one by one
+5. Admin deletes empty group → 200 SUCCESS
 
 **UC24: Add User to Group (verify student exists)**
 

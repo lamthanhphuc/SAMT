@@ -332,13 +332,18 @@ try {
 **Endpoint:** `DELETE /api/groups/{groupId}`  
 **Security:** JWT (ADMIN)
 
+> **Business Rule:** Group must be empty (0 members) before deletion. If group has any members (LEADER or MEMBER), request fails with 409 CONFLICT. Admin must explicitly remove all members first.
+
 #### Response
 
 **Status:** `204 NO_CONTENT`
 
 #### Error Codes
 
-- `404 GROUP_NOT_FOUND`
+- `404 GROUP_NOT_FOUND` - Group doesn't exist
+- `409 CANNOT_DELETE_GROUP_WITH_MEMBERS` - Group has members (must remove all first)
+- `401 UNAUTHORIZED` - Not authenticated
+- `403 FORBIDDEN` - Not ADMIN
 
 ---
 

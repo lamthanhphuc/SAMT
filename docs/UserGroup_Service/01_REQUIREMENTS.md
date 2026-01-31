@@ -447,43 +447,40 @@ log.info("UC27 - LECTURER_UPDATED: groupId={}, oldLecturer={}, newLecturer={}, a
 
 **Behavior:**
 
-System performs cascade soft delete:
-1. Soft delete group (set deleted_at)
-2. Soft delete all memberships in group (cascade)
+System validates group is empty before deletion:
+1. Check member count (including LEADER)
+2. If has members → 409 CONFLICT
+3. If empty → Soft delete group (set deleted_at)
 
-**Business Rule:**
-- Allowed regardless of member count
-- All members automatically soft deleted
-- Historical data preserved (soft delete)
+**Business Rule:** ✅ **PREVENT DELETE IF HAS MEMBERS**
+- ❌ Delete PREVENTED if group has any members (LEADER or MEMBER)
+- ✅ Delete ALLOWED only if group is empty (0 members)
+- ⚠️ Admin must remove all members first (intentional workflow)
 
 **Examples:**
 
 | Group State | Delete Operation | Result |
 |-------------|------------------|--------|
-| Empty group | Delete | Group + 0 memberships soft deleted |
-| Group with 5 members | Delete | Group + 5 memberships soft deleted |
+| Empty group (0 members) | Delete | 204 SUCCESS (soft delete) |
+| Group with 1 LEADER | Delete | 409 CANNOT_DELETE_GROUP_WITH_MEMBERS |
+| Group with 5 members | Delete | 409 CANNOT_DELETE_GROUP_WITH_MEMBERS |
 
-**Note:** Students will see group as deleted in their group list. No orphaned memberships remain.
+**Required Workflow:**
+1. Admin removes all members from group (UC26)
+2. Group becomes empty
+3. Admin deletes empty group → SUCCESS
 
-**Alternative Approach (Not Implemented):**
-
-Some systems prevent delete if group has members:
-```java
-if (memberCount > 0) {
-    throw CANNOT_DELETE_GROUP_WITH_MEMBERS;
-}
-```
-
-**Current Decision:** Allow cascade delete for operational flexibility.
-
-**Trade-offs:**
-- ✅ Easier for admins (one operation vs. remove all members first)
-- ⚠️ Risk of accidental deletion (mitigated by soft delete)
+**Rationale:**
+- Prevents accidental data loss
+- Follows "least surprise" principle
+- Requires explicit member removal (intentional action)
+- Safer for production environment
 
 **Error Codes:**
-- `404 GROUP_NOT_FOUND`
-- `401 UNAUTHORIZED`
-- `403 FORBIDDEN` (not ADMIN)
+- `404 GROUP_NOT_FOUND` - Group doesn't exist
+- `409 CANNOT_DELETE_GROUP_WITH_MEMBERS` - Group has active members
+- `401 UNAUTHORIZED` - Not authenticated
+- `403 FORBIDDEN` - Not ADMIN role
 
 ---
 

@@ -12,7 +12,7 @@
 | List Groups | 5 | MEDIUM |
 | Update Group | 6 | HIGH |
 | Delete Group | 5 | MEDIUM |
-| Add Member to Group (UC24) | 10 | HIGH |
+| Add Member to Group (UC24) | 11 | HIGH |
 | Assign Group Role (UC25) | 8 | CRITICAL |
 | Remove Member (UC26) | 6 | HIGH |
 | Get Group Members | 4 | MEDIUM |
@@ -20,7 +20,7 @@
 | Authorization & Security | 12 | CRITICAL |
 | Validation Rules | 15 | HIGH |
 | Soft Delete | 8 | HIGH |
-| **TOTAL** | **116** | - |
+| **TOTAL** | **117** | - |
 
 ---
 
@@ -1333,19 +1333,20 @@ userId: 3fa85f64-5717-4562-b3fc-2c963f66afa6
 
 ## 8. DELETE GROUP
 
-### TC-UG-044: Delete group thành công - Soft delete
+### TC-UG-044: Delete group thành công - Soft delete empty group
 
 | Field | Value |
 |-------|-------|
 | **Test Case ID** | TC-UG-044 |
-| **Tên Test Case** | Delete group successfully - Soft delete |
-| **Mô tả** | ADMIN soft delete group |
+| **Tên Test Case** | Delete empty group successfully - Soft delete |
+| **Mô tả** | ADMIN soft delete group KHÔNG CÓ members |
 | **Độ ưu tiên** | MEDIUM |
 | **Loại test** | Positive - Happy Path |
 
 **Điều kiện tiên quyết:**
 - User login với role ADMIN
 - Group G1 tồn tại
+- Group G1 KHÔNG CÓ members (member count = 0)
 
 **Các bước thực hiện:**
 1. Gửi DELETE request đến `/api/groups/{groupId}`
@@ -1399,30 +1400,35 @@ userId: 3fa85f64-5717-4562-b3fc-2c963f66afa6
 
 ---
 
-### TC-UG-047: Delete group cascade với members
+### TC-UG-047: Delete group thất bại - Group has members
 
 | Field | Value |
 |-------|-------|
 | **Test Case ID** | TC-UG-047 |
-| **Tên Test Case** | Delete group cascades to members |
-| **Mô tả** | Xóa group cũng soft delete các members (user_groups records) |
+| **Tên Test Case** | Delete group fails - Group has members |
+| **Mô tả** | Không thể xóa group khi còn members (phải remove all members trước) |
 | **Độ ưu tiên** | HIGH |
-| **Loại test** | Positive - Cascade Delete |
+| **Loại test** | Negative - Business Rule |
 
 **Điều kiện tiên quyết:**
 - Group G1 tồn tại với 5 members
 - Admin login
 
 **Các bước thực hiện:**
-1. Delete group G1
-2. Query `user_groups` table
+1. Gửi DELETE request đến `/api/groups/{groupId}`
+2. groupId = G1 (có 5 members)
 
 **Kết quả mong đợi:**
-- HTTP Status: `204 NO_CONTENT`
-- Database: 
-  - `groups.deleted_at` được set
-  - Tất cả 5 records trong `user_groups` có `deleted_at` được set
-  - Không hard delete bất kỳ record nào
+- HTTP Status: `409 CONFLICT`
+- Response:
+```json
+{
+  "code": "CANNOT_DELETE_GROUP_WITH_MEMBERS",
+  "message": "Group has 5 members. Remove all members first.",
+  "timestamp": "2026-01-29T10:00:00Z"
+}
+```
+- Database: Group G1 và members KHÔNG bị xóa
 
 ---
 
@@ -1765,6 +1771,58 @@ userId: 3fa85f64-5717-4562-b3fc-2c963f66afa6
 **Kết quả mong đợi:**
 - HTTP Status: `403 FORBIDDEN`
 - Response: "Only admins can add members to groups"
+
+---
+
+### TC-UG-058b: Add member thất bại - Race condition prevented by database trigger
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-UG-058b |
+| **Tên Test Case** | Add member fails - Concurrent add to different groups same semester (DB trigger) |
+| **Mô tả** | Database trigger ngăn race condition khi 2 requests concurrent add cùng user vào 2 groups khác nhau cùng semester |
+| **Độ ưu tiên** | CRITICAL |
+| **Loại test** | Negative - Concurrency / Database Constraint |
+
+**Điều kiện tiên quyết:**
+- Group G1 tồn tại trong semester "Spring2026"
+- Group G2 tồn tại trong semester "Spring2026"
+- User U1 CHƯA thuộc group nào trong semester "Spring2026"
+- Admin login
+
+**Các bước thực hiện (concurrent):**
+1. Thread 1: POST `/api/groups/{G1}/members` với userId = U1
+2. Thread 2: POST `/api/groups/{G2}/members` với userId = U1 (cùng lúc)
+3. Cả 2 requests pass application-level check (vì query chưa thấy record)
+4. Database trigger `check_user_semester_uniqueness()` chạy trước khi INSERT
+5. Request thứ 2 đến database bị trigger reject
+
+**Dữ liệu test:**
+```json
+{
+  "userId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "isLeader": false
+}
+```
+
+**Kết quả mong đợi:**
+- Request 1: HTTP Status `201 CREATED` (thành công)
+- Request 2: HTTP Status `409 CONFLICT`
+- Response (Request 2):
+```json
+{
+  "code": "USER_ALREADY_IN_GROUP_SAME_SEMESTER",
+  "message": "User already in a group for semester Spring2026",
+  "timestamp": "2026-01-29T10:00:00Z"
+}
+```
+- Database: Chỉ có 1 record được insert (user U1 trong group G1)
+- PostgreSQL error 23505 (unique_violation) được catch và map thành 409 CONFLICT
+
+**Ghi chú:**
+- Test case này kiểm tra defense-in-depth: application check + database trigger
+- Database trigger là lớp bảo vệ cuối cùng chống race condition
+- Production-ready: trigger đảm bảo BR-UG-009 không thể bị vi phạm
 
 ---
 
