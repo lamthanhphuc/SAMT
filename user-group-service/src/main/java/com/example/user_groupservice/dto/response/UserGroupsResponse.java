@@ -17,7 +17,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class UserGroupsResponse {
     
-    private UUID userId;
+    private Long userId;
     private List<GroupInfo> groups;
     
     @Data

@@ -27,7 +27,7 @@ public class GroupMembersResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class MemberInfo {
-        private UUID userId;
+        private Long userId;
         private String fullName;
         private String email;
         private String role;

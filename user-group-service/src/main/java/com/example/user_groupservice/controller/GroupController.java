@@ -72,7 +72,7 @@ public class GroupController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String semester,
-            @RequestParam(required = false) UUID lecturerId) {
+            @RequestParam(required = false) Long lecturerId) {
         
         PageResponse<GroupListResponse> response = groupService.listGroups(
                 page, size, semester, lecturerId);
@@ -138,7 +138,7 @@ public class GroupController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<MemberResponse> assignRole(
             @PathVariable UUID groupId,
-            @PathVariable UUID userId,
+            @PathVariable Long userId,
             @Valid @RequestBody AssignRoleRequest request) {
         
         MemberResponse response = memberService.assignRole(groupId, userId, request);
@@ -152,7 +152,7 @@ public class GroupController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> removeMember(
             @PathVariable UUID groupId,
-            @PathVariable UUID userId) {
+            @PathVariable Long userId) {
         
         memberService.removeMember(groupId, userId);
         return ResponseEntity.noContent().build();

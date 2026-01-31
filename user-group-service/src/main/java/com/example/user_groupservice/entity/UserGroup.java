@@ -11,7 +11,7 @@ import java.util.UUID;
  * UserGroup entity representing the many-to-many relationship
  * between users and groups, including the group role (LEADER/MEMBER).
  * 
- * Uses pure UUID references (NO FK constraints) for cross-service data integrity.
+ * Uses Long userId (references Identity Service) and UUID groupId (local).
  * User validation via gRPC to Identity Service.
  * 
  * Business rules:
@@ -32,7 +32,7 @@ public class UserGroup {
     
     @Id
     @Column(name = "user_id", nullable = false)
-    private UUID userId;
+    private Long userId;
     
     @Id
     @Column(name = "group_id", nullable = false)

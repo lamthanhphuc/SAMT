@@ -115,7 +115,7 @@ public class GroupServiceImpl implements GroupService {
         List<UserGroup> memberships = userGroupRepository.findAllByGroupId(groupId);
         
         // Batch fetch user info from Identity Service (avoid N+1 calls)
-        List<UUID> userIds = memberships.stream()
+        List<Long> userIds = memberships.stream()
                 .map(UserGroup::getUserId)
                 .toList();
         
@@ -125,7 +125,7 @@ public class GroupServiceImpl implements GroupService {
         List<GroupDetailResponse.MemberInfo> members = memberships.stream()
                 .map(ug -> {
                     GetUserResponse userInfo = usersResponse.getUsersList().stream()
-                            .filter(u -> u.getUserId().equals(ug.getUserId().toString()))
+                            .filter(u -> Long.parseLong(u.getUserId()) == ug.getUserId())
                             .findFirst()
                             .orElse(null);
                     
@@ -157,7 +157,7 @@ public class GroupServiceImpl implements GroupService {
     
     @Override
     public PageResponse<GroupListResponse> listGroups(int page, int size,
-                                                      String semester, UUID lecturerId) {
+                                                      String semester, Long lecturerId) {
         log.info("Listing groups: page={}, size={}, semester={}, lecturerId={}", 
                 page, size, semester, lecturerId);
         
@@ -167,7 +167,7 @@ public class GroupServiceImpl implements GroupService {
         Page<Group> groupPage = groupRepository.findByFilters(semester, lecturerId, pageRequest);
         
         // Batch fetch all lecturer info
-        List<UUID> lecturerIds = groupPage.getContent().stream()
+        List<Long> lecturerIds = groupPage.getContent().stream()
                 .map(Group::getLecturerId)
                 .distinct()
                 .toList();
@@ -186,7 +186,7 @@ public class GroupServiceImpl implements GroupService {
                     long memberCount = userGroupRepository.countAllMembersByGroupId(group.getId());
                     
                     GetUserResponse lecturer = lecturersResponse.getUsersList().stream()
-                            .filter(u -> u.getUserId().equals(group.getLecturerId().toString()))
+                            .filter(u -> Long.parseLong(u.getUserId()) == group.getLecturerId())
                             .findFirst()
                             .orElse(null);
                     
@@ -304,7 +304,7 @@ public class GroupServiceImpl implements GroupService {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> ResourceNotFoundException.groupNotFound(groupId));
         
-        UUID oldLecturerId = group.getLecturerId();
+        Long oldLecturerId = group.getLecturerId();
         
         // 2. Validate new lecturer via gRPC
         try {

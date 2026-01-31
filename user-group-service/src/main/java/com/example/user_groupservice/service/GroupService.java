@@ -44,7 +44,7 @@ public interface GroupService {
      * @return Paginated list of groups
      */
     PageResponse<GroupListResponse> listGroups(int page, int size, 
-                                               String semester, UUID lecturerId);
+                                               String semester, Long lecturerId);
     
     /**
      * Update a group.

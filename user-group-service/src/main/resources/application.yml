@@ -5,8 +5,8 @@
 server:
   port: ${SERVER_PORT:8082}
   shutdown: graceful
-  servlet:
-    context-path: /api
+  # servlet:
+  #   context-path: /api
 
 spring:
   application:
@@ -51,13 +51,13 @@ spring:
 
 # JWT Configuration - MUST match identity-service
 jwt:
-  secret: ${JWT_SECRET:dGhpcy1pcy1hLXZlcnktbG9uZy1zZWNyZXQta2V5LWZvci1qd3QtdG9rZW4tc2lnbmluZy1hdC1sZWFzdC0yNTYtYml0cw==}
+  secret: ${JWT_SECRET:samt-super-secret-key-for-jwt-hs256-algorithm-minimum-32-chars}
 
 # gRPC Configuration - Identity Service Integration
 grpc:
   identity-service:
     host: ${IDENTITY_SERVICE_GRPC_HOST:localhost}
-    port: ${IDENTITY_SERVICE_GRPC_PORT:9090}
+    port: ${IDENTITY_SERVICE_GRPC_PORT:9091}
     deadline-seconds: 5
 
 management:

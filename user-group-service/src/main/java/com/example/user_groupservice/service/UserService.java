@@ -6,7 +6,6 @@ import com.example.user_groupservice.dto.response.UserGroupsResponse;
 import com.example.user_groupservice.dto.response.UserResponse;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Service interface for user operations.
@@ -22,7 +21,7 @@ public interface UserService {
      * @param actorRoles Roles of the user performing the action
      * @return UserResponse
      */
-    UserResponse getUserById(UUID userId, UUID actorId, List<String> actorRoles);
+    UserResponse getUserById(Long userId, Long actorId, List<String> actorRoles);
     
     /**
      * Update user profile.
@@ -34,8 +33,8 @@ public interface UserService {
      * @param actorRoles Roles of the user performing the action
      * @return Updated UserResponse
      */
-    UserResponse updateUser(UUID userId, UpdateUserRequest request, 
-                           UUID actorId, List<String> actorRoles);
+    UserResponse updateUser(Long userId, UpdateUserRequest request, 
+                           Long actorId, List<String> actorRoles);
     
     /**
      * List all users with pagination and filters.
@@ -59,6 +58,6 @@ public interface UserService {
      * @param actorRoles Roles of the user performing the action
      * @return UserGroupsResponse
      */
-    UserGroupsResponse getUserGroups(UUID userId, String semester, 
-                                     UUID actorId, List<String> actorRoles);
+    UserGroupsResponse getUserGroups(Long userId, String semester, 
+                                     Long actorId, List<String> actorRoles);
 }

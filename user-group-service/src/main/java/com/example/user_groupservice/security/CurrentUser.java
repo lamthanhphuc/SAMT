@@ -5,7 +5,6 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
-import java.util.UUID;
 
 /**
  * Custom UserDetails implementation for JWT authentication.
@@ -14,10 +13,10 @@ import java.util.UUID;
 @Getter
 public class CurrentUser implements UserDetails {
     
-    private final UUID userId;
+    private final Long userId;
     private final Collection<? extends GrantedAuthority> authorities;
     
-    public CurrentUser(UUID userId, Collection<? extends GrantedAuthority> authorities) {
+    public CurrentUser(Long userId, Collection<? extends GrantedAuthority> authorities) {
         this.userId = userId;
         this.authorities = authorities;
     }

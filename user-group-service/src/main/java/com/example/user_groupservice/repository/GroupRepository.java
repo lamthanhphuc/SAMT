@@ -44,15 +44,15 @@ public interface GroupRepository extends JpaRepository<Group, UUID> {
     /**
      * Find groups by lecturer ID.
      */
-    Page<Group> findByLecturerId(UUID lecturerId, Pageable pageable);
+    Page<Group> findByLecturerId(Long lecturerId, Pageable pageable);
     
     /**
      * Find groups by semester and lecturer ID.
      */
     @Query("SELECT g FROM Group g WHERE " +
            "(:semester IS NULL OR g.semester = :semester) AND " +
-           "(:lecturerId IS NULL OR g.lecturer.id = :lecturerId)")
+           "(:lecturerId IS NULL OR g.lecturerId = :lecturerId)")
     Page<Group> findByFilters(@Param("semester") String semester,
-                              @Param("lecturerId") UUID lecturerId,
+                              @Param("lecturerId") Long lecturerId,
                               Pageable pageable);
 }

@@ -30,7 +30,7 @@ public class GroupDetailResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class LecturerInfo {
-        private UUID id;
+        private Long id;
         private String fullName;
         private String email;
     }
@@ -40,7 +40,7 @@ public class GroupDetailResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class MemberInfo {
-        private UUID userId;
+        private Long userId;
         private String fullName;
         private String email;
         private String role;

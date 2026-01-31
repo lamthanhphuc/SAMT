@@ -16,7 +16,7 @@ public class ResourceNotFoundException extends BaseException {
     /**
      * User not found.
      */
-    public static ResourceNotFoundException userNotFound(UUID userId) {
+    public static ResourceNotFoundException userNotFound(Long userId) {
         return new ResourceNotFoundException(
             "USER_NOT_FOUND",
             String.format("User with ID %s not found", userId)
@@ -36,7 +36,7 @@ public class ResourceNotFoundException extends BaseException {
     /**
      * Lecturer not found.
      */
-    public static ResourceNotFoundException lecturerNotFound(UUID lecturerId) {
+    public static ResourceNotFoundException lecturerNotFound(Long lecturerId) {
         return new ResourceNotFoundException(
             "LECTURER_NOT_FOUND",
             String.format("Lecturer with ID %s not found", lecturerId)
@@ -46,7 +46,7 @@ public class ResourceNotFoundException extends BaseException {
     /**
      * Member not found in group.
      */
-    public static ResourceNotFoundException memberNotFound(UUID userId, UUID groupId) {
+    public static ResourceNotFoundException memberNotFound(Long userId, UUID groupId) {
         return new ResourceNotFoundException(
             "USER_NOT_FOUND",
             String.format("User %s is not a member of group %s", userId, groupId)

@@ -20,7 +20,7 @@ public class GroupResponse {
     private UUID id;
     private String groupName;
     private String semester;
-    private UUID lecturerId;
+    private Long lecturerId;
     private String lecturerName;
     
 }

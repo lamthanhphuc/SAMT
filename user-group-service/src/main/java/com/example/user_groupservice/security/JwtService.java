@@ -10,10 +10,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Service for JWT token operations.
@@ -29,14 +29,14 @@ public class JwtService {
     /**
      * Extract user ID from JWT token.
      */
-    public UUID extractUserId(String token) {
+    public Long extractUserId(String token) {
         Claims claims = extractAllClaims(token);
         String userId = claims.get("userId", String.class);
         if (userId == null) {
             // Fallback to subject if userId claim not present
             userId = claims.getSubject();
         }
-        return UUID.fromString(userId);
+        return Long.parseLong(userId);
     }
     
     /**
@@ -83,7 +83,6 @@ public class JwtService {
      * Get signing key for JWT validation.
      */
     private SecretKey getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
-        return Keys.hmacShaKeyFor(keyBytes);
+        return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 }

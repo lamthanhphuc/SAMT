@@ -16,7 +16,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -42,10 +41,10 @@ public class UserController {
     @GetMapping("/{userId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserResponse> getUserById(
-            @PathVariable UUID userId,
+            @PathVariable("userId") Long userId,
             @AuthenticationPrincipal CurrentUser currentUser) {
         
-        UUID actorId = currentUser.getUserId();
+        Long actorId = currentUser.getUserId();
         List<String> actorRoles = extractRoles(currentUser);
         
         UserResponse response = userService.getUserById(userId, actorId, actorRoles);
@@ -58,11 +57,11 @@ public class UserController {
     @PutMapping("/{userId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserResponse> updateUser(
-            @PathVariable UUID userId,
+            @PathVariable("userId") Long userId,
             @Valid @RequestBody UpdateUserRequest request,
             @AuthenticationPrincipal CurrentUser currentUser) {
         
-        UUID actorId = currentUser.getUserId();
+        Long actorId = currentUser.getUserId();
         List<String> actorRoles = extractRoles(currentUser);
         
         UserResponse response = userService.updateUser(userId, request, actorId, actorRoles);
@@ -90,11 +89,11 @@ public class UserController {
     @GetMapping("/{userId}/groups")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserGroupsResponse> getUserGroups(
-            @PathVariable UUID userId,
+            @PathVariable("userId") Long userId,
             @RequestParam(required = false) String semester,
             @AuthenticationPrincipal CurrentUser currentUser) {
         
-        UUID actorId = currentUser.getUserId();
+        Long actorId = currentUser.getUserId();
         List<String> actorRoles = extractRoles(currentUser);
         
         UserGroupsResponse response = userService.getUserGroups(

@@ -169,6 +169,8 @@
                 <configuration>
                     <source>21</source>
                     <target>21</target>
+                    <!-- Preserve parameter names for Spring -->
+                    <parameters>true</parameters>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
@@ -183,6 +185,9 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.example.user_groupservice.UserGroupServiceApplication</mainClass>
+                </configuration>
             </plugin>
 
             <!-- Protobuf compiler -->

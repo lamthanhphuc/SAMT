@@ -32,5 +32,5 @@ public class CreateGroupRequest {
     private String semester;
     
     @NotNull(message = "Lecturer ID is required")
-    private UUID lecturerId;
+    private Long lecturerId;
 }

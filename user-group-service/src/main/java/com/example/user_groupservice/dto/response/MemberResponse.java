@@ -17,7 +17,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class MemberResponse {
     
-    private UUID userId;
+    private Long userId;
     private UUID groupId;
     private String fullName;
     private String email;

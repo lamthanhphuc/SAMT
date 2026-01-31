@@ -1,6 +1,7 @@
 -- V2__create_user_groups_table.sql
 -- Create user_groups table for many-to-many relationship between users and groups
--- NO FK constraints (cross-service references to Identity Service)
+-- user_id has NO FK constraint (cross-service reference to Identity Service)
+-- group_id has FK constraint to groups table
 
 CREATE TABLE user_groups (
     user_id UUID NOT NULL,
@@ -10,7 +11,11 @@ CREATE TABLE user_groups (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     
     -- Composite primary key
-    PRIMARY KEY (user_id, group_id)
+    PRIMARY KEY (user_id, group_id),
+    
+    -- FK to groups table
+    CONSTRAINT fk_user_groups_group FOREIGN KEY (group_id) 
+        REFERENCES groups(id) ON DELETE RESTRICT
 );
 
 -- Unique partial index: only one LEADER per group (excluding soft-deleted)

@@ -26,7 +26,7 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UserGroupI
      */
     @Query("SELECT ug FROM UserGroup ug " +
            "WHERE ug.userId = :userId AND ug.groupId = :groupId")
-    Optional<UserGroup> findByUserIdAndGroupId(@Param("userId") UUID userId, 
+    Optional<UserGroup> findByUserIdAndGroupId(@Param("userId") Long userId, 
                                                @Param("groupId") UUID groupId);
     
     /**
@@ -36,7 +36,7 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UserGroupI
     @Query("SELECT CASE WHEN COUNT(ug) > 0 THEN true ELSE false END " +
            "FROM UserGroup ug JOIN Group g ON ug.groupId = g.id " +
            "WHERE ug.userId = :userId AND g.semester = :semester")
-    boolean existsByUserIdAndSemester(@Param("userId") UUID userId, 
+    boolean existsByUserIdAndSemester(@Param("userId") Long userId, 
                                       @Param("semester") String semester);
     
     /**
@@ -45,7 +45,7 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UserGroupI
     @Query("SELECT CASE WHEN COUNT(ug) > 0 THEN true ELSE false END " +
            "FROM UserGroup ug " +
            "WHERE ug.userId = :userId AND ug.groupId = :groupId")
-    boolean existsByUserIdAndGroupId(@Param("userId") UUID userId, 
+    boolean existsByUserIdAndGroupId(@Param("userId") Long userId, 
                                      @Param("groupId") UUID groupId);
     
     /**
@@ -109,14 +109,14 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UserGroupI
     @Query("SELECT ug FROM UserGroup ug " +
            "WHERE ug.userId = :userId " +
            "ORDER BY ug.createdAt DESC")
-    List<UserGroup> findAllByUserId(@Param("userId") UUID userId);
+    List<UserGroup> findAllByUserId(@Param("userId") Long userId);
     
     /**
      * Find all groups that a user belongs to in a specific semester.
      */
     @Query("SELECT ug FROM UserGroup ug JOIN Group g ON ug.groupId = g.id " +
            "WHERE ug.userId = :userId AND g.semester = :semester")
-    List<UserGroup> findAllByUserIdAndSemester(@Param("userId") UUID userId, 
+    List<UserGroup> findAllByUserIdAndSemester(@Param("userId") Long userId, 
                                                 @Param("semester") String semester);
     
     /**

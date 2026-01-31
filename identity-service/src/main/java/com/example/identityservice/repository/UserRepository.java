@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -38,6 +39,24 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @return true if email exists
      */
     boolean existsByEmail(String email);
+
+    // ==================== gRPC Service queries ====================
+
+    /**
+     * Find user by ID (excluding deleted).
+     * Use case: gRPC GetUser service - return user data to other microservices.
+     * Note: Uses @SQLRestriction automatically.
+     */
+    default Optional<User> findByIdIgnoreDeleted(Long id) {
+        return findById(id);
+    }
+
+    /**
+     * Find all users by IDs (excluding deleted).
+     * Use case: gRPC GetUsers service - batch fetch users.
+     */
+    @Query("SELECT u FROM User u WHERE u.id IN :ids")
+    List<User> findAllByIdInIgnoreDeleted(@Param("ids") List<Long> ids);
 
     // ==================== Admin queries (include soft-deleted) ====================
 

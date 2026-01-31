@@ -39,7 +39,7 @@ public class Group {
     private String semester;
     
     @Column(name = "lecturer_id", nullable = false)
-    private UUID lecturerId;
+    private Long lecturerId;
     
     @Column(name = "deleted_at")
     private Instant deletedAt;

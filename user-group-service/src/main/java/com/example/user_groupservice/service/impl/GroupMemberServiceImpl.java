@@ -134,7 +134,7 @@ public class GroupMemberServiceImpl implements GroupMemberService {
     
     @Override
     @Transactional(rollbackFor = Exception.class, isolation = Isolation.SERIALIZABLE)
-    public MemberResponse assignRole(UUID groupId, UUID userId, AssignRoleRequest request) {
+    public MemberResponse assignRole(UUID groupId, Long userId, AssignRoleRequest request) {
         log.info("UC25 - Assigning role: groupId={}, userId={}, role={}", 
                 groupId, userId, request.getRole());
         
@@ -186,7 +186,7 @@ public class GroupMemberServiceImpl implements GroupMemberService {
     
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void removeMember(UUID groupId, UUID userId) {
+    public void removeMember(UUID groupId, Long userId) {
         log.info("Removing member from group: groupId={}, userId={}", groupId, userId);
         
         // Validate group exists - use findById() not existsById() per spec (soft delete caveat)
@@ -228,7 +228,7 @@ public class GroupMemberServiceImpl implements GroupMemberService {
         }
         
         // Batch fetch all user info
-        List<UUID> userIds = memberships.stream()
+        List<Long> userIds = memberships.stream()
                 .map(UserGroup::getUserId)
                 .toList();
         
@@ -244,7 +244,7 @@ public class GroupMemberServiceImpl implements GroupMemberService {
         List<GroupMembersResponse.MemberInfo> members = memberships.stream()
                 .map(ug -> {
                     GetUserResponse userInfo = usersResponse.getUsersList().stream()
-                            .filter(u -> u.getUserId().equals(ug.getUserId().toString()))
+                            .filter(u -> Long.parseLong(u.getUserId()) == ug.getUserId())
                             .findFirst()
                             .orElse(null);
                     

@@ -19,7 +19,7 @@ public class GrpcClientConfig {
     @Value("${grpc.identity-service.host:localhost}")
     private String identityServiceHost;
     
-    @Value("${grpc.identity-service.port:9090}")
+    @Value("${grpc.identity-service.port:9091}")
     private int identityServicePort;
     
     @Value("${grpc.identity-service.deadline-seconds:5}")
@@ -40,13 +40,22 @@ public class GrpcClientConfig {
     
     /**
      * Create blocking stub for UserGrpcService.
+     * DO NOT set deadline here - it will be applied per-call in IdentityServiceClient.
      * 
      * @param channel ManagedChannel for Identity Service
-     * @return UserGrpcServiceBlockingStub with deadline
+     * @return UserGrpcServiceBlockingStub without deadline (deadline set per-call)
      */
     @Bean
     public UserGrpcServiceGrpc.UserGrpcServiceBlockingStub userGrpcStub(ManagedChannel identityServiceChannel) {
-        return UserGrpcServiceGrpc.newBlockingStub(identityServiceChannel)
-                .withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS);
+        return UserGrpcServiceGrpc.newBlockingStub(identityServiceChannel);
+    }
+    
+    /**
+     * Get deadline in seconds for gRPC calls.
+     * Used by IdentityServiceClient to set deadline per-call.
+     */
+    @Bean
+    public long grpcDeadlineSeconds() {
+        return deadlineSeconds;
     }
 }

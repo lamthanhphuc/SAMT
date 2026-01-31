@@ -16,7 +16,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * JWT Authentication Filter.
@@ -52,7 +51,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             // Validate token and extract claims
             if (jwtService.isTokenValid(jwt)) {
-                UUID userId = jwtService.extractUserId(jwt);
+                Long userId = jwtService.extractUserId(jwt);
                 List<String> roles = jwtService.extractRoles(jwt);
                 
                 // Create authorities with ROLE_ prefix

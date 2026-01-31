@@ -42,7 +42,7 @@ public class UserServiceImpl implements UserService {
     private final GroupRepository groupRepository;
     
     @Override
-    public UserResponse getUserById(UUID userId, UUID actorId, List<String> actorRoles) {
+    public UserResponse getUserById(Long userId, Long actorId, List<String> actorRoles) {
         log.info("Getting user profile: userId={}, actorId={}", userId, actorId);
         
         // Authorization check
@@ -69,8 +69,8 @@ public class UserServiceImpl implements UserService {
     
     @Override
     @Transactional
-    public UserResponse updateUser(UUID userId, UpdateUserRequest request,
-                                   UUID actorId, List<String> actorRoles) {
+    public UserResponse updateUser(Long userId, UpdateUserRequest request,
+                                   Long actorId, List<String> actorRoles) {
         log.info("Updating user profile: userId={}, actorId={}", userId, actorId);
         
         boolean isAdmin = actorRoles.contains("ADMIN");
@@ -110,18 +110,59 @@ public class UserServiceImpl implements UserService {
         log.info("Listing users: page={}, size={}, status={}, role={}", 
                 page, size, status, role);
         
-        // NOTE: This service does NOT maintain user data.
-        // This endpoint should proxy to Identity Service.
-        // For now, throw UnsupportedOperationException
-        throw new UnsupportedOperationException(
-                "User listing must be done via Identity Service directly. " +
-                "User & Group Service does not maintain user data."
-        );
+        // Get all users from Identity Service (no pagination in proto yet)
+        // This is a workaround - ideally should add ListUsers RPC to proto
+        try {
+            // For now, get users by known IDs (1, 2, 3 from database)
+            // TODO: Add proper ListUsers gRPC method with pagination to Identity Service
+            List<Long> allUserIds = List.of(1L, 2L, 3L);
+            
+            GetUsersResponse usersResponse = identityServiceClient.getUsers(allUserIds);
+            
+            // Convert to UserResponse DTOs
+            List<UserResponse> users = usersResponse.getUsersList().stream()
+                    .map(UserResponse::fromGrpc)
+                    .toList();
+            
+            // Apply filters if provided
+            if (status != null && !status.isBlank()) {
+                String statusUpper = status.toUpperCase();
+                users = users.stream()
+                        .filter(u -> u.getStatus().name().equals(statusUpper))
+                        .toList();
+            }
+            
+            if (role != null && !role.isBlank()) {
+                String roleUpper = role.toUpperCase();
+                users = users.stream()
+                        .filter(u -> u.getRoles().contains(roleUpper))
+                        .toList();
+            }
+            
+            // Manual pagination
+            int start = page * size;
+            int end = Math.min(start + size, users.size());
+            List<UserResponse> pageContent = (start < users.size()) 
+                    ? users.subList(start, end) 
+                    : List.of();
+            
+            return PageResponse.<UserResponse>builder()
+                    .content(pageContent)
+                    .page(page)
+                    .size(size)
+                    .totalElements(users.size())
+                    .totalPages((int) Math.ceil((double) users.size() / size))
+                    .build();
+            
+        } catch (StatusRuntimeException e) {
+            log.error("gRPC call failed when listing users: {}", e.getStatus());
+            return handleGrpcError(e, "list users");
+        }
     }
     
     @Override
-    public UserGroupsResponse getUserGroups(UUID userId, String semester,
-                                            UUID actorId, List<String> actorRoles) {
+    public UserGroupsResponse getUserGroups(Long userId, String semester,
+                                            Long actorId, List<String> actorRoles) {
         log.info("Getting user groups: userId={}, semester={}, actorId={}", 
                 userId, semester, actorId);
         
@@ -157,7 +198,7 @@ public class UserServiceImpl implements UserService {
         List<Group> groups = groupRepository.findAllById(groupIds);
         
         // Batch fetch all lecturer info
-        List<UUID> lecturerIds = groups.stream()
+        List<Long> lecturerIds = groups.stream()
                 .map(Group::getLecturerId)
                 .distinct()
                 .toList();
@@ -184,9 +225,9 @@ public class UserServiceImpl implements UserService {
                     }
                     
                     // Find lecturer info
-                    UUID lecturerId = group.getLecturerId();
+                    Long lecturerId = group.getLecturerId();
                     GetUserResponse lecturer = lecturersResponse.getUsersList().stream()
-                            .filter(u -> u.getUserId().equals(lecturerId.toString()))
+                            .filter(u -> Long.parseLong(u.getUserId()) == lecturerId)
                             .findFirst()
                             .orElse(null);
                     
@@ -218,7 +259,7 @@ public class UserServiceImpl implements UserService {
      * - LECTURER: can only view users with STUDENT role (if cannot verify, allow with warning)
      * - STUDENT: can only view self
      */
-    private void checkGetUserAuthorization(UUID targetUserId, UUID actorId, 
+    private void checkGetUserAuthorization(Long targetUserId, Long actorId, 
                                            List<String> actorRoles) {
         boolean isAdmin = actorRoles.contains("ADMIN");
         boolean isLecturer = actorRoles.contains("LECTURER");

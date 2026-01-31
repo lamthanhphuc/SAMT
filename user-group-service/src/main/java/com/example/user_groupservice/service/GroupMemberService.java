@@ -41,7 +41,7 @@ public interface GroupMemberService {
      * @param request Assign role request
      * @return Updated MemberResponse
      */
-    MemberResponse assignRole(UUID groupId, UUID userId, AssignRoleRequest request);
+    MemberResponse assignRole(UUID groupId, Long userId, AssignRoleRequest request);
     
     /**
      * Remove a member from a group (soft delete).
@@ -53,7 +53,7 @@ public interface GroupMemberService {
      * @param groupId Group ID
      * @param userId User ID
      */
-    void removeMember(UUID groupId, UUID userId);
+    void removeMember(UUID groupId, Long userId);
     
     /**
      * Get all members of a group.

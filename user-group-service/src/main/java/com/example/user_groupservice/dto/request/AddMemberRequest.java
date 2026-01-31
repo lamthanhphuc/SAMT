@@ -6,8 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.UUID;
-
 /**
  * Request DTO for adding a member to a group.
  */
@@ -18,7 +16,7 @@ import java.util.UUID;
 public class AddMemberRequest {
     
     @NotNull(message = "User ID is required")
-    private UUID userId;
+    private Long userId;
     
     @NotNull(message = "isLeader is required")
     private Boolean isLeader;

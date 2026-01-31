@@ -17,7 +17,7 @@ public class ConflictException extends BaseException {
     /**
      * User is already in the specified group.
      */
-    public static ConflictException userAlreadyInGroup(UUID userId, UUID groupId) {
+    public static ConflictException userAlreadyInGroup(Long userId, UUID groupId) {
         return new ConflictException(
             "USER_ALREADY_IN_GROUP",
             String.format("User %s is already in group %s", userId, groupId)
@@ -27,7 +27,7 @@ public class ConflictException extends BaseException {
     /**
      * User is already in a group for the specified semester.
      */
-    public static ConflictException userAlreadyInGroupSameSemester(UUID userId, String semester) {
+    public static ConflictException userAlreadyInGroupSameSemester(Long userId, String semester) {
         return new ConflictException(
             "USER_ALREADY_IN_GROUP_SAME_SEMESTER",
             String.format("User %s is already in a group for semester %s", userId, semester)
@@ -37,7 +37,7 @@ public class ConflictException extends BaseException {
     /**
      * User is inactive.
      */
-    public static ConflictException userInactive(UUID userId) {
+    public static ConflictException userInactive(Long userId) {
         return new ConflictException(
             "USER_INACTIVE",
             String.format("User %s is inactive", userId)

@@ -27,5 +27,5 @@ public class UpdateGroupRequest {
     private String groupName;
     
     @NotNull(message = "Lecturer ID is required")
-    private UUID lecturerId;
+    private Long lecturerId;
 }

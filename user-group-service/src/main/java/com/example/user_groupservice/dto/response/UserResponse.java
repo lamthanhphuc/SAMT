@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class UserResponse {
     
-    private UUID id;
+    private Long id;
     private String email;
     private String fullName;
     private UserStatus status;
@@ -32,8 +32,13 @@ public class UserResponse {
      * Create UserResponse from gRPC GetUserResponse.
      */
     public static UserResponse fromGrpc(GetUserResponse grpcUser) {
+        String userIdStr = grpcUser.getUserId();
+        if (userIdStr == null || userIdStr.isBlank()) {
+            throw new IllegalArgumentException("User ID from gRPC response is null or empty");
+        }
+        
         return UserResponse.builder()
-                .id(UUID.fromString(grpcUser.getUserId()))
+                .id(Long.parseLong(userIdStr))
                 .email(grpcUser.getEmail())
                 .fullName(grpcUser.getFullName())
                 .status(mapStatus(grpcUser.getStatus()))

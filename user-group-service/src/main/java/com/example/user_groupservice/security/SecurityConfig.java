@@ -36,7 +36,9 @@ public class SecurityConfig {
                 // Public endpoints
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers("/actuator/info").permitAll()
+                // Swagger UI
                 .requestMatchers("/swagger-ui/**").permitAll()
+                .requestMatchers("/swagger-ui.html").permitAll()
                 .requestMatchers("/v3/api-docs/**").permitAll()
                 
                 // All other endpoints require authentication
