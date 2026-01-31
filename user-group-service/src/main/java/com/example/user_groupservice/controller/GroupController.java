@@ -1,9 +1,6 @@
 package com.example.user_groupservice.controller;
 
-import com.example.user_groupservice.dto.request.AddMemberRequest;
-import com.example.user_groupservice.dto.request.AssignRoleRequest;
-import com.example.user_groupservice.dto.request.CreateGroupRequest;
-import com.example.user_groupservice.dto.request.UpdateGroupRequest;
+import com.example.user_groupservice.dto.request.*;
 import com.example.user_groupservice.dto.response.*;
 import com.example.user_groupservice.entity.GroupRole;
 import com.example.user_groupservice.service.GroupMemberService;
@@ -104,6 +101,19 @@ public class GroupController {
         
         groupService.deleteGroup(groupId);
         return ResponseEntity.noContent().build();
+    }
+    
+    /**
+     * UC27 - Update Group Lecturer
+     */
+    @PatchMapping("/{groupId}/lecturer")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<GroupResponse> updateGroupLecturer(
+            @PathVariable UUID groupId,
+            @Valid @RequestBody UpdateLecturerRequest request) {
+        
+        GroupResponse response = groupService.updateGroupLecturer(groupId, request);
+        return ResponseEntity.ok(response);
     }
     
     // ==================== Member Management ====================

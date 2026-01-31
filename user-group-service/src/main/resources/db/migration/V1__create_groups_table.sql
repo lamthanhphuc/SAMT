@@ -1,4 +1,4 @@
--- V2__create_groups_table.sql
+-- V1__create_groups_table.sql
 -- Create groups table for Group management
 -- NO FK constraint for lecturer_id (cross-service reference to Identity Service)
 

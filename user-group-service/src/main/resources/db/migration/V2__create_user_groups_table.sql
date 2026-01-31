@@ -1,4 +1,4 @@
--- V3__create_user_groups_table.sql
+-- V2__create_user_groups_table.sql
 -- Create user_groups table for many-to-many relationship between users and groups
 -- NO FK constraints (cross-service references to Identity Service)
 

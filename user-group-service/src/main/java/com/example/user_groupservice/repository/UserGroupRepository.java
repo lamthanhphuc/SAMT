@@ -25,17 +25,17 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UserGroupI
      * Find membership by user ID and group ID.
      */
     @Query("SELECT ug FROM UserGroup ug " +
-           "WHERE ug.user.id = :userId AND ug.group.id = :groupId")
+           "WHERE ug.userId = :userId AND ug.groupId = :groupId")
     Optional<UserGroup> findByUserIdAndGroupId(@Param("userId") UUID userId, 
                                                @Param("groupId") UUID groupId);
     
     /**
      * Check if user is already in a group for the given semester.
-     * This includes checking across all groups in that semester.
+     * Joins with Group to check semester.
      */
     @Query("SELECT CASE WHEN COUNT(ug) > 0 THEN true ELSE false END " +
-           "FROM UserGroup ug " +
-           "WHERE ug.user.id = :userId AND ug.group.semester = :semester")
+           "FROM UserGroup ug JOIN Group g ON ug.groupId = g.id " +
+           "WHERE ug.userId = :userId AND g.semester = :semester")
     boolean existsByUserIdAndSemester(@Param("userId") UUID userId, 
                                       @Param("semester") String semester);
     
@@ -44,7 +44,7 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UserGroupI
      */
     @Query("SELECT CASE WHEN COUNT(ug) > 0 THEN true ELSE false END " +
            "FROM UserGroup ug " +
-           "WHERE ug.user.id = :userId AND ug.group.id = :groupId")
+           "WHERE ug.userId = :userId AND ug.groupId = :groupId")
     boolean existsByUserIdAndGroupId(@Param("userId") UUID userId, 
                                      @Param("groupId") UUID groupId);
     
@@ -53,7 +53,7 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UserGroupI
      */
     @Query("SELECT CASE WHEN COUNT(ug) > 0 THEN true ELSE false END " +
            "FROM UserGroup ug " +
-           "WHERE ug.group.id = :groupId AND ug.role = :role")
+           "WHERE ug.groupId = :groupId AND ug.role = :role")
     boolean existsByGroupIdAndRole(@Param("groupId") UUID groupId, 
                                    @Param("role") GroupRole role);
     
@@ -61,7 +61,7 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UserGroupI
      * Find the current leader of a group (without lock).
      */
     @Query("SELECT ug FROM UserGroup ug " +
-           "WHERE ug.group.id = :groupId AND ug.role = 'LEADER'")
+           "WHERE ug.groupId = :groupId AND ug.role = 'LEADER'")
     Optional<UserGroup> findLeaderByGroupId(@Param("groupId") UUID groupId);
     
     /**
@@ -70,59 +70,58 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UserGroupI
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT ug FROM UserGroup ug " +
-           "WHERE ug.group.id = :groupId AND ug.role = 'LEADER'")
+           "WHERE ug.groupId = :groupId AND ug.role = 'LEADER'")
     Optional<UserGroup> findLeaderByGroupIdWithLock(@Param("groupId") UUID groupId);
     
     /**
      * Count members (excluding leader) in a group.
      */
     @Query("SELECT COUNT(ug) FROM UserGroup ug " +
-           "WHERE ug.group.id = :groupId AND ug.role = 'MEMBER'")
+           "WHERE ug.groupId = :groupId AND ug.role = 'MEMBER'")
     long countMembersByGroupId(@Param("groupId") UUID groupId);
     
     /**
      * Count all members (including leader) in a group.
      */
     @Query("SELECT COUNT(ug) FROM UserGroup ug " +
-           "WHERE ug.group.id = :groupId")
+           "WHERE ug.groupId = :groupId")
     long countAllMembersByGroupId(@Param("groupId") UUID groupId);
     
     /**
      * Find all members of a group.
      */
     @Query("SELECT ug FROM UserGroup ug " +
-           "JOIN FETCH ug.user " +
-           "WHERE ug.group.id = :groupId " +
-           "ORDER BY ug.role DESC, ug.user.fullName ASC")
+           "WHERE ug.groupId = :groupId " +
+           "ORDER BY ug.role DESC, ug.createdAt ASC")
     List<UserGroup> findAllByGroupId(@Param("groupId") UUID groupId);
     
     /**
      * Find all members of a group with specific role.
      */
     @Query("SELECT ug FROM UserGroup ug " +
-           "JOIN FETCH ug.user " +
-           "WHERE ug.group.id = :groupId AND ug.role = :role " +
-           "ORDER BY ug.user.fullName ASC")
+           "WHERE ug.groupId = :groupId AND ug.role = :role")
     List<UserGroup> findAllByGroupIdAndRole(@Param("groupId") UUID groupId, 
-                                            @Param("role") GroupRole role);
+                                           @Param("role") GroupRole role);
     
     /**
      * Find all groups that a user belongs to.
      */
     @Query("SELECT ug FROM UserGroup ug " +
-           "JOIN FETCH ug.group g " +
-           "JOIN FETCH g.lecturer " +
-           "WHERE ug.user.id = :userId " +
-           "ORDER BY g.semester DESC, g.groupName ASC")
+           "WHERE ug.userId = :userId " +
+           "ORDER BY ug.createdAt DESC")
     List<UserGroup> findAllByUserId(@Param("userId") UUID userId);
     
     /**
      * Find all groups that a user belongs to in a specific semester.
      */
-    @Query("SELECT ug FROM UserGroup ug " +
-           "JOIN FETCH ug.group g " +
-           "JOIN FETCH g.lecturer " +
-           "WHERE ug.user.id = :userId AND g.semester = :semester")
+    @Query("SELECT ug FROM UserGroup ug JOIN Group g ON ug.groupId = g.id " +
+           "WHERE ug.userId = :userId AND g.semester = :semester")
     List<UserGroup> findAllByUserIdAndSemester(@Param("userId") UUID userId, 
-                                               @Param("semester") String semester);
+                                                @Param("semester") String semester);
+    
+    /**
+     * Soft delete all memberships in a group (for cascade delete).
+     */
+    @Query("SELECT ug FROM UserGroup ug WHERE ug.groupId = :groupId")
+    List<UserGroup> findByGroupId(@Param("groupId") UUID groupId);
 }

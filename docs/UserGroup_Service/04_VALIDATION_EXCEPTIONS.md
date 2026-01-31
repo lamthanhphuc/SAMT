@@ -92,9 +92,43 @@
 
 - **userId:** 
   - Required: YES
-  - Must exist in users table
+  - Must exist in Identity Service (gRPC validation)
   - Status must be ACTIVE
+  - **Role must be STUDENT** (gRPC validation)
   - Cannot be INACTIVE
+  - Cannot be ADMIN or LECTURER
+
+**Role Validation Flow:**
+
+```java
+// Step 1: Verify user exists
+VerifyUserResponse verification = identityClient.verifyUserExists(userId);
+if (!verification.getExists()) {
+    throw NotFoundException("USER_NOT_FOUND");
+}
+if (!verification.getActive()) {
+    throw ConflictException("USER_INACTIVE");
+}
+
+// Step 2: Verify user role = STUDENT
+GetUserRoleResponse roleResponse = identityClient.getUserRole(userId);
+if (roleResponse.getRole() != UserRole.STUDENT) {
+    throw ConflictException("INVALID_ROLE", 
+        "Only students can be added to groups. User role: " + roleResponse.getRole());
+}
+```
+
+**Error Scenarios:**
+
+| Input User Role | Validation Result | Error Code | HTTP Status |
+|-----------------|-------------------|------------|-------------|
+| STUDENT | ✅ Pass | - | 201 CREATED |
+| LECTURER | ❌ Fail | INVALID_ROLE | 409 CONFLICT |
+| ADMIN | ❌ Fail | INVALID_ROLE | 409 CONFLICT |
+| (deleted user) | ❌ Fail | USER_NOT_FOUND | 404 |
+| (inactive user) | ❌ Fail | USER_INACTIVE | 409 CONFLICT |
+
+**Business Rule:** `BR-UG-009: Only STUDENT role members in groups`
   
 - **isLeader:**
   - Type: Boolean
@@ -509,5 +543,275 @@ public void assignGroupRole(UUID groupId, UUID userId, String role) {
 @Transactional(readOnly = true)
 public UserResponse getUserById(UUID userId) {
     // Implementation
+}
+```
+
+---
+
+## PART 3: gRPC ERROR HANDLING
+
+### 1. Exception Mapping Pattern
+
+**Principle:** Convert gRPC `StatusRuntimeException` to domain exceptions with appropriate HTTP status codes.
+
+#### 1.1 Service-Level Exception Handler
+
+```java
+@Slf4j
+public abstract class BaseGrpcService {
+    
+    protected <T> T executeGrpcCall(Supplier<T> grpcCall, String operationName) {
+        try {
+            return grpcCall.get();
+            
+        } catch (StatusRuntimeException e) {
+            log.error("gRPC call failed: operation={}, status={}", 
+                operationName, e.getStatus());
+            
+            switch (e.getStatus().getCode()) {
+                case UNAVAILABLE:
+                    throw new ServiceUnavailableException(
+                        "Identity Service unavailable during: " + operationName
+                    );
+                    
+                case DEADLINE_EXCEEDED:
+                    throw new GatewayTimeoutException(
+                        "Identity Service timeout during: " + operationName
+                    );
+                    
+                case NOT_FOUND:
+                    throw new NotFoundException(
+                        "USER_NOT_FOUND", 
+                        "User not found in Identity Service"
+                    );
+                    
+                case PERMISSION_DENIED:
+                    throw new ForbiddenException(
+                        "FORBIDDEN", 
+                        "Identity Service denied access"
+                    );
+                    
+                case INVALID_ARGUMENT:
+                    throw new BadRequestException(
+                        "BAD_REQUEST", 
+                        "Invalid argument in gRPC call: " + e.getMessage()
+                    );
+                    
+                default:
+                    throw new RuntimeException(
+                        "Unexpected gRPC error: " + e.getStatus(), e
+                    );
+            }
+        }
+    }
+}
+```
+
+#### 1.2 Usage Example
+
+```java
+@Service
+public class GroupServiceImpl extends BaseGrpcService implements GroupService {
+    
+    public GroupResponse createGroup(CreateGroupRequest request) {
+        // Wrap gRPC call with error handling
+        GetUserRoleResponse roleResponse = executeGrpcCall(
+            () -> identityClient.getUserRole(request.getLecturerId()),
+            "getUserRole for createGroup"
+        );
+        
+        if (roleResponse.getRole() != UserRole.LECTURER) {
+            throw new ConflictException("INVALID_ROLE", "User is not a lecturer");
+        }
+        
+        // ... continue ...
+    }
+}
+```
+
+### 2. Custom Exception Classes
+
+#### 2.1 ServiceUnavailableException
+
+```java
+@ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+public class ServiceUnavailableException extends BaseException {
+    public ServiceUnavailableException(String message) {
+        super("SERVICE_UNAVAILABLE", message);
+    }
+}
+```
+
+#### 2.2 GatewayTimeoutException
+
+```java
+@ResponseStatus(HttpStatus.GATEWAY_TIMEOUT)
+public class GatewayTimeoutException extends BaseException {
+    public GatewayTimeoutException(String message) {
+        super("GATEWAY_TIMEOUT", message);
+    }
+}
+```
+
+### 3. Global Exception Handler Updates
+
+```java
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+    
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleServiceUnavailable(ServiceUnavailableException ex) {
+        ErrorResponse error = new ErrorResponse(
+            ex.getCode(),
+            ex.getMessage(),
+            Instant.now()
+        );
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
+    }
+    
+    @ExceptionHandler(GatewayTimeoutException.class)
+    public ResponseEntity<ErrorResponse> handleGatewayTimeout(GatewayTimeoutException ex) {
+        ErrorResponse error = new ErrorResponse(
+            ex.getCode(),
+            ex.getMessage(),
+            Instant.now()
+        );
+        return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT).body(error);
+    }
+    
+    @ExceptionHandler(PessimisticLockException.class)
+    public ResponseEntity<ErrorResponse> handleLockTimeout(PessimisticLockException ex) {
+        ErrorResponse error = new ErrorResponse(
+            "LOCK_TIMEOUT",
+            "Operation timed out due to concurrent access",
+            Instant.now()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+}
+```
+
+### 4. gRPC Status Code Reference
+
+| gRPC Status Code | HTTP Status | Error Code | Use Case |
+|------------------|-------------|------------|----------|
+| OK | 200 | - | Success |
+| INVALID_ARGUMENT | 400 | BAD_REQUEST | Invalid UUID format, invalid input |
+| UNAUTHENTICATED | 401 | UNAUTHORIZED | Missing gRPC credentials |
+| PERMISSION_DENIED | 403 | FORBIDDEN | Insufficient permissions |
+| NOT_FOUND | 404 | USER_NOT_FOUND | User doesn't exist |
+| ALREADY_EXISTS | 409 | USER_ALREADY_IN_GROUP | Duplicate resource |
+| FAILED_PRECONDITION | 409 | USER_INACTIVE | Business rule violation |
+| UNAVAILABLE | 503 | SERVICE_UNAVAILABLE | Identity Service down |
+| DEADLINE_EXCEEDED | 504 | GATEWAY_TIMEOUT | gRPC call timeout (>5s) |
+| INTERNAL | 500 | INTERNAL_ERROR | Unexpected gRPC error |
+
+---
+
+## Part 4: Cross-Service Error Handling
+
+### gRPC Call Error Mapping
+
+**All services implement consistent gRPC error handling via helper method:**
+
+```java
+/**
+ * Maps gRPC exceptions to HTTP exceptions per API specification.
+ * Used by all service methods that call Identity Service.
+ */
+private <T> T handleGrpcError(StatusRuntimeException e, String operation) {
+    Status.Code code = e.getStatus().getCode();
+    
+    switch (code) {
+        case UNAVAILABLE:
+            throw ServiceUnavailableException.identityServiceUnavailable(); // 503
+        case DEADLINE_EXCEEDED:
+            throw GatewayTimeoutException.identityServiceTimeout(); // 504
+        case NOT_FOUND:
+            throw new ResourceNotFoundException("USER_NOT_FOUND", "User not found"); // 404
+        case PERMISSION_DENIED:
+            throw new ForbiddenException("FORBIDDEN", "Access denied"); // 403
+        case INVALID_ARGUMENT:
+            throw new BadRequestException("BAD_REQUEST", "Invalid request"); // 400
+        default:
+            throw new RuntimeException("Failed to " + operation + ": " + code);
+    }
+}
+```
+
+**Usage Pattern:**
+
+```java
+try {
+    VerifyUserResponse verification = identityServiceClient.verifyUserExists(userId);
+    // ... process response ...
+    
+} catch (StatusRuntimeException e) {
+    log.error("gRPC call failed: operation={}, status={}", "verify user", e.getStatus());
+    return handleGrpcError(e, "verify user");
+}
+```
+
+**Exception Classes:**
+
+| Exception | HTTP Status | Use Case |
+|-----------|-------------|----------|
+| ServiceUnavailableException | 503 | Identity Service down/unreachable |
+| GatewayTimeoutException | 504 | gRPC call exceeds 5s deadline |
+| ResourceNotFoundException | 404 | User/Lecturer not found |
+| ForbiddenException | 403 | Permission denied from Identity Service |
+| BadRequestException | 400 | Invalid argument to gRPC call |
+
+**GlobalExceptionHandler Mappings:**
+
+```java
+@ExceptionHandler(ServiceUnavailableException.class)
+public ResponseEntity<ErrorResponse> handleServiceUnavailable(ServiceUnavailableException ex) {
+    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(...);
+}
+
+@ExceptionHandler(GatewayTimeoutException.class)
+public ResponseEntity<ErrorResponse> handleGatewayTimeout(GatewayTimeoutException ex) {
+    return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT).body(...);
+}
+```
+
+**Client Retry Guidance:**
+
+- **503 SERVICE_UNAVAILABLE:** Retry with exponential backoff (temporary outage)
+- **504 GATEWAY_TIMEOUT:** Retry once (may be transient network issue)
+- **404 NOT_FOUND:** Do not retry (resource doesn't exist)
+- **403 FORBIDDEN:** Do not retry (authorization issue)
+- **400 BAD_REQUEST:** Do not retry (client error)
+
+### 5. Error Response Examples
+
+**Identity Service Unavailable:**
+
+```json
+{
+  "code": "SERVICE_UNAVAILABLE",
+  "message": "Identity Service unavailable during: getUserRole for createGroup",
+  "timestamp": "2026-01-31T10:00:00Z"
+}
+```
+
+**Identity Service Timeout:**
+
+```json
+{
+  "code": "GATEWAY_TIMEOUT",
+  "message": "Identity Service timeout during: verifyUserExists",
+  "timestamp": "2026-01-31T10:00:00Z"
+}
+```
+
+**Pessimistic Lock Timeout:**
+
+```json
+{
+  "code": "LOCK_TIMEOUT",
+  "message": "Operation timed out due to concurrent access",
+  "timestamp": "2026-01-31T10:00:00Z"
 }
 ```

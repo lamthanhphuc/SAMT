@@ -7,7 +7,7 @@ import java.util.UUID;
 
 /**
  * Composite primary key for UserGroup entity.
- * Consists of userId and groupId.
+ * Consists of userId and groupId (pure UUIDs, no FK constraints).
  */
 @Data
 @NoArgsConstructor
@@ -15,7 +15,7 @@ import java.util.UUID;
 @EqualsAndHashCode
 public class UserGroupId implements Serializable {
     
-    private UUID user;
+    private UUID userId;
     
-    private UUID group;
+    private UUID groupId;
 }

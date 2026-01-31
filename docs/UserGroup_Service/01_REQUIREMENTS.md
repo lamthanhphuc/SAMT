@@ -88,6 +88,45 @@
 
 > **Clarification (UC22-AUTH):** LECTURER role bị loại trừ hoàn toàn khỏi UC này. LECTURER muốn update profile phải thông qua kênh khác hoặc liên hệ ADMIN.
 
+#### Implementation Details
+
+> **IMPORTANT:** User/Group Service DOES NOT manage user data locally. This API acts as a **proxy/gateway** to Identity Service.
+
+**Implementation Pattern:**
+
+1. User/Group Service receives `PUT /api/users/{userId}` request
+2. Validate authorization (ADMIN/STUDENT only, LECTURER excluded)
+3. Forward request to Identity Service via gRPC `UpdateUser()` RPC
+4. Identity Service performs update
+5. Return updated user info to client
+
+**gRPC Integration:**
+
+```protobuf
+// user_service.proto
+rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+
+message UpdateUserRequest {
+  string user_id = 1;
+  string full_name = 2;
+}
+
+message UpdateUserResponse {
+  GetUserResponse user = 1;
+}
+```
+
+**Rationale:**
+- Maintains separation of concerns
+- User/Group Service acts as API gateway for client convenience
+- Authorization enforced at both service layers
+- UC22 requirement satisfied without duplicating user data
+
+**Error Handling:**
+- Identity Service unavailable → `503 SERVICE_UNAVAILABLE`
+- Identity Service timeout → `504 GATEWAY_TIMEOUT`
+- User not found in Identity Service → `404 USER_NOT_FOUND`
+
 #### API
 
 **Endpoint:** `PUT /api/users/{userId}`
@@ -150,12 +189,16 @@
 #### Main Flow
 
 1. Admin thêm user vào group
-2. System tạo user_groups record
+2. System validates user có role STUDENT (via gRPC)
+3. System tạo user_groups record
 
 #### Rules
 
 - Mỗi user chỉ thuộc **1 group / semester**
 - Không thêm user INACTIVE
+- **CHỈ user có role STUDENT được thêm vào group** (ADMIN/LECTURER không được phép)
+
+> **Business Rule BR-UG-009:** Only users with role `STUDENT` can be added to groups. System MUST validate user role via Identity Service gRPC call before adding to group.
 
 #### API
 
@@ -219,7 +262,31 @@
 
 #### Rules
 
-- Không remove LEADER nếu group còn active
+- Không remove LEADER nếu group còn active members (role=MEMBER)
+
+#### Validation Detail
+
+**Remove LEADER validation:**
+
+System counts users with role=MEMBER (excludes LEADER being removed):
+
+```java
+long memberCount = countMembersByGroupId(groupId); // Counts MEMBER role only
+if (memberCount > 0) {
+    throw CANNOT_REMOVE_LEADER;
+}
+```
+
+**Examples:**
+
+| Group State | Remove Operation | Result |
+|-------------|------------------|--------|
+| 1 LEADER + 0 MEMBER | Remove LEADER | 204 SUCCESS |
+| 1 LEADER + 1 MEMBER | Remove LEADER | 409 CANNOT_REMOVE_LEADER |
+| 1 LEADER + 2 MEMBER | Remove LEADER | 409 CANNOT_REMOVE_LEADER |
+| 1 LEADER + 1 MEMBER | Remove MEMBER | 204 SUCCESS |
+
+**Business Logic:** LEADER can only be removed from empty group (no MEMBER role users).
 
 ---
 
@@ -243,6 +310,67 @@
 4. System update groups.lecturer_id
 5. System ghi audit log (old_value, new_value)
 6. System trả về group info cập nhật
+
+#### Validation Flow (Detailed)
+
+**Step 1: Authorization Check**
+- Extract JWT → Verify `hasRole('ADMIN')`
+- Non-admin → `403 FORBIDDEN`
+
+**Step 2: Group Existence Check**
+- Query: `SELECT * FROM groups WHERE id = :groupId AND deleted_at IS NULL`
+- Not found → `404 GROUP_NOT_FOUND`
+
+**Step 3: New Lecturer Verification (gRPC)**
+
+```java
+// Call Identity Service
+VerifyUserResponse verification = identityClient.verifyUserExists(newLecturerId);
+
+// Check 1: User exists
+if (!verification.getExists()) {
+    throw NotFoundException("LECTURER_NOT_FOUND", "Lecturer not found");
+}
+
+// Check 2: User is active
+if (!verification.getActive()) {
+    throw ConflictException("USER_INACTIVE", "Lecturer account is inactive");
+}
+
+// Check 3: User has LECTURER role
+GetUserRoleResponse roleResponse = identityClient.getUserRole(newLecturerId);
+if (roleResponse.getRole() != UserRole.LECTURER) {
+    throw ConflictException("INVALID_ROLE", 
+        "User is not a lecturer (role: " + roleResponse.getRole() + ")");
+}
+```
+
+**Step 4: Update & Audit**
+
+```java
+UUID oldLecturerId = group.getLecturerId();
+group.setLecturerId(newLecturerId);
+groupRepository.save(group);
+
+// Audit log
+log.info("UC27 - LECTURER_UPDATED: groupId={}, oldLecturer={}, newLecturer={}, actor={}", 
+    groupId, oldLecturerId, newLecturerId, actorId);
+```
+
+#### gRPC Error Handling
+
+| gRPC Status | HTTP Status | Error Code | Action |
+|-------------|-------------|------------|--------|
+| UNAVAILABLE | 503 | SERVICE_UNAVAILABLE | Log + retry later |
+| DEADLINE_EXCEEDED | 504 | GATEWAY_TIMEOUT | Log + retry later |
+| NOT_FOUND | 404 | LECTURER_NOT_FOUND | Return error to client |
+| PERMISSION_DENIED | 403 | FORBIDDEN | Return error to client |
+| INTERNAL | 500 | INTERNAL_ERROR | Log + return generic error |
+
+#### Idempotency
+
+- Request với `lecturerId` giống current lecturer → `200 OK` (no-op)
+- Multiple requests với cùng `lecturerId` mới → `200 OK` (idempotent)
 
 #### API
 
@@ -308,6 +436,54 @@
   "serviceName": "UserGroupService"
 }
 ```
+
+---
+
+### Delete Group (ADMIN)
+
+**Endpoint:** `DELETE /api/groups/{groupId}`
+
+**Actor:** ADMIN
+
+**Behavior:**
+
+System performs cascade soft delete:
+1. Soft delete group (set deleted_at)
+2. Soft delete all memberships in group (cascade)
+
+**Business Rule:**
+- Allowed regardless of member count
+- All members automatically soft deleted
+- Historical data preserved (soft delete)
+
+**Examples:**
+
+| Group State | Delete Operation | Result |
+|-------------|------------------|--------|
+| Empty group | Delete | Group + 0 memberships soft deleted |
+| Group with 5 members | Delete | Group + 5 memberships soft deleted |
+
+**Note:** Students will see group as deleted in their group list. No orphaned memberships remain.
+
+**Alternative Approach (Not Implemented):**
+
+Some systems prevent delete if group has members:
+```java
+if (memberCount > 0) {
+    throw CANNOT_DELETE_GROUP_WITH_MEMBERS;
+}
+```
+
+**Current Decision:** Allow cascade delete for operational flexibility.
+
+**Trade-offs:**
+- ✅ Easier for admins (one operation vs. remove all members first)
+- ⚠️ Risk of accidental deletion (mitigated by soft delete)
+
+**Error Codes:**
+- `404 GROUP_NOT_FOUND`
+- `401 UNAUTHORIZED`
+- `403 FORBIDDEN` (not ADMIN)
 
 ---
 

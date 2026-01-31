@@ -4,7 +4,6 @@ import com.example.user_groupservice.dto.request.UpdateUserRequest;
 import com.example.user_groupservice.dto.response.PageResponse;
 import com.example.user_groupservice.dto.response.UserGroupsResponse;
 import com.example.user_groupservice.dto.response.UserResponse;
-import com.example.user_groupservice.entity.UserStatus;
 
 import java.util.List;
 import java.util.UUID;
@@ -44,11 +43,11 @@ public interface UserService {
      * 
      * @param page Page number (0-based)
      * @param size Page size
-     * @param status Optional status filter
-     * @param role Optional role filter
+     * @param status Optional status filter (ACTIVE/INACTIVE)
+     * @param role Optional role filter (ADMIN/LECTURER/STUDENT)
      * @return Paginated list of users
      */
-    PageResponse<UserResponse> listUsers(int page, int size, UserStatus status, String role);
+    PageResponse<UserResponse> listUsers(int page, int size, String status, String role);
     
     /**
      * Get all groups that a user belongs to.

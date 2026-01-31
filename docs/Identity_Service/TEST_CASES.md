@@ -1,68 +1,76 @@
 # TEST CASES – IDENTITY SERVICE
 
-## Test Case Overview
-
-| Category | Test Count | Priority |
-|----------|------------|----------|
-| Register (UC-REGISTER) | 15 | HIGH |
-| Login (UC-LOGIN) | 12 | CRITICAL |
-| Refresh Token (UC-REFRESH-TOKEN) | 10 | CRITICAL |
-| Logout (UC-LOGOUT) | 6 | HIGH |
-| Admin Soft Delete User (UC-SOFT-DELETE) | 8 | CRITICAL |
-| Admin Restore User (UC-RESTORE) | 6 | HIGH |
-| Admin Lock Account (UC-LOCK-ACCOUNT) | 7 | CRITICAL |
-| Admin Unlock Account (UC-UNLOCK-ACCOUNT) | 5 | HIGH |
-| JWT Validation | 8 | CRITICAL |
-| Token Reuse Detection | 5 | CRITICAL |
-| Audit Logging | 10 | HIGH |
-| Validation Rules | 12 | HIGH |
-| Security Tests | 10 | CRITICAL |
-| **TOTAL** | **114** | - |
+**Version:** 2.0  
+**Last Updated:** January 30, 2026  
+**Status:** Production-Ready
 
 ---
 
-## 1. REGISTER (UC-REGISTER)
+## Test Coverage Overview
 
-### TC-ID-001: Register thành công với dữ liệu hợp lệ
+| Use Case | Test Count | Priority |
+|----------|------------|----------|
+| UC-REGISTER | 18 | HIGH |
+| UC-LOGIN | 15 | CRITICAL |
+| UC-REFRESH-TOKEN | 12 | CRITICAL |
+| UC-LOGOUT | 6 | HIGH |
+| UC-ADMIN-CREATE-USER | 8 | CRITICAL |
+| UC-ADMIN-SOFT-DELETE | 7 | HIGH |
+| UC-ADMIN-RESTORE | 6 | HIGH |
+| UC-ADMIN-LOCK-ACCOUNT | 8 | CRITICAL |
+| UC-ADMIN-UNLOCK-ACCOUNT | 5 | HIGH |
+| UC-ADMIN-UPDATE-EXTERNAL-ACCOUNTS | 5 | MEDIUM |
+| JWT Validation | 10 | CRITICAL |
+| Token Reuse Detection | 5 | CRITICAL |
+| Role Format Validation | 6 | CRITICAL |
+| Audit Logging | 8 | HIGH |
+| **TOTAL** | **119** | - |
+
+---
+
+## 1. UC-REGISTER
+
+### TC-AUTH-REG-001: Register successfully with valid STUDENT data
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-001 |
-| **Tên Test Case** | Register successfully with valid data |
-| **Mô tả** | Guest đăng ký tài khoản STUDENT với tất cả fields hợp lệ |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Positive - Happy Path |
+| **Test Case ID** | TC-AUTH-REG-001 |
+| **Title** | Register STUDENT account with all valid fields |
+| **Priority** | CRITICAL |
+| **Type** | Positive - Happy Path |
 
-**Điều kiện tiên quyết:**
-- Email "student@university.edu" chưa tồn tại trong database
+**Preconditions:**
+- Email "student@university.edu" does not exist in database
+- Application is running
 
-**Các bước thực hiện:**
-1. Gửi POST request đến `/api/auth/register`
-2. Body: Valid registration data
-
-**Dữ liệu test:**
+**Test Data:**
 ```json
 {
   "email": "student@university.edu",
-  "password": "SecurePass@123",
-  "confirmPassword": "SecurePass@123",
-  "fullName": "Nguyen Van A",
+  "password": "Ph@050204",
+  "confirmPassword": "Ph@050204",
+  "fullName": "Nguyễn Văn An",
   "role": "STUDENT"
 }
 ```
 
-**Kết quả mong đợi:**
+**Steps:**
+1. Send POST request to `/api/auth/register`
+2. Include request body with test data
+3. Verify response
+
+**Expected Result:**
 - HTTP Status: `201 CREATED`
-- Response:
+- Response body:
 ```json
 {
   "user": {
     "id": 1,
     "email": "student@university.edu",
-    "fullName": "Nguyen Van A",
+    "fullName": "Nguyễn Văn An",
     "role": "STUDENT",
     "status": "ACTIVE",
-    "createdAt": "2026-01-29T10:00:00Z"
+    "createdAt": "2026-01-30T10:00:00Z"
   },
   "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "refreshToken": "550e8400-e29b-41d4-a716-446655440000",
@@ -70,81 +78,120 @@
   "expiresIn": 900
 }
 ```
-- Database: 
-  - 1 record mới trong `users` table với `status = ACTIVE`
-  - Password được hash với BCrypt (strength 10)
-  - 1 refresh token mới trong `refresh_tokens` table
-- Audit log: Event `CREATE` được ghi
+- Database verification:
+  - New record in `users` table with `status = ACTIVE`, `role = STUDENT`
+  - `password_hash` starts with `$2a$10$` (BCrypt strength 10)
+  - New record in `refresh_tokens` table with `revoked = false`
+- Audit log: Event `USER_CREATED` with outcome `SUCCESS`
 
 ---
 
-### TC-ID-002: Register thất bại - Email already exists
+### TC-AUTH-REG-002: Register fails - Email already exists
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-002 |
-| **Tên Test Case** | Register fails - Email already exists |
-| **Mô tả** | Đăng ký với email đã tồn tại trong database |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Negative - Business Rule |
+| **Test Case ID** | TC-AUTH-REG-002 |
+| **Title** | Registration rejected when email already registered |
+| **Priority** | HIGH |
+| **Type** | Negative - Business Rule |
 
-**Điều kiện tiên quyết:**
-- Email "existing@university.edu" đã tồn tại trong database
+**Preconditions:**
+- User with email "existing@university.edu" already exists in database
 
-**Dữ liệu test:**
+**Test Data:**
 ```json
 {
   "email": "existing@university.edu",
-  "password": "SecurePass@123",
-  "confirmPassword": "SecurePass@123",
-  "fullName": "Nguyen Van B",
+  "password": "NewPassword@456",
+  "confirmPassword": "NewPassword@456",
+  "fullName": "Trần Thị Bình",
   "role": "STUDENT"
 }
 ```
 
-**Kết quả mong đợi:**
+**Steps:**
+1. Send POST request to `/api/auth/register`
+2. Verify error response
+
+**Expected Result:**
 - HTTP Status: `409 CONFLICT`
-- Response:
+- Response body:
 ```json
 {
   "code": "EMAIL_ALREADY_EXISTS",
   "message": "Email already registered",
-  "timestamp": "2026-01-29T10:00:00Z"
+  "timestamp": "2026-01-30T10:00:00Z"
 }
 ```
-- Database: Không có record mới
+- No new database records created
 
 ---
 
-### TC-ID-003: Register thất bại - Invalid email format
+### TC-AUTH-REG-003: Register fails - Email case-insensitive duplicate
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-003 |
-| **Tên Test Case** | Register fails - Invalid email format |
-| **Mô tả** | Đăng ký với email không đúng RFC 5322 format |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Negative - Validation |
+| **Test Case ID** | TC-AUTH-REG-003 |
+| **Title** | Registration rejected for case-insensitive duplicate email |
+| **Priority** | HIGH |
+| **Type** | Negative - Business Rule |
 
-**Dữ liệu test:**
+**Preconditions:**
+- User with email "student@university.edu" exists in database
+
+**Test Data:**
 ```json
 {
-  "email": "invalid-email",
+  "email": "STUDENT@UNIVERSITY.EDU",
   "password": "SecurePass@123",
   "confirmPassword": "SecurePass@123",
-  "fullName": "Nguyen Van A",
+  "fullName": "Lê Văn Cường",
   "role": "STUDENT"
 }
 ```
 
-**Kết quả mong đợi:**
+**Steps:**
+1. Send POST request to `/api/auth/register`
+2. Verify email uniqueness check is case-insensitive
+
+**Expected Result:**
+- HTTP Status: `409 CONFLICT`
+- Response: "Email already registered"
+- Implementation uses: `LOWER(email) = LOWER(?)` comparison
+
+---
+
+### TC-AUTH-REG-004: Register fails - Invalid email format
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-REG-004 |
+| **Title** | Registration rejected for invalid email format |
+| **Priority** | HIGH |
+| **Type** | Negative - Validation |
+
+**Test Data:**
+```json
+{
+  "email": "not-an-email",
+  "password": "SecurePass@123",
+  "confirmPassword": "SecurePass@123",
+  "fullName": "Nguyễn Văn An",
+  "role": "STUDENT"
+}
+```
+
+**Steps:**
+1. Send POST request to `/api/auth/register`
+
+**Expected Result:**
 - HTTP Status: `400 BAD_REQUEST`
-- Response:
+- Response body:
 ```json
 {
   "code": "VALIDATION_ERROR",
   "message": "Validation failed",
-  "timestamp": "2026-01-29T10:00:00Z",
+  "timestamp": "2026-01-30T10:00:00Z",
   "errors": [
     {
       "field": "email",
@@ -156,131 +203,263 @@
 
 ---
 
-### TC-ID-004: Register thất bại - Password too weak
+### TC-AUTH-REG-005: Register fails - Password too short
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-004 |
-| **Tên Test Case** | Register fails - Password too weak |
-| **Mô tả** | Đăng ký với password không đáp ứng yêu cầu (thiếu uppercase, special char) |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Negative - Validation |
+| **Test Case ID** | TC-AUTH-REG-005 |
+| **Title** | Registration rejected when password < 8 characters |
+| **Priority** | HIGH |
+| **Type** | Negative - Validation |
 
-**Dữ liệu test:**
+**Test Data:**
 ```json
 {
   "email": "student@university.edu",
-  "password": "weakpass",
-  "confirmPassword": "weakpass",
-  "fullName": "Nguyen Van A",
+  "password": "Pass@1",
+  "confirmPassword": "Pass@1",
+  "fullName": "Nguyễn Văn An",
   "role": "STUDENT"
 }
 ```
 
-**Kết quả mong đợi:**
+**Expected Result:**
 - HTTP Status: `400 BAD_REQUEST`
-- Response:
-```json
-{
-  "code": "VALIDATION_ERROR",
-  "message": "Validation failed",
-  "timestamp": "2026-01-29T10:00:00Z",
-  "errors": [
-    {
-      "field": "password",
-      "message": "Password does not meet requirements"
-    }
-  ]
-}
-```
+- Error: "Password must be 8-128 characters"
 
 ---
 
-### TC-ID-005: Register thất bại - Passwords don't match
+### TC-AUTH-REG-006: Register fails - Password missing uppercase
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-005 |
-| **Tên Test Case** | Register fails - Passwords don't match |
-| **Mô tả** | Đăng ký với password và confirmPassword không giống nhau |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Negative - Validation |
+| **Test Case ID** | TC-AUTH-REG-006 |
+| **Title** | Registration rejected when password has no uppercase letter |
+| **Priority** | HIGH |
+| **Type** | Negative - Validation |
 
-**Dữ liệu test:**
+**Test Data:**
+```json
+{
+  "email": "student@university.edu",
+  "password": "securepass@123",
+  "confirmPassword": "securepass@123",
+  "fullName": "Nguyễn Văn An",
+  "role": "STUDENT"
+}
+```
+
+**Expected Result:**
+- HTTP Status: `400 BAD_REQUEST`
+- Error: "Password must contain at least 1 uppercase letter"
+
+---
+
+### TC-AUTH-REG-007: Register fails - Password missing lowercase
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-REG-007 |
+| **Title** | Registration rejected when password has no lowercase letter |
+| **Priority** | HIGH |
+| **Type** | Negative - Validation |
+
+**Test Data:**
+```json
+{
+  "email": "student@university.edu",
+  "password": "SECUREPASS@123",
+  "confirmPassword": "SECUREPASS@123",
+  "fullName": "Nguyễn Văn An",
+  "role": "STUDENT"
+}
+```
+
+**Expected Result:**
+- HTTP Status: `400 BAD_REQUEST`
+- Error: "Password must contain at least 1 lowercase letter"
+
+---
+
+### TC-AUTH-REG-008: Register fails - Password missing digit
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-REG-008 |
+| **Title** | Registration rejected when password has no digit |
+| **Priority** | HIGH |
+| **Type** | Negative - Validation |
+
+**Test Data:**
+```json
+{
+  "email": "student@university.edu",
+  "password": "SecurePass@",
+  "confirmPassword": "SecurePass@",
+  "fullName": "Nguyễn Văn An",
+  "role": "STUDENT"
+}
+```
+
+**Expected Result:**
+- HTTP Status: `400 BAD_REQUEST`
+- Error: "Password must contain at least 1 digit"
+
+---
+
+### TC-AUTH-REG-009: Register fails - Password missing special character
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-REG-009 |
+| **Title** | Registration rejected when password has no special character |
+| **Priority** | HIGH |
+| **Type** | Negative - Validation |
+
+**Test Data:**
+```json
+{
+  "email": "student@university.edu",
+  "password": "SecurePass123",
+  "confirmPassword": "SecurePass123",
+  "fullName": "Nguyễn Văn An",
+  "role": "STUDENT"
+}
+```
+
+**Expected Result:**
+- HTTP Status: `400 BAD_REQUEST`
+- Error: "Password must contain at least 1 special character (@$!%*?&)"
+
+---
+
+### TC-AUTH-REG-010: Register fails - Password invalid special character
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-REG-010 |
+| **Title** | Registration rejected when password contains disallowed special character |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Validation |
+
+**Test Data:**
+```json
+{
+  "email": "student@university.edu",
+  "password": "SecurePass#123",
+  "confirmPassword": "SecurePass#123",
+  "fullName": "Nguyễn Văn An",
+  "role": "STUDENT"
+}
+```
+
+**Expected Result:**
+- HTTP Status: `400 BAD_REQUEST`
+- Error: "Password must contain at least 1 special character (@$!%*?&)"
+- Only `@`, `$`, `!`, `%`, `*`, `?`, `&` allowed
+
+---
+
+### TC-AUTH-REG-011: Register fails - Passwords do not match
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-REG-011 |
+| **Title** | Registration rejected when password and confirmPassword differ |
+| **Priority** | HIGH |
+| **Type** | Negative - Validation |
+
+**Test Data:**
 ```json
 {
   "email": "student@university.edu",
   "password": "SecurePass@123",
-  "confirmPassword": "DifferentPass@123",
-  "fullName": "Nguyen Van A",
+  "confirmPassword": "DifferentPass@456",
+  "fullName": "Nguyễn Văn An",
   "role": "STUDENT"
 }
 ```
 
-**Kết quả mong đợi:**
+**Expected Result:**
 - HTTP Status: `400 BAD_REQUEST`
-- Response:
+- Response body:
 ```json
 {
   "code": "PASSWORD_MISMATCH",
   "message": "Passwords do not match",
-  "timestamp": "2026-01-29T10:00:00Z"
+  "timestamp": "2026-01-30T10:00:00Z"
 }
 ```
 
 ---
 
-### TC-ID-006: Register thất bại - Invalid role (LECTURER/ADMIN)
+### TC-AUTH-REG-012: Register fails - Invalid role LECTURER
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-006 |
-| **Tên Test Case** | Register fails - Invalid role (LECTURER/ADMIN not allowed) |
-| **Mô tả** | Guest cố đăng ký với role LECTURER hoặc ADMIN (chỉ ADMIN mới tạo được) |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Negative - Authorization |
+| **Test Case ID** | TC-AUTH-REG-012 |
+| **Title** | Public registration rejected for LECTURER role |
+| **Priority** | CRITICAL |
+| **Type** | Negative - Authorization |
 
-**Dữ liệu test:**
+**Test Data:**
 ```json
 {
   "email": "lecturer@university.edu",
   "password": "SecurePass@123",
   "confirmPassword": "SecurePass@123",
-  "fullName": "Dr. Nguyen Van A",
+  "fullName": "Dr. Nguyễn Văn An",
   "role": "LECTURER"
 }
 ```
 
-**Kết quả mong đợi:**
+**Steps:**
+1. Send POST request to `/api/auth/register`
+
+**Expected Result:**
 - HTTP Status: `400 BAD_REQUEST`
-- Response:
-```json
-{
-  "code": "VALIDATION_ERROR",
-  "message": "Validation failed",
-  "timestamp": "2026-01-29T10:00:00Z",
-  "errors": [
-    {
-      "field": "role",
-      "message": "Invalid role specified"
-    }
-  ]
-}
-```
+- Error: "Invalid role specified"
+- Only `STUDENT` role allowed in public registration
 
 ---
 
-### TC-ID-007: Register thất bại - Full name too short
+### TC-AUTH-REG-013: Register fails - Invalid role ADMIN
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-007 |
-| **Tên Test Case** | Register fails - Full name too short |
-| **Mô tả** | Đăng ký với fullName < 2 characters |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Negative - Validation |
+| **Test Case ID** | TC-AUTH-REG-013 |
+| **Title** | Public registration rejected for ADMIN role |
+| **Priority** | CRITICAL |
+| **Type** | Negative - Authorization |
 
-**Dữ liệu test:**
+**Test Data:**
+```json
+{
+  "email": "admin@university.edu",
+  "password": "SecurePass@123",
+  "confirmPassword": "SecurePass@123",
+  "fullName": "Administrator",
+  "role": "ADMIN"
+}
+```
+
+**Expected Result:**
+- HTTP Status: `400 BAD_REQUEST`
+- Error: "Invalid role specified"
+- ADMIN/LECTURER accounts must be created via `/api/admin/users`
+
+---
+
+### TC-AUTH-REG-014: Register fails - Full name too short
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-REG-014 |
+| **Title** | Registration rejected when full name < 2 characters |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Validation |
+
+**Test Data:**
 ```json
 {
   "email": "student@university.edu",
@@ -291,249 +470,135 @@
 }
 ```
 
-**Kết quả mong đợi:**
+**Expected Result:**
 - HTTP Status: `400 BAD_REQUEST`
 - Error: "Name must be 2-100 characters"
 
 ---
 
-### TC-ID-008: Register thất bại - Full name too long
+### TC-AUTH-REG-015: Register fails - Full name too long
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-008 |
-| **Tên Test Case** | Register fails - Full name too long |
-| **Mô tả** | Đăng ký với fullName > 100 characters |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Negative - Validation |
+| **Test Case ID** | TC-AUTH-REG-015 |
+| **Title** | Registration rejected when full name > 100 characters |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Validation |
 
-**Dữ liệu test:**
+**Test Data:**
 ```json
 {
   "email": "student@university.edu",
   "password": "SecurePass@123",
   "confirmPassword": "SecurePass@123",
-  "fullName": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "fullName": "A very long name that exceeds one hundred characters limit for validation testing purposes and should be rejected",
   "role": "STUDENT"
 }
 ```
 
-**Kết quả mong đợi:**
+**Expected Result:**
 - HTTP Status: `400 BAD_REQUEST`
 - Error: "Name must be 2-100 characters"
 
 ---
 
-### TC-ID-009: Register thành công - Vietnamese name với dấu
+### TC-AUTH-REG-016: Register fails - Full name contains numbers
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-009 |
-| **Tên Test Case** | Register successfully - Vietnamese name with accents |
-| **Mô tả** | Đăng ký với tên tiếng Việt có dấu (Unicode) |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Positive - Validation |
+| **Test Case ID** | TC-AUTH-REG-016 |
+| **Title** | Registration rejected when full name contains digits |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Validation |
 
-**Dữ liệu test:**
+**Test Data:**
 ```json
 {
   "email": "student@university.edu",
   "password": "SecurePass@123",
   "confirmPassword": "SecurePass@123",
-  "fullName": "Nguyễn Văn Ánh",
+  "fullName": "Nguyen123 Van An",
   "role": "STUDENT"
 }
 ```
 
-**Kết quả mong đợi:**
-- HTTP Status: `201 CREATED`
-- fullName = "Nguyễn Văn Ánh" (Unicode được accept)
-- Pattern `\p{L}` match Unicode letters
-
----
-
-### TC-ID-010: Register thất bại - Full name với số
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-010 |
-| **Tên Test Case** | Register fails - Full name with numbers |
-| **Mô tả** | Đăng ký với fullName chứa số |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Negative - Validation |
-
-**Dữ liệu test:**
-```json
-{
-  "email": "student@university.edu",
-  "password": "SecurePass@123",
-  "confirmPassword": "SecurePass@123",
-  "fullName": "Nguyen123",
-  "role": "STUDENT"
-}
-```
-
-**Kết quả mong đợi:**
+**Expected Result:**
 - HTTP Status: `400 BAD_REQUEST`
 - Error: "Name contains invalid characters"
+- Pattern: `^[\p{L}\s\-]{2,100}$` (only letters, spaces, hyphens)
 
 ---
 
-### TC-ID-011: Register thất bại - Password min length
+### TC-AUTH-REG-017: Register success - Full name with hyphen
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-011 |
-| **Tên Test Case** | Register fails - Password too short (< 8 chars) |
-| **Mô tả** | Đăng ký với password < 8 characters |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Negative - Validation |
+| **Test Case ID** | TC-AUTH-REG-017 |
+| **Title** | Registration accepts full name with hyphen |
+| **Priority** | MEDIUM |
+| **Type** | Positive - Validation |
 
-**Dữ liệu test:**
+**Test Data:**
 ```json
 {
   "email": "student@university.edu",
-  "password": "Pass@1",
-  "confirmPassword": "Pass@1",
-  "fullName": "Nguyen Van A",
-  "role": "STUDENT"
-}
-```
-
-**Kết quả mong đợi:**
-- HTTP Status: `400 BAD_REQUEST`
-- Error: "Password must be at least 8 characters"
-
----
-
-### TC-ID-012: Register thất bại - Password missing uppercase
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-012 |
-| **Tên Test Case** | Register fails - Password missing uppercase |
-| **Mô tả** | Đăng ký với password không có chữ hoa |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Negative - Validation |
-
-**Dữ liệu test:**
-```json
-{
-  "email": "student@university.edu",
-  "password": "securepass@123",
-  "confirmPassword": "securepass@123",
-  "fullName": "Nguyen Van A",
-  "role": "STUDENT"
-}
-```
-
-**Kết quả mong đợi:**
-- HTTP Status: `400 BAD_REQUEST`
-- Error: "Password must contain at least 1 uppercase letter"
-
----
-
-### TC-ID-013: Register thất bại - Password missing special char
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-013 |
-| **Tên Test Case** | Register fails - Password missing special character |
-| **Mô tả** | Đăng ký với password không có ký tự đặc biệt |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Negative - Validation |
-
-**Dữ liệu test:**
-```json
-{
-  "email": "student@university.edu",
-  "password": "SecurePass123",
-  "confirmPassword": "SecurePass123",
-  "fullName": "Nguyen Van A",
-  "role": "STUDENT"
-}
-```
-
-**Kết quả mong đợi:**
-- HTTP Status: `400 BAD_REQUEST`
-- Error: "Password must contain at least 1 special character (@$!%*?&)"
-
----
-
-### TC-ID-014: Verify password được hash với BCrypt
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-014 |
-| **Tên Test Case** | Verify password is hashed with BCrypt (strength 10) |
-| **Mô tả** | Kiểm tra password được hash bằng BCrypt strength 10 |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Security - Encryption |
-
-**Điều kiện tiên quyết:**
-- User đã register thành công (TC-ID-001)
-
-**Các bước thực hiện:**
-1. Register user với password "SecurePass@123"
-2. Query trực tiếp database: `SELECT password_hash FROM users WHERE email = ?`
-3. Verify password_hash format
-
-**Kết quả mong đợi:**
-- Database `password_hash` ≠ plaintext password
-- `password_hash` format: `$2a$10$...` (BCrypt với strength 10)
-- Length ≈ 60 characters
-- Verify với `BCryptPasswordEncoder.matches("SecurePass@123", hash)` → true
-
----
-
-### TC-ID-015: Register thất bại - Email max length
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-015 |
-| **Tên Test Case** | Register fails - Email exceeds max length (255 chars) |
-| **Mô tả** | Đăng ký với email > 255 characters |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Negative - Validation |
-
-**Dữ liệu test:**
-```json
-{
-  "email": "verylongemailaddressverylongemailaddressverylongemailaddressverylongemailaddressverylongemailaddressverylongemailaddressverylongemailaddressverylongemailaddressverylongemailaddressverylongemailaddressverylongemailaddressverylongemailaddressverylongemailaddress@university.edu",
   "password": "SecurePass@123",
   "confirmPassword": "SecurePass@123",
-  "fullName": "Nguyen Van A",
+  "fullName": "Jean-Pierre Dubois",
   "role": "STUDENT"
 }
 ```
 
-**Kết quả mong đợi:**
-- HTTP Status: `400 BAD_REQUEST`
-- Error: "Email must not exceed 255 characters"
+**Expected Result:**
+- HTTP Status: `201 CREATED`
+- Full name stored as "Jean-Pierre Dubois"
 
 ---
 
-## 2. LOGIN (UC-LOGIN)
-
-### TC-ID-016: Login thành công với credentials hợp lệ
+### TC-AUTH-REG-018: Register success - Unicode Vietnamese name
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-016 |
-| **Tên Test Case** | Login successfully with valid credentials |
-| **Mô tả** | User login với email và password đúng |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Positive - Happy Path |
+| **Test Case ID** | TC-AUTH-REG-018 |
+| **Title** | Registration accepts Vietnamese name with diacritics |
+| **Priority** | HIGH |
+| **Type** | Positive - Validation |
 
-**Điều kiện tiên quyết:**
-- User tồn tại với email "student@university.edu" và password "SecurePass@123"
-- User status = ACTIVE
+**Test Data:**
+```json
+{
+  "email": "student@university.edu",
+  "password": "SecurePass@123",
+  "confirmPassword": "SecurePass@123",
+  "fullName": "Trần Thị Bảo Châu",
+  "role": "STUDENT"
+}
+```
 
-**Các bước thực hiện:**
-1. Gửi POST request đến `/api/auth/login`
-2. Body: Valid credentials
+**Expected Result:**
+- HTTP Status: `201 CREATED`
+- Full name stored correctly with Unicode characters
+- Pattern `\p{L}` matches Unicode letters
 
-**Dữ liệu test:**
+---
+
+## 2. UC-LOGIN
+
+### TC-AUTH-LOGIN-001: Login successfully with valid credentials
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-LOGIN-001 |
+| **Title** | Login with correct email and password |
+| **Priority** | CRITICAL |
+| **Type** | Positive - Happy Path |
+
+**Preconditions:**
+- User exists: email = "student@university.edu", password = "SecurePass@123"
+- User status = `ACTIVE`
+- User role = `STUDENT`
+
+**Test Data:**
 ```json
 {
   "email": "student@university.edu",
@@ -541,9 +606,15 @@
 }
 ```
 
-**Kết quả mong đợi:**
+**Steps:**
+1. Send POST request to `/api/auth/login`
+2. Verify response tokens
+3. Decode JWT access token
+4. Query database for refresh token
+
+**Expected Result:**
 - HTTP Status: `200 OK`
-- Response:
+- Response body:
 ```json
 {
   "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -552,292 +623,204 @@
   "expiresIn": 900
 }
 ```
-- Access token: JWT với TTL = 15 minutes
-- Refresh token: UUID được lưu vào database với TTL = 7 days
-- Audit log: Event `LOGIN_SUCCESS` với outcome = SUCCESS
-
----
-
-### TC-ID-017: Login thất bại - Email not found
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-017 |
-| **Tên Test Case** | Login fails - Email not found |
-| **Mô tả** | Login với email không tồn tại |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Negative - Business Logic |
-
-**Dữ liệu test:**
-```json
-{
-  "email": "nonexistent@university.edu",
-  "password": "SecurePass@123"
-}
-```
-
-**Kết quả mong đợi:**
-- HTTP Status: `401 UNAUTHORIZED`
-- Response:
-```json
-{
-  "code": "INVALID_CREDENTIALS",
-  "message": "Invalid credentials",
-  "timestamp": "2026-01-29T10:00:00Z"
-}
-```
-- **Security:** Không tiết lộ "Email not found" (prevent enumeration)
-- Audit log: Event `LOGIN_FAILED` với outcome = FAILURE
-
----
-
-### TC-ID-018: Login thất bại - Password incorrect
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-018 |
-| **Tên Test Case** | Login fails - Password incorrect |
-| **Mô tả** | Login với password sai |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Negative - Business Logic |
-
-**Điều kiện tiên quyết:**
-- User tồn tại với email "student@university.edu"
-
-**Dữ liệu test:**
-```json
-{
-  "email": "student@university.edu",
-  "password": "WrongPassword@123"
-}
-```
-
-**Kết quả mong đợi:**
-- HTTP Status: `401 UNAUTHORIZED`
-- Response:
-```json
-{
-  "code": "INVALID_CREDENTIALS",
-  "message": "Invalid credentials",
-  "timestamp": "2026-01-29T10:00:00Z"
-}
-```
-- **Security:** Same error message như email not found (prevent enumeration)
-- Audit log: Event `LOGIN_FAILED` với outcome = FAILURE
-
----
-
-### TC-ID-019: Login thất bại - Account locked
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-019 |
-| **Tén Test Case** | Login fails - Account locked |
-| **Mô tả** | Login với account có status = LOCKED |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Negative - Business Rule |
-
-**Điều kiện tiên quyết:**
-- User tồn tại với email "locked@university.edu"
-- User status = LOCKED
-- Password đúng
-
-**Dữ liệu test:**
-```json
-{
-  "email": "locked@university.edu",
-  "password": "SecurePass@123"
-}
-```
-
-**Kết quả mong đợi:**
-- HTTP Status: `403 FORBIDDEN`
-- Response:
-```json
-{
-  "code": "ACCOUNT_LOCKED",
-  "message": "Account is locked",
-  "timestamp": "2026-01-29T10:00:00Z"
-}
-```
-- **Note:** Error khác với invalid credentials (cho phép hiển thị locked status sau khi xác thực password)
-- Audit log: Event `LOGIN_DENIED` với outcome = DENIED
-
----
-
-### TC-ID-020: Login với password validation trước status check
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-020 |
-| **Tên Test Case** | Login validates password BEFORE status check (prevent enumeration) |
-| **Mô tả** | Verify password được validate TRƯỚC khi check account locked |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Security - Account Enumeration Prevention |
-
-**Điều kiện tiên quyết:**
-- User tồn tại với status = LOCKED
-
-**Dữ liệu test:**
-```json
-{
-  "email": "locked@university.edu",
-  "password": "WrongPassword@123"
-}
-```
-
-**Kết quả mong đợi:**
-- HTTP Status: `401 UNAUTHORIZED`
-- Response: "Invalid credentials" (KHÔNG phải "Account is locked")
-- **Security:** Attacker không thể enumerate locked accounts bằng cách thử password sai
-- Flow: Find user → Validate password (fail) → Return invalid credentials (KHÔNG check status)
-
----
-
-### TC-ID-021: Login thành công - Multiple devices
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-021 |
-| **Tên Test Case** | Login successfully - Multiple devices/sessions |
-| **Mô tả** | User có thể login nhiều lần (multiple devices) |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Positive - Business Rule |
-
-**Các bước thực hiện:**
-1. User login lần 1 từ device A
-2. User login lần 2 từ device B (cùng credentials)
-
-**Kết quả mong đợi:**
-- Cả 2 login đều thành công (200 OK)
-- Database có 2 refresh tokens khác nhau cho cùng user_id
-- Cả 2 sessions đều active
-
----
-
-### TC-ID-022: Verify JWT claims structure
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-022 |
-| **Tên Test Case** | Verify JWT access token claims structure |
-| **Mô tả** | Kiểm tra JWT access token chứa đúng claims |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Positive - Token Structure |
-
-**Điều kiện tiên quyết:**
-- User đã login thành công
-
-**Các bước thực hiện:**
-1. Login user
-2. Decode access token (JWT)
-3. Verify claims
-
-**Kết quả mong đợi:**
-- JWT header: `{"alg": "HS256", "typ": "JWT"}`
-- JWT claims:
+- Access token JWT payload:
 ```json
 {
   "sub": "1",
   "email": "student@university.edu",
-  "roles": ["ROLE_STUDENT"],
-  "iat": 1738148400,
-  "exp": 1738149300,
-  "token_type": "ACCESS"
+  "roles": ["STUDENT"],
+  "token_type": "ACCESS",
+  "iat": 1738234800,
+  "exp": 1738235700
 }
 ```
-- Signature valid với JWT_SECRET
-- TTL = 15 minutes (900 seconds)
+- Refresh token: UUID format, stored in database with `revoked = false`
+- Audit log: Event `LOGIN_SUCCESS` with outcome `SUCCESS`, IP address captured
 
 ---
 
-### TC-ID-023: Verify refresh token format
+### TC-AUTH-LOGIN-002: Login fails - Email not found (Generic error)
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-023 |
-| **Tên Test Case** | Verify refresh token format (UUID, not JWT) |
-| **Mô tả** | Kiểm tra refresh token là UUID opaque string, KHÔNG phải JWT |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Positive - Token Structure |
+| **Test Case ID** | TC-AUTH-LOGIN-002 |
+| **Title** | Login with non-existent email returns generic error |
+| **Priority** | CRITICAL |
+| **Type** | Negative - Security (Anti-Enumeration) |
 
-**Điều kiện tiên quyết:**
-- User đã login thành công
-
-**Các bước thực hiện:**
-1. Login user
-2. Extract refresh token từ response
-3. Verify format
-
-**Kết quả mong đợi:**
-- Refresh token format: UUID v4 (e.g., `550e8400-e29b-41d4-a716-446655440000`)
-- KHÔNG phải JWT (không có 3 parts separated by dots)
-- Stored in database `refresh_tokens` table
-- TTL = 7 days
-
----
-
-### TC-ID-024: Login thất bại - Missing email
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-024 |
-| **Tên Test Case** | Login fails - Missing email field |
-| **Mô tả** | Login với request thiếu email |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Negative - Validation |
-
-**Dữ liệu test:**
+**Test Data:**
 ```json
 {
+  "email": "nonexistent@university.edu",
+  "password": "AnyPassword@123"
+}
+```
+
+**Steps:**
+1. Send POST request to `/api/auth/login`
+2. Verify generic error message
+
+**Expected Result:**
+- HTTP Status: `401 UNAUTHORIZED`
+- Response body:
+```json
+{
+  "code": "INVALID_CREDENTIALS",
+  "message": "Invalid credentials",
+  "timestamp": "2026-01-30T10:00:00Z"
+}
+```
+- **CRITICAL**: Must NOT reveal that email does not exist
+- Same error as wrong password (anti-enumeration)
+- Audit log: Event `LOGIN_FAILED` with outcome `FAILURE`
+
+---
+
+### TC-AUTH-LOGIN-003: Login fails - Wrong password (Generic error)
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-LOGIN-003 |
+| **Title** | Login with incorrect password returns generic error |
+| **Priority** | CRITICAL |
+| **Type** | Negative - Security (Anti-Enumeration) |
+
+**Preconditions:**
+- User exists: email = "student@university.edu", correct password = "SecurePass@123"
+- User status = `ACTIVE`
+
+**Test Data:**
+```json
+{
+  "email": "student@university.edu",
+  "password": "WrongPassword@456"
+}
+```
+
+**Steps:**
+1. Send POST request to `/api/auth/login`
+
+**Expected Result:**
+- HTTP Status: `401 UNAUTHORIZED`
+- Response body:
+```json
+{
+  "code": "INVALID_CREDENTIALS",
+  "message": "Invalid credentials",
+  "timestamp": "2026-01-30T10:00:00Z"
+}
+```
+- **CRITICAL**: Same error message as email not found (anti-enumeration)
+- Audit log: Event `LOGIN_FAILED` with outcome `FAILURE`
+
+---
+
+### TC-AUTH-LOGIN-004: Login denied - Account locked with CORRECT password
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-LOGIN-004 |
+| **Title** | Login denied when account is locked (password correct) |
+| **Priority** | CRITICAL |
+| **Type** | Negative - Authorization |
+
+**Preconditions:**
+- User exists: email = "locked@university.edu", password = "SecurePass@123"
+- User status = `LOCKED`
+- Password in test data is CORRECT
+
+**Test Data:**
+```json
+{
+  "email": "locked@university.edu",
   "password": "SecurePass@123"
 }
 ```
 
-**Kết quả mong đợi:**
-- HTTP Status: `400 BAD_REQUEST`
-- Error: "Email is required"
+**Steps:**
+1. Send POST request to `/api/auth/login`
+2. Verify account locked error (NOT generic error)
+
+**Expected Result:**
+- HTTP Status: `403 FORBIDDEN`
+- Response body:
+```json
+{
+  "code": "ACCOUNT_LOCKED",
+  "message": "Account is locked. Contact admin.",
+  "timestamp": "2026-01-30T10:00:00Z"
+}
+```
+- **SECURITY RATIONALE**: Account locked error ONLY shown when password correct
+  - User proved identity with correct password
+  - System may reveal account status after authentication
+- No tokens generated
+- Audit log: Event `LOGIN_DENIED` with outcome `DENIED`, reason "Account is locked"
 
 ---
 
-### TC-ID-025: Login thất bại - Missing password
+### TC-AUTH-LOGIN-005: Login fails - Account locked with WRONG password (Anti-Enumeration)
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-025 |
-| **Tên Test Case** | Login fails - Missing password field |
-| **Mô tả** | Login với request thiếu password |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Negative - Validation |
+| **Test Case ID** | TC-AUTH-LOGIN-005 |
+| **Title** | Login with wrong password on locked account returns generic error |
+| **Priority** | CRITICAL |
+| **Type** | Negative - Security (Anti-Enumeration) |
 
-**Dữ liệu test:**
+**Preconditions:**
+- User exists: email = "locked@university.edu", correct password = "SecurePass@123"
+- User status = `LOCKED`
+- Password in test data is WRONG
+
+**Test Data:**
 ```json
 {
-  "email": "student@university.edu"
+  "email": "locked@university.edu",
+  "password": "WrongPassword@456"
 }
 ```
 
-**Kết quả mong đợi:**
-- HTTP Status: `400 BAD_REQUEST`
-- Error: "Password is required"
+**Steps:**
+1. Send POST request to `/api/auth/login`
+2. Verify generic error (NOT account locked error)
+
+**Expected Result:**
+- HTTP Status: `401 UNAUTHORIZED` (NOT 403!)
+- Response body:
+```json
+{
+  "code": "INVALID_CREDENTIALS",
+  "message": "Invalid credentials",
+  "timestamp": "2026-01-30T10:00:00Z"
+}
+```
+- **CRITICAL SECURITY**: Must return generic error (same as TC-AUTH-LOGIN-003)
+- **MUST NOT** reveal that account is locked
+- **RATIONALE**: User did NOT prove identity (wrong password) → cannot know account status
+- Audit log: Event `LOGIN_FAILED` with outcome `FAILURE`
+- **Implementation check order**:
+  1. Find user by email
+  2. **Validate password FIRST** (BCrypt comparison)
+  3. If password wrong → return "Invalid credentials"
+  4. If password correct → check status → return "Account locked" if needed
 
 ---
 
-### TC-ID-026: Login không thể xóa soft deleted user
+### TC-AUTH-LOGIN-006: Login fails - Soft deleted user
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-026 |
-| **Tên Test Case** | Login fails - Soft deleted user cannot login |
-| **Mô tả** | User đã bị soft delete không thể login |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Negative - Soft Delete |
+| **Test Case ID** | TC-AUTH-LOGIN-006 |
+| **Title** | Login fails for soft deleted user |
+| **Priority** | HIGH |
+| **Type** | Negative - Business Rule |
 
-**Điều kiện tiên quyết:**
-- User tồn tại với email "deleted@university.edu"
-- User đã bị soft delete (deleted_at IS NOT NULL)
+**Preconditions:**
+- User was created: email = "deleted@university.edu"
+- User has been soft deleted: `deleted_at IS NOT NULL`
 
-**Dữ liệu test:**
+**Test Data:**
 ```json
 {
   "email": "deleted@university.edu",
@@ -845,2106 +828,2476 @@
 }
 ```
 
-**Kết quả mong đợi:**
+**Steps:**
+1. Send POST request to `/api/auth/login`
+
+**Expected Result:**
 - HTTP Status: `401 UNAUTHORIZED`
 - Response: "Invalid credentials"
-- `@SQLRestriction("deleted_at IS NULL")` filter soft deleted users
-- Soft deleted user không tìm thấy trong query
+- Soft deleted users filtered by `@SQLRestriction("deleted_at IS NULL")`
+- User not found in query (appears as non-existent)
 
 ---
 
-### TC-ID-027: Login audit log capture IP và User-Agent
+### TC-AUTH-LOGIN-007: JWT access token structure validation
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-027 |
-| **Tên Test Case** | Login audit log captures IP address and User-Agent |
-| **Mô tả** | Kiểm tra audit log ghi lại IP và User-Agent |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Positive - Audit Logging |
+| **Test Case ID** | TC-AUTH-LOGIN-007 |
+| **Title** | Verify JWT access token contains correct claims |
+| **Priority** | CRITICAL |
+| **Type** | Positive - Token Structure |
 
-**Các bước thực hiện:**
-1. Login với IP address = 192.168.1.100
-2. User-Agent = "Mozilla/5.0..."
-3. Query audit_logs table
+**Preconditions:**
+- User logged in successfully (TC-AUTH-LOGIN-001)
 
-**Kết quả mong đợi:**
-- Audit log record:
-  - `action = LOGIN_SUCCESS`
-  - `ip_address = "192.168.1.100"`
-  - `user_agent = "Mozilla/5.0..."`
-  - `actor_email = "student@university.edu"`
-  - `outcome = SUCCESS`
+**Steps:**
+1. Extract access token from login response
+2. Decode JWT at jwt.io or with library
+3. Verify header and payload
+
+**Expected Result:**
+- JWT Header:
+```json
+{
+  "alg": "HS256",
+  "typ": "JWT"
+}
+```
+- JWT Payload:
+```json
+{
+  "sub": "1",
+  "email": "student@university.edu",
+  "roles": ["STUDENT"],
+  "token_type": "ACCESS",
+  "iat": 1738234800,
+  "exp": 1738235700
+}
+```
+- **CRITICAL**: `roles` array contains plain string `"STUDENT"` (NO `ROLE_` prefix)
+- TTL = 900 seconds (15 minutes)
+- Signature valid with secret key (HS256 algorithm)
 
 ---
 
-## 3. REFRESH TOKEN (UC-REFRESH-TOKEN)
-
-### TC-ID-028: Refresh token thành công với valid token
+### TC-AUTH-LOGIN-008: Refresh token structure validation
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-028 |
-| **Tên Test Case** | Refresh token successfully with valid token |
-| **Mô tả** | Client refresh access token với valid refresh token |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Positive - Happy Path |
+| **Test Case ID** | TC-AUTH-LOGIN-008 |
+| **Title** | Verify refresh token is UUID (not JWT) |
+| **Priority** | HIGH |
+| **Type** | Positive - Token Structure |
 
-**Điều kiện tiên quyết:**
-- User đã login
-- Có valid refresh token (chưa revoked, chưa expired)
+**Preconditions:**
+- User logged in successfully
 
-**Các bước thực hiện:**
-1. Gửi POST request đến `/api/auth/refresh`
-2. Body: Valid refresh token
+**Steps:**
+1. Extract refresh token from login response
+2. Verify format
 
-**Dữ liệu test:**
+**Expected Result:**
+- Refresh token format: UUID v4 (e.g., `550e8400-e29b-41d4-a716-446655440000`)
+- NOT a JWT (no three parts separated by dots)
+- Database record:
+  - `refresh_tokens.token` = UUID value
+  - `refresh_tokens.user_id` = user ID
+  - `refresh_tokens.revoked` = `false`
+  - `refresh_tokens.expires_at` = current time + 7 days
+  - `refresh_tokens.issued_at` = current time
+
+---
+
+### TC-AUTH-LOGIN-009: Login creates audit log with IP and User-Agent
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-LOGIN-009 |
+| **Title** | Login success creates audit log with request metadata |
+| **Priority** | HIGH |
+| **Type** | Positive - Audit Logging |
+
+**Preconditions:**
+- User exists and can login
+
+**Steps:**
+1. Send login request with:
+   - IP address: `192.168.1.100`
+   - User-Agent: `Mozilla/5.0 (Windows NT 10.0; Win64; x64)`
+2. Query `audit_logs` table after login
+
+**Expected Result:**
+- Audit log record created:
+  - `action` = `LOGIN_SUCCESS`
+  - `entity_type` = `User`
+  - `entity_id` = user ID
+  - `actor_id` = user ID
+  - `actor_email` = user email
+  - `ip_address` = `"192.168.1.100"`
+  - `user_agent` = `"Mozilla/5.0 (Windows NT 10.0; Win64; x64)"`
+  - `outcome` = `SUCCESS`
+  - `timestamp` = current time
+
+---
+
+### TC-AUTH-LOGIN-010: Multiple concurrent logins allowed
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-LOGIN-010 |
+| **Title** | User can login from multiple devices simultaneously |
+| **Priority** | HIGH |
+| **Type** | Positive - Business Rule |
+
+**Preconditions:**
+- User exists: email = "student@university.edu"
+
+**Steps:**
+1. Login from Device A (User-Agent: Chrome)
+2. Login from Device B (User-Agent: Firefox)
+3. Verify both sessions active
+
+**Expected Result:**
+- Both login requests return `200 OK`
+- Database has 2 active refresh tokens for same user:
+  - Token A: `revoked = false`, different UUID
+  - Token B: `revoked = false`, different UUID
+- Both access tokens valid
+- No existing session terminated
+
+---
+
+### TC-AUTH-LOGIN-011: Login fails - Missing email field
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-LOGIN-011 |
+| **Title** | Login rejected when email field missing |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Validation |
+
+**Test Data:**
+```json
+{
+  "password": "SecurePass@123"
+}
+```
+
+**Expected Result:**
+- HTTP Status: `400 BAD_REQUEST`
+- Error: "Email is required"
+
+---
+
+### TC-AUTH-LOGIN-012: Login fails - Missing password field
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-LOGIN-012 |
+| **Title** | Login rejected when password field missing |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Validation |
+
+**Test Data:**
+```json
+{
+  "email": "student@university.edu"
+}
+```
+
+**Expected Result:**
+- HTTP Status: `400 BAD_REQUEST`
+- Error: "Password is required"
+
+---
+
+### TC-AUTH-LOGIN-013: Login fails - Empty email string
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-LOGIN-013 |
+| **Title** | Login rejected when email is empty string |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Validation |
+
+**Test Data:**
+```json
+{
+  "email": "",
+  "password": "SecurePass@123"
+}
+```
+
+**Expected Result:**
+- HTTP Status: `400 BAD_REQUEST`
+- Error: "Email is required"
+- `@NotBlank` validation rejects empty strings
+
+---
+
+### TC-AUTH-LOGIN-014: Login fails - Empty password string
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-LOGIN-014 |
+| **Title** | Login rejected when password is empty string |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Validation |
+
+**Test Data:**
+```json
+{
+  "email": "student@university.edu",
+  "password": ""
+}
+```
+
+**Expected Result:**
+- HTTP Status: `400 BAD_REQUEST`
+- Error: "Password is required"
+
+---
+
+### TC-AUTH-LOGIN-015: Login response time constant for enumeration prevention
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-LOGIN-015 |
+| **Title** | Login response time similar for valid/invalid credentials |
+| **Priority** | MEDIUM |
+| **Type** | Security - Timing Attack Prevention |
+
+**Steps:**
+1. Measure response time for non-existent email: T1
+2. Measure response time for wrong password: T2
+3. Calculate difference: |T1 - T2|
+
+**Expected Result:**
+- Response time difference < 100ms
+- BCrypt password comparison is constant-time
+- Cannot enumerate accounts via timing attacks
+
+---
+
+## 3. UC-REFRESH-TOKEN
+
+### TC-AUTH-REFRESH-001: Refresh token successfully with valid token
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-REFRESH-001 |
+| **Title** | Refresh access token with valid refresh token |
+| **Priority** | CRITICAL |
+| **Type** | Positive - Happy Path |
+
+**Preconditions:**
+- User logged in and has valid refresh token
+- Refresh token not revoked, not expired
+- User status = `ACTIVE`
+
+**Test Data:**
 ```json
 {
   "refreshToken": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
 
-**Kết quả mong đợi:**
+**Steps:**
+1. Send POST request to `/api/auth/refresh`
+2. Verify old token revoked
+3. Verify new tokens generated
+
+**Expected Result:**
 - HTTP Status: `200 OK`
-- Response:
+- Response body:
 ```json
 {
   "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refreshToken": "a1b2c3d4-e5f6-47g8-h9i0-j1k2l3m4n5o6",
+  "refreshToken": "660f9511-f30c-52e5-b827-557766551111",
   "tokenType": "Bearer",
   "expiresIn": 900
 }
 ```
-- Old refresh token bị revoke (revoked = true)
-- New refresh token được tạo và lưu vào database
-- New access token với TTL = 15 minutes
-- Audit log: Event `REFRESH_SUCCESS`
+- Database changes:
+  - OLD refresh token: `revoked = true`
+  - NEW refresh token: `revoked = false`, different UUID
+- Audit log: Event `REFRESH_SUCCESS` with outcome `SUCCESS`
+- Token rotation implemented (new refresh token on each use)
 
 ---
 
-### TC-ID-029: Refresh token thất bại - Token expired
+### TC-AUTH-REFRESH-002: Refresh fails - Invalid token format
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-029 |
-| **Tên Test Case** | Refresh token fails - Token expired |
-| **Mô tả** | Refresh với token đã hết hạn (> 7 days) |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Negative - Business Rule |
+| **Test Case ID** | TC-AUTH-REFRESH-002 |
+| **Title** | Refresh rejected with invalid UUID format |
+| **Priority** | HIGH |
+| **Type** | Negative - Validation |
 
-**Điều kiện tiên quyết:**
-- Refresh token tồn tại
-- Token `expires_at` < NOW()
+**Test Data:**
+```json
+{
+  "refreshToken": "not-a-valid-uuid"
+}
+```
 
-**Các bước thực hiện:**
-1. Gửi POST request với expired token
+**Expected Result:**
+- HTTP Status: `401 UNAUTHORIZED`
+- Response:
+```json
+{
+  "code": "INVALID_TOKEN",
+  "message": "Invalid token",
+  "timestamp": "2026-01-30T10:00:00Z"
+}
+```
 
-**Kết quả mong đợi:**
+---
+
+### TC-AUTH-REFRESH-003: Refresh fails - Token not found in database
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-REFRESH-003 |
+| **Title** | Refresh rejected when token does not exist in database |
+| **Priority** | HIGH |
+| **Type** | Negative - Business Rule |
+
+**Test Data:**
+```json
+{
+  "refreshToken": "999e9999-e99b-99d9-a999-999999999999"
+}
+```
+
+**Steps:**
+1. Send POST request with non-existent UUID
+
+**Expected Result:**
+- HTTP Status: `401 UNAUTHORIZED`
+- Response: "Invalid token"
+
+---
+
+### TC-AUTH-REFRESH-004: Refresh fails - Token already revoked
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-REFRESH-004 |
+| **Title** | Refresh rejected when token already revoked |
+| **Priority** | HIGH |
+| **Type** | Negative - Business Rule |
+
+**Preconditions:**
+- Refresh token exists in database
+- Token has `revoked = true`
+
+**Test Data:**
+```json
+{
+  "refreshToken": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Expected Result:**
+- HTTP Status: `401 UNAUTHORIZED`
+- Response: "Invalid token"
+
+---
+
+### TC-AUTH-REFRESH-005: Refresh fails - Token expired
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-REFRESH-005 |
+| **Title** | Refresh rejected when token expired (> 7 days old) |
+| **Priority** | HIGH |
+| **Type** | Negative - Business Rule |
+
+**Preconditions:**
+- Refresh token exists in database
+- Token `expires_at < NOW()`
+
+**Test Data:**
+```json
+{
+  "refreshToken": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Expected Result:**
 - HTTP Status: `401 UNAUTHORIZED`
 - Response:
 ```json
 {
   "code": "TOKEN_EXPIRED",
   "message": "Token expired",
-  "timestamp": "2026-01-29T10:00:00Z"
+  "timestamp": "2026-01-30T10:00:00Z"
 }
 ```
 
 ---
 
-### TC-ID-030: Refresh token thất bại - Token not found
+### TC-AUTH-REFRESH-006: Refresh fails - User account locked (CRITICAL SECURITY FIX)
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-030 |
-| **Tên Test Case** | Refresh token fails - Token not found |
-| **Mô tả** | Refresh với token không tồn tại trong database |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Negative - Business Logic |
+| **Test Case ID** | TC-AUTH-REFRESH-006 |
+| **Title** | Refresh rejected when user account locked |
+| **Priority** | CRITICAL |
+| **Type** | Negative - Security (Account Lock Bypass Prevention) |
 
-**Dữ liệu test:**
+**Preconditions:**
+- User logged in at T0 → received valid refresh token (expires in 7 days)
+- Admin locked user account at T1 (status = `LOCKED`)
+- Refresh token still valid (not expired, not revoked)
+- Current time T2 < T0 + 7 days
+
+**Test Data:**
 ```json
 {
-  "refreshToken": "99999999-9999-9999-9999-999999999999"
+  "refreshToken": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
 
-**Kết quả mong đợi:**
-- HTTP Status: `401 UNAUTHORIZED`
-- Response:
-```json
-{
-  "code": "TOKEN_INVALID",
-  "message": "Token invalid",
-  "timestamp": "2026-01-29T10:00:00Z"
-}
-```
+**Steps:**
+1. Send POST request to `/api/auth/refresh`
+2. Verify all user tokens revoked
 
----
-
-### TC-ID-031: Refresh token thất bại - Token already revoked
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-031 |
-| **Tên Test Case** | Refresh token fails - Token already revoked |
-| **Mô tả** | Refresh với token đã bị revoke |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Negative - Security |
-
-**Điều kiện tiên quyết:**
-- Refresh token tồn tại
-- Token `revoked = true`
-
-**Các bước thực hiện:**
-1. Gửi POST request với revoked token
-
-**Kết quả mong đợi:**
-- HTTP Status: `401 UNAUTHORIZED`
-- Response: "Token invalid"
-
----
-
-### TC-ID-032: Token rotation - Old token bị revoke
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-032 |
-| **Tên Test Case** | Token rotation - Old token is revoked after refresh |
-| **Mô tả** | Verify old token bị revoke ngay sau khi refresh thành công |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Positive - Security |
-
-**Các bước thực hiện:**
-1. Refresh token lần 1 với token T1 → nhận token T2
-2. Query database: `SELECT revoked FROM refresh_tokens WHERE token = T1`
-3. Cố refresh lại với token T1
-
-**Kết quả mong đợi:**
-- Database: T1.revoked = true
-- Refresh với T1 lần 2 → 401 UNAUTHORIZED "Token invalid"
-- Chỉ T2 valid
-
----
-
-### TC-ID-033: Token reuse detection - Revoke all tokens
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-033 |
-| **Tên Test Case** | Token reuse detection - Revoke ALL tokens on reuse |
-| **Mô tả** | Khi detect reuse của revoked token, revoke ALL tokens của user |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Positive - Security |
-
-**Điều kiện tiên quyết:**
-- User có 3 active refresh tokens (3 devices)
-- Token T1 đã được sử dụng để refresh → đã revoked
-
-**Các bước thực hiện:**
-1. Attacker cố reuse token T1 (đã revoked)
-2. System detect reuse attack
-3. Query database: `SELECT revoked FROM refresh_tokens WHERE user_id = ?`
-
-**Kết quả mong đợi:**
-- HTTP Status: `401 UNAUTHORIZED`
-- Response: "Token invalid"
-- **Security action:** TẤT CẢ 3 tokens bị revoke (revoked = true)
-- User bị force logout khỏi tất cả devices
-- Audit log: Event `REFRESH_REUSE` với alert level CRITICAL
-
----
-
-### TC-ID-034: Refresh token kiểm tra account status
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-034 |
-| **Tén Test Case** | Refresh token checks account status (LOCKED users cannot refresh) |
-| **Mô tả** | User bị lock không thể refresh token (even với valid token) |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Negative - Security |
-
-**Điều kiện tiên quyết:**
-- User login → nhận refresh token T1
-- Admin lock account → status = LOCKED
-- Token T1 vẫn chưa expired
-
-**Các bước thực hiện:**
-1. User cố refresh với token T1
-
-**Kết quả mong đợi:**
+**Expected Result:**
 - HTTP Status: `403 FORBIDDEN`
-- Response: "Account is locked"
-- Token T1 bị revoke
-- Audit log: Event với action = REFRESH_DENIED
+- Response body:
+```json
+{
+  "code": "ACCOUNT_LOCKED",
+  "message": "Account is locked. Contact admin.",
+  "timestamp": "2026-01-30T10:00:00Z"
+}
+```
+- **CRITICAL SECURITY**: Status check BEFORE generating new tokens
+- Database changes:
+  - ALL refresh tokens for user: `revoked = true`
+- Audit log: Event `REFRESH_DENIED` with outcome `DENIED`, reason "Account is locked"
+- **Implementation requirement**:
+```java
+// Step 5: CRITICAL - Check status BEFORE generating new tokens
+if (user.getStatus() != User.Status.ACTIVE) {
+    refreshTokenRepository.revokeAllByUser(user);
+    throw new AccountLockedException();
+}
+```
 
 ---
 
-### TC-ID-035: Refresh token thành công - Soft deleted user KHÔNG refresh được
+### TC-AUTH-REFRESH-007: Refresh fails - User soft deleted
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-035 |
-| **Tên Test Case** | Refresh token fails - Soft deleted user cannot refresh |
-| **Mô tả** | User đã bị soft delete không thể refresh token |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Negative - Soft Delete |
+| **Test Case ID** | TC-AUTH-REFRESH-007 |
+| **Title** | Refresh rejected when user soft deleted |
+| **Priority** | HIGH |
+| **Type** | Negative - Business Rule |
 
-**Điều kiện tiên quyết:**
-- User login → nhận refresh token T1
-- Admin soft delete user → deleted_at set
-- Token T1 vẫn chưa expired
+**Preconditions:**
+- User has valid refresh token
+- User has been soft deleted (`deleted_at IS NOT NULL`)
 
-**Các bước thực hiện:**
-1. User cố refresh với token T1
+**Test Data:**
+```json
+{
+  "refreshToken": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
 
-**Kết quả mong đợi:**
+**Expected Result:**
 - HTTP Status: `401 UNAUTHORIZED`
-- Response: "Token invalid"
-- `@SQLRestriction` filter user → user not found
-- Token không thể refresh
+- Response: "Invalid token"
+- Soft deleted users filtered by `@SQLRestriction`
+- User not found → token appears invalid
 
 ---
 
-### TC-ID-036: Refresh token TTL = 7 days
+### TC-AUTH-REFRESH-008: Token reuse detection - Revoke all tokens
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-036 |
-| **Tén Test Case** | Verify refresh token TTL = 7 days |
-| **Mô tả** | Kiểm tra refresh token hết hạn sau 7 ngày |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Positive - Token Lifecycle |
+| **Test Case ID** | TC-AUTH-REFRESH-008 |
+| **Title** | Token reuse detected and all user tokens revoked |
+| **Priority** | CRITICAL |
+| **Type** | Security - Token Reuse Detection |
 
-**Các bước thực hiện:**
-1. User login → nhận refresh token T1
-2. Query database: `SELECT expires_at FROM refresh_tokens WHERE token = T1`
-3. Verify expires_at
+**Preconditions:**
+- User U1 logged in at T0 → received refresh token R1
+- User U1 refreshed at T1 → R1 revoked, received new token R2
+- Attacker has copy of R1 (old revoked token)
 
-**Kết quả mong đợi:**
-- `expires_at = created_at + 7 days`
-- Token valid trong 7 ngày
-- Sau 7 ngày → token expired, cannot refresh
+**Steps:**
+1. Attacker attempts to reuse R1 at T2
+2. System detects reuse (token is revoked)
+3. Verify all tokens revoked
+
+**Test Data:**
+```json
+{
+  "refreshToken": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Expected Result:**
+- HTTP Status: `401 UNAUTHORIZED`
+- Response: "Token reuse detected. All sessions revoked."
+- Database changes:
+  - ALL refresh tokens for user U1: `revoked = true`
+- Legitimate user with R2 also logged out (must re-login)
+- Audit log: Event `REFRESH_REUSE` with:
+  - Outcome = `SECURITY_ALERT`
+  - Alert level = `CRITICAL`
+  - IP address captured
+  - User agent captured
+- **Security benefit**: Forces attacker and legitimate user to re-authenticate
 
 ---
 
-### TC-ID-037: Refresh token audit log async
+### TC-AUTH-REFRESH-009: Token reuse detection only affects target user
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-037 |
-| **Tên Test Case** | Refresh token audit logging is asynchronous |
-| **Mô tả** | Verify audit logging không block refresh request |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Performance - Async |
+| **Test Case ID** | TC-AUTH-REFRESH-009 |
+| **Title** | Token reuse revokes only affected user's tokens |
+| **Priority** | HIGH |
+| **Type** | Security - Isolation |
 
-**Các bước thực hiện:**
+**Preconditions:**
+- User U1 has token reuse detected
+- User U2 (different user) has active sessions
+
+**Steps:**
+1. Trigger token reuse for U1
+2. Verify U2 sessions unaffected
+
+**Expected Result:**
+- User U1: All tokens revoked
+- User U2: All tokens remain active
+- Token reuse detection isolated per user
+
+---
+
+### TC-AUTH-REFRESH-010: Refresh token rotation - Old token revoked
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-REFRESH-010 |
+| **Title** | Refresh token rotation revokes old token |
+| **Priority** | HIGH |
+| **Type** | Positive - Security |
+
+**Preconditions:**
+- User has valid refresh token R1
+
+**Steps:**
+1. Refresh with R1 → receive new token R2
+2. Attempt to reuse R1
+
+**Expected Result:**
+- First refresh: `200 OK`, new token R2
+- Second attempt with R1: `401 UNAUTHORIZED` "Token reuse detected"
+- Database: R1 has `revoked = true`
+
+---
+
+### TC-AUTH-REFRESH-011: Refresh creates new access token with same user data
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-REFRESH-011 |
+| **Title** | Refreshed access token contains current user data |
+| **Priority** | HIGH |
+| **Type** | Positive - Token Generation |
+
+**Preconditions:**
+- User logged in
+- User role = `STUDENT`
+
+**Steps:**
 1. Refresh token
-2. Measure response time
-3. Verify audit log được ghi
+2. Decode new access token
+3. Verify claims
 
-**Kết quả mong đợi:**
-- Response time không bị delay bởi audit logging
-- Audit log được ghi async (`@Async` annotation)
-- Audit log persist trong separate transaction
-
----
-
-## 4. LOGOUT (UC-LOGOUT)
-
-### TC-ID-038: Logout thành công với valid tokens
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-038 |
-| **Tên Test Case** | Logout successfully with valid tokens |
-| **Mô tả** | User logout thành công, refresh token bị revoke |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Positive - Happy Path |
-
-**Điều kiện tiên quyết:**
-- User đã login
-- Có valid access token và refresh token
-
-**Các bước thực hiện:**
-1. Gửi POST request đến `/api/auth/logout`
-2. Header: `Authorization: Bearer <accessToken>`
-3. Body: `{"refreshToken": "550e8400-..."}`
-
-**Kết quả mong đợi:**
-- HTTP Status: `204 NO_CONTENT`
-- Database: refresh token bị revoke (revoked = true)
-- Audit log: Event `LOGOUT` được ghi
+**Expected Result:**
+- New access token JWT payload contains:
+  - `sub` = user ID
+  - `email` = current email
+  - `roles` = `["STUDENT"]` (current role)
+  - `token_type` = `"ACCESS"`
+  - `exp` = now + 15 minutes
 
 ---
 
-### TC-ID-039: Logout thất bại - Missing access token
+### TC-AUTH-REFRESH-012: Refresh fails - Missing refreshToken field
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-039 |
-| **Tên Test Case** | Logout fails - Missing access token |
-| **Mô tả** | Logout không có JWT token trong header |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Negative - Authentication |
+| **Test Case ID** | TC-AUTH-REFRESH-012 |
+| **Title** | Refresh rejected when refreshToken field missing |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Validation |
 
-**Các bước thực hiện:**
-1. Gửi POST request đến `/api/auth/logout`
-2. KHÔNG gửi header Authorization
-3. Body: `{"refreshToken": "550e8400-..."}`
+**Test Data:**
+```json
+{}
+```
 
-**Kết quả mong đợi:**
+**Expected Result:**
+- HTTP Status: `400 BAD_REQUEST`
+- Error: "Refresh token is required"
+
+---
+
+## 4. UC-LOGOUT
+
+### TC-AUTH-LOGOUT-001: Logout successfully revokes refresh token
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-LOGOUT-001 |
+| **Title** | Logout revokes refresh token in database |
+| **Priority** | HIGH |
+| **Type** | Positive - Happy Path |
+
+**Preconditions:**
+- User logged in with valid refresh token
+- User authenticated (JWT access token in Authorization header)
+
+**Test Data:**
+```json
+{
+  "refreshToken": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Steps:**
+1. Send POST request to `/api/auth/logout`
+2. Include `Authorization: Bearer <access_token>` header
+3. Query database for token status
+
+**Expected Result:**
+- HTTP Status: `200 OK`
+- Response body:
+```json
+{
+  "message": "Logout successful"
+}
+```
+- Database: `refresh_tokens.revoked = true` for specified token
+- Audit log: Event `LOGOUT` with outcome `SUCCESS`
+
+---
+
+### TC-AUTH-LOGOUT-002: Logout fails - Unauthenticated request
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-LOGOUT-002 |
+| **Title** | Logout rejected without authentication |
+| **Priority** | HIGH |
+| **Type** | Negative - Authentication |
+
+**Test Data:**
+```json
+{
+  "refreshToken": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Steps:**
+1. Send POST request to `/api/auth/logout`
+2. Do NOT include Authorization header
+
+**Expected Result:**
+- HTTP Status: `401 UNAUTHORIZED`
+- Response: "Unauthorized"
+- Token not revoked in database
+
+---
+
+### TC-AUTH-LOGOUT-003: Logout fails - Token not owned by user
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-LOGOUT-003 |
+| **Title** | Logout rejected when token belongs to different user |
+| **Priority** | CRITICAL |
+| **Type** | Negative - Authorization |
+
+**Preconditions:**
+- User U1 authenticated with access token
+- Refresh token R1 belongs to User U2
+
+**Test Data:**
+```json
+{
+  "refreshToken": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Steps:**
+1. User U1 sends logout request with U2's refresh token
+
+**Expected Result:**
+- HTTP Status: `403 FORBIDDEN`
+- Response: "Token does not belong to user"
+- Token NOT revoked (still owned by U2)
+
+---
+
+### TC-AUTH-LOGOUT-004: Logout idempotent - Already revoked token
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-LOGOUT-004 |
+| **Title** | Logout succeeds even if token already revoked |
+| **Priority** | MEDIUM |
+| **Type** | Positive - Idempotency |
+
+**Preconditions:**
+- User authenticated
+- Refresh token already revoked (`revoked = true`)
+
+**Test Data:**
+```json
+{
+  "refreshToken": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Expected Result:**
+- HTTP Status: `200 OK`
+- Response: "Logout successful"
+- Idempotent operation (no error)
+
+---
+
+### TC-AUTH-LOGOUT-005: Logout fails - Missing refreshToken field
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-LOGOUT-005 |
+| **Title** | Logout rejected when refreshToken missing |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Validation |
+
+**Test Data:**
+```json
+{}
+```
+
+**Expected Result:**
+- HTTP Status: `400 BAD_REQUEST`
+- Error: "Refresh token is required"
+
+---
+
+### TC-AUTH-LOGOUT-006: Access token still valid after logout until expiration
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUTH-LOGOUT-006 |
+| **Title** | Access token remains valid after logout (stateless JWT) |
+| **Priority** | MEDIUM |
+| **Type** | Positive - JWT Behavior |
+
+**Preconditions:**
+- User logged out (refresh token revoked)
+- Access token not expired yet (< 15 minutes since issue)
+
+**Steps:**
+1. User logs out
+2. User makes authenticated request with access token
+
+**Expected Result:**
+- Request succeeds (access token still valid)
+- **Note**: JWT is stateless, cannot be invalidated server-side
+- Access token expires after 15 minutes (TTL)
+- User cannot get new access token (refresh token revoked)
+
+---
+
+## 5. UC-ADMIN-CREATE-USER
+
+### TC-ADMIN-CREATE-001: Admin creates LECTURER account successfully
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ADMIN-CREATE-001 |
+| **Title** | ADMIN creates LECTURER account via admin endpoint |
+| **Priority** | HIGH |
+| **Type** | Positive - Happy Path |
+
+**Preconditions:**
+- Authenticated user with role = `ADMIN`
+- Email "lecturer@university.edu" does not exist
+
+**Test Data:**
+```json
+{
+  "email": "lecturer@university.edu",
+  "password": "LecturerPass@123",
+  "confirmPassword": "LecturerPass@123",
+  "fullName": "Dr. Nguyễn Văn Bình",
+  "role": "LECTURER"
+}
+```
+
+**Steps:**
+1. Send POST request to `/api/admin/users`
+2. Include `Authorization: Bearer <admin_access_token>` header
+
+**Expected Result:**
+- HTTP Status: `201 CREATED`
+- Response body:
+```json
+{
+  "message": "User created successfully",
+  "user": {
+    "id": 2,
+    "email": "lecturer@university.edu",
+    "fullName": "Dr. Nguyễn Văn Bình",
+    "role": "LECTURER",
+    "status": "ACTIVE",
+    "createdAt": "2026-01-30T10:00:00Z"
+  }
+}
+```
+- Database: New user with `role = LECTURER`, `status = ACTIVE`
+- Audit log: Event `USER_CREATED` with actor = admin ID
+
+---
+
+### TC-ADMIN-CREATE-002: Admin creates ADMIN account successfully
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ADMIN-CREATE-002 |
+| **Title** | ADMIN creates another ADMIN account |
+| **Priority** | HIGH |
+| **Type** | Positive - Happy Path |
+
+**Preconditions:**
+- Authenticated user with role = `ADMIN`
+
+**Test Data:**
+```json
+{
+  "email": "admin2@university.edu",
+  "password": "AdminPass@456",
+  "confirmPassword": "AdminPass@456",
+  "fullName": "Administrator Two",
+  "role": "ADMIN"
+}
+```
+
+**Expected Result:**
+- HTTP Status: `201 CREATED`
+- New user created with `role = ADMIN`
+
+---
+
+### TC-ADMIN-CREATE-003: Admin creates STUDENT account successfully
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ADMIN-CREATE-003 |
+| **Title** | ADMIN creates STUDENT account via admin endpoint |
+| **Priority** | MEDIUM |
+| **Type** | Positive - Edge Case |
+
+**Preconditions:**
+- Authenticated user with role = `ADMIN`
+
+**Test Data:**
+```json
+{
+  "email": "student@university.edu",
+  "password": "StudentPass@789",
+  "confirmPassword": "StudentPass@789",
+  "fullName": "Trần Thị Cúc",
+  "role": "STUDENT"
+}
+```
+
+**Expected Result:**
+- HTTP Status: `201 CREATED`
+- STUDENT account created successfully
+- **Note**: ADMIN can create any role type
+
+---
+
+### TC-ADMIN-CREATE-004: Non-admin cannot create users
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ADMIN-CREATE-004 |
+| **Title** | STUDENT/LECTURER cannot access admin user creation |
+| **Priority** | CRITICAL |
+| **Type** | Negative - Authorization |
+
+**Preconditions:**
+- Authenticated user with role = `STUDENT` or `LECTURER`
+
+**Test Data:**
+```json
+{
+  "email": "newuser@university.edu",
+  "password": "Password@123",
+  "confirmPassword": "Password@123",
+  "fullName": "New User",
+  "role": "LECTURER"
+}
+```
+
+**Steps:**
+1. Send POST request to `/api/admin/users`
+2. Include access token of STUDENT/LECTURER user
+
+**Expected Result:**
+- HTTP Status: `403 FORBIDDEN`
+- Response: "Access denied"
+- No user created
+
+---
+
+### TC-ADMIN-CREATE-005: Admin user creation fails - Email exists
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ADMIN-CREATE-005 |
+| **Title** | Admin user creation rejected for duplicate email |
+| **Priority** | HIGH |
+| **Type** | Negative - Business Rule |
+
+**Preconditions:**
+- Authenticated user with role = `ADMIN`
+- Email "existing@university.edu" already exists
+
+**Test Data:**
+```json
+{
+  "email": "existing@university.edu",
+  "password": "Password@123",
+  "confirmPassword": "Password@123",
+  "fullName": "Duplicate User",
+  "role": "LECTURER"
+}
+```
+
+**Expected Result:**
+- HTTP Status: `409 CONFLICT`
+- Response: "Email already registered"
+
+---
+
+### TC-ADMIN-CREATE-006: Admin user creation fails - Passwords don't match
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ADMIN-CREATE-006 |
+| **Title** | Admin user creation rejected when passwords mismatch |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Validation |
+
+**Test Data:**
+```json
+{
+  "email": "lecturer@university.edu",
+  "password": "Password@123",
+  "confirmPassword": "DifferentPass@456",
+  "fullName": "Dr. Nguyen",
+  "role": "LECTURER"
+}
+```
+
+**Expected Result:**
+- HTTP Status: `400 BAD_REQUEST`
+- Response: "Passwords do not match"
+
+---
+
+### TC-ADMIN-CREATE-007: Admin user creation fails - Invalid role
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ADMIN-CREATE-007 |
+| **Title** | Admin user creation rejected for invalid role value |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Validation |
+
+**Test Data:**
+```json
+{
+  "email": "user@university.edu",
+  "password": "Password@123",
+  "confirmPassword": "Password@123",
+  "fullName": "User Name",
+  "role": "SUPERUSER"
+}
+```
+
+**Expected Result:**
+- HTTP Status: `400 BAD_REQUEST`
+- Error: "Invalid role specified"
+
+---
+
+### TC-ADMIN-CREATE-008: Unauthenticated user cannot create accounts
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ADMIN-CREATE-008 |
+| **Title** | Admin endpoint rejected without authentication |
+| **Priority** | CRITICAL |
+| **Type** | Negative - Authentication |
+
+**Steps:**
+1. Send POST request to `/api/admin/users`
+2. Do NOT include Authorization header
+
+**Expected Result:**
 - HTTP Status: `401 UNAUTHORIZED`
 - Response: "Unauthorized"
 
 ---
 
-### TC-ID-040: Logout idempotent - Token not found
+## 6. UC-ADMIN-SOFT-DELETE
+
+### TC-ADMIN-DELETE-001: Admin soft deletes user successfully
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-040 |
-| **Tên Test Case** | Logout is idempotent - Token not found returns 204 |
-| **Mô tả** | Logout với refresh token không tồn tại vẫn trả về 204 (silent success) |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Positive - Idempotency |
+| **Test Case ID** | TC-ADMIN-DELETE-001 |
+| **Title** | ADMIN soft deletes active user account |
+| **Priority** | HIGH |
+| **Type** | Positive - Happy Path |
 
-**Các bước thực hiện:**
-1. Gửi logout request với refresh token không tồn tại
+**Preconditions:**
+- Authenticated user with role = `ADMIN`
+- Target user U1 exists with `deleted_at = NULL`
 
-**Kết quả mong đợi:**
-- HTTP Status: `204 NO_CONTENT`
-- **Design:** Idempotent - không leak information về token existence
+**Steps:**
+1. Send DELETE request to `/api/admin/users/{userId}`
+2. Include admin access token
 
----
-
-### TC-ID-041: Logout idempotent - Token already revoked
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-041 |
-| **Tên Test Case** | Logout is idempotent - Already revoked token returns 204 |
-| **Mô tả** | Logout lần 2 với token đã revoked vẫn trả về 204 |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Positive - Idempotency |
-
-**Các bước thực hiện:**
-1. Logout lần 1 → token revoked
-2. Logout lần 2 với cùng token
-
-**Kết quả mong đợi:**
-- HTTP Status: `204 NO_CONTENT` (cả 2 lần)
-- **Design:** Calling logout multiple times has same effect
-
----
-
-### TC-ID-042: Logout với expired access token
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-042 |
-| **Tên Test Case** | Logout fails - Expired access token |
-| **Mô tả** | Logout với access token đã hết hạn (> 15 minutes) |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Negative - Token Expiration |
-
-**Điều kiện tiên quyết:**
-- Access token đã expired (> 15 minutes since issued)
-
-**Các bước thực hiện:**
-1. Gửi logout request với expired access token
-
-**Kết quả mong đợi:**
-- HTTP Status: `401 UNAUTHORIZED`
-- Response: "Token expired"
-- Refresh token KHÔNG bị revoke (do không authenticate được)
-
----
-
-### TC-ID-043: Logout revoke chỉ 1 token (not all)
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-043 |
-| **Tén Test Case** | Logout revokes only specified token (not all tokens) |
-| **Mô tả** | Logout chỉ revoke token được chỉ định, không ảnh hưởng tokens khác |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Positive - Multi-Device |
-
-**Điều kiện tiên quyết:**
-- User có 3 refresh tokens (3 devices): T1, T2, T3
-
-**Các bước thực hiện:**
-1. Logout device 1 với token T1
-2. Query database: `SELECT revoked FROM refresh_tokens WHERE user_id = ?`
-
-**Kết quả mong đợi:**
-- T1: revoked = true
-- T2, T3: revoked = false (still active)
-- User vẫn logged in trên device 2 và 3
-
----
-
-## 5. ADMIN SOFT DELETE USER (UC-SOFT-DELETE)
-
-### TC-ID-044: Admin soft delete user thành công
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-044 |
-| **Tên Test Case** | Admin soft delete user successfully |
-| **Mô tả** | ADMIN soft delete user, revoke all tokens |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Positive - Happy Path |
-
-**Điều kiện tiên quyết:**
-- Admin login với role ADMIN
-- Target user U1 tồn tại (status = ACTIVE, chưa deleted)
-
-**Các bước thực hiện:**
-1. Gửi DELETE request đến `/api/admin/users/{userId}`
-2. userId = U1
-3. Header: `Authorization: Bearer <admin_access_token>`
-
-**Kết quả mong đợi:**
+**Expected Result:**
 - HTTP Status: `200 OK`
-- Response:
+- Response body:
 ```json
 {
   "message": "User deleted successfully",
   "userId": "123"
 }
 ```
-- Database:
-  - `users.deleted_at = NOW()`
-  - `users.deleted_by = admin_id`
-  - Tất cả refresh tokens của U1: revoked = true
-- Audit log: Event `SOFT_DELETE` với actor = admin
+- Database changes:
+  - `users.deleted_at` = current timestamp
+  - `users.deleted_by` = admin user ID
+- User not visible in queries (filtered by `@SQLRestriction`)
+- Audit log: Event `USER_DELETED` with actor = admin ID
 
 ---
 
-### TC-ID-045: Admin soft delete thất bại - Not ADMIN
+### TC-ADMIN-DELETE-002: Admin cannot soft delete self
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-045 |
-| **Tén Test Case** | Admin soft delete fails - Non-ADMIN cannot delete |
-| **Mô tả** | STUDENT/LECTURER không thể delete user |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Negative - Authorization |
+| **Test Case ID** | TC-ADMIN-DELETE-002 |
+| **Title** | ADMIN cannot soft delete own account |
+| **Priority** | CRITICAL |
+| **Type** | Negative - Business Rule |
 
-**Điều kiện tiên quyết:**
-- User login với role STUDENT hoặc LECTURER
+**Preconditions:**
+- Authenticated ADMIN user with ID = 1
 
-**Các bước thực hiện:**
-1. Gửi DELETE request đến `/api/admin/users/{userId}`
+**Steps:**
+1. Send DELETE request to `/api/admin/users/1` (self)
 
-**Kết quả mong đợi:**
-- HTTP Status: `403 FORBIDDEN`
-- Response: "Access denied"
+**Expected Result:**
+- HTTP Status: `400 BAD_REQUEST`
+- Response body:
+```json
+{
+  "code": "INVALID_USER_STATE",
+  "message": "Cannot delete own account",
+  "timestamp": "2026-01-30T10:00:00Z"
+}
+```
+- User NOT deleted
 
 ---
 
-### TC-ID-046: Admin soft delete thất bại - User not found
+### TC-ADMIN-DELETE-003: Admin soft delete fails - User not found
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-046 |
-| **Tên Test Case** | Admin soft delete fails - User not found |
-| **Mô tả** | Delete user không tồn tại |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Negative - Business Logic |
+| **Test Case ID** | TC-ADMIN-DELETE-003 |
+| **Title** | Soft delete rejected for non-existent user |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Business Rule |
 
-**Các bước thực hiện:**
-1. Admin gửi DELETE request với userId không tồn tại
+**Steps:**
+1. Send DELETE request to `/api/admin/users/99999` (non-existent ID)
 
-**Kết quả mong đợi:**
+**Expected Result:**
 - HTTP Status: `404 NOT_FOUND`
 - Response: "User not found"
 
 ---
 
-### TC-ID-047: Admin soft delete thất bại - User already deleted
+### TC-ADMIN-DELETE-004: Admin soft delete fails - User already deleted
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-047 |
-| **Tên Test Case** | Admin soft delete fails - User already deleted |
-| **Mô tả** | Delete user đã bị soft delete trước đó |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Negative - Business Rule |
+| **Test Case ID** | TC-ADMIN-DELETE-004 |
+| **Title** | Soft delete rejected when user already deleted |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Business Rule |
 
-**Điều kiện tiên quyết:**
-- User U1 đã bị soft delete (deleted_at IS NOT NULL)
+**Preconditions:**
+- User U1 already soft deleted (`deleted_at IS NOT NULL`)
 
-**Các bước thực hiện:**
-1. Admin cố delete U1 lần nữa
+**Steps:**
+1. Send DELETE request to `/api/admin/users/{userId}`
 
-**Kết quả mong đợi:**
-- HTTP Status: `400 BAD_REQUEST`
-- Response: "User already deleted"
+**Expected Result:**
+- HTTP Status: `404 NOT_FOUND`
+- Response: "User not found"
+- `@SQLRestriction` filters soft deleted users
 
 ---
 
-### TC-ID-048: Admin soft delete thất bại - Cannot delete self
+### TC-ADMIN-DELETE-005: Non-admin cannot soft delete users
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-048 |
-| **Tên Test Case** | Admin soft delete fails - Cannot delete own account |
-| **Mô tả** | Admin không thể delete chính mình (prevent lockout) |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Negative - Business Rule |
+| **Test Case ID** | TC-ADMIN-DELETE-005 |
+| **Title** | STUDENT/LECTURER cannot soft delete users |
+| **Priority** | CRITICAL |
+| **Type** | Negative - Authorization |
 
-**Điều kiện tiên quyết:**
-- Admin A1 login
-- Target userId = A1's own ID
+**Preconditions:**
+- Authenticated user with role = `STUDENT` or `LECTURER`
 
-**Các bước thực hiện:**
-1. Admin A1 cố delete chính mình
+**Steps:**
+1. Send DELETE request to `/api/admin/users/{userId}`
 
-**Kết quả mong đợi:**
-- HTTP Status: `400 BAD_REQUEST`
-- Response: "Cannot delete own account"
+**Expected Result:**
+- HTTP Status: `403 FORBIDDEN`
+- Response: "Access denied"
 
 ---
 
-### TC-ID-049: Soft delete cascade revoke all tokens
+### TC-ADMIN-DELETE-006: Soft deleted user cannot login
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-049 |
-| **Tên Test Case** | Soft delete cascades to revoke ALL refresh tokens |
-| **Mô tả** | Khi soft delete user, tất cả refresh tokens bị revoke |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Positive - Cascade |
+| **Test Case ID** | TC-ADMIN-DELETE-006 |
+| **Title** | Soft deleted user cannot authenticate |
+| **Priority** | HIGH |
+| **Type** | Positive - Security |
 
-**Điều kiện tiên quyết:**
-- User U1 có 3 active refresh tokens (3 devices)
+**Preconditions:**
+- User U1 soft deleted
 
-**Các bước thực hiện:**
-1. Admin soft delete U1
-2. Query database: `SELECT revoked FROM refresh_tokens WHERE user_id = U1`
+**Steps:**
+1. Attempt login with U1 credentials
 
-**Kết quả mong đợi:**
-- Tất cả 3 tokens: revoked = true
-- User bị force logout khỏi tất cả devices
-
----
-
-### TC-ID-050: Soft delete audit log ghi deleted_by
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-050 |
-| **Tén Test Case** | Soft delete audit log records deleted_by (admin ID) |
-| **Mô tả** | Audit log và users table ghi admin ID thực hiện delete |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Positive - Audit |
-
-**Các bước thực hiện:**
-1. Admin A1 (userId = 5) soft delete user U1 (userId = 10)
-2. Query database:
-   - `SELECT deleted_by FROM users WHERE id = 10`
-   - `SELECT actor_id FROM audit_logs WHERE action = 'SOFT_DELETE' AND entity_id = 10`
-
-**Kết quả mong đợi:**
-- `users.deleted_by = 5`
-- Audit log: `actor_id = 5`, `action = SOFT_DELETE`
-
----
-
-### TC-ID-051: Soft deleted user không thể login
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-051 |
-| **Tén Test Case** | Soft deleted user cannot login |
-| **Mô tả** | User đã bị soft delete không thể login |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Positive - Security |
-
-**Điều kiện tiên quyết:**
-- User U1 đã bị soft delete
-
-**Các bước thực hiện:**
-1. User U1 cố login với credentials đúng
-
-**Kết quả mong đợi:**
+**Expected Result:**
 - HTTP Status: `401 UNAUTHORIZED`
 - Response: "Invalid credentials"
-- `@SQLRestriction` filter user → user not found
+- User not found due to `@SQLRestriction`
 
 ---
 
-## 6. ADMIN RESTORE USER (UC-RESTORE)
-
-### TC-ID-052: Admin restore user thành công
+### TC-ADMIN-DELETE-007: Soft deleted user tokens still work until expiration
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-052 |
-| **Tên Test Case** | Admin restore user successfully |
-| **Mô tả** | ADMIN restore user đã bị soft delete |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Positive - Happy Path |
+| **Test Case ID** | TC-ADMIN-DELETE-007 |
+| **Title** | Soft deleted user's JWT access token remains valid |
+| **Priority** | MEDIUM |
+| **Type** | Positive - JWT Behavior |
 
-**Điều kiện tiên quyết:**
-- Admin login với role ADMIN
-- User U1 đã bị soft delete (deleted_at IS NOT NULL)
+**Preconditions:**
+- User U1 has valid access token
+- Admin soft deletes U1
 
-**Các bước thực hiện:**
-1. Gửi POST request đến `/api/admin/users/{userId}/restore`
-2. userId = U1
-3. Header: `Authorization: Bearer <admin_access_token>`
+**Steps:**
+1. U1 makes authenticated request with access token
 
-**Kết quả mong đợi:**
+**Expected Result:**
+- Request succeeds while token not expired (< 15 min)
+- **Note**: JWT is stateless, cannot be invalidated
+- U1 cannot refresh token (user not found)
+
+---
+
+## 7. UC-ADMIN-RESTORE
+
+### TC-ADMIN-RESTORE-001: Admin restores soft deleted user successfully
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ADMIN-RESTORE-001 |
+| **Title** | ADMIN restores soft deleted user account |
+| **Priority** | HIGH |
+| **Type** | Positive - Happy Path |
+
+**Preconditions:**
+- Authenticated user with role = `ADMIN`
+- User U1 soft deleted (`deleted_at IS NOT NULL`)
+
+**Steps:**
+1. Send POST request to `/api/admin/users/{userId}/restore`
+
+**Expected Result:**
 - HTTP Status: `200 OK`
-- Response:
+- Response body:
 ```json
 {
   "message": "User restored successfully",
   "userId": "123"
 }
 ```
-- Database:
-  - `users.deleted_at = NULL`
-  - `users.deleted_by = NULL`
-- User có thể login lại (nếu status = ACTIVE)
-- Audit log: Event `RESTORE` với actor = admin
+- Database changes:
+  - `users.deleted_at` = `NULL`
+  - `users.deleted_by` = `NULL`
+- User visible in queries again
+- User can login (if status = `ACTIVE`)
+- Audit log: Event `USER_RESTORED` with actor = admin ID
 
 ---
 
-### TC-ID-053: Admin restore thất bại - Not ADMIN
+### TC-ADMIN-RESTORE-002: Admin restore fails - User not deleted
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-053 |
-| **Tên Test Case** | Admin restore fails - Non-ADMIN cannot restore |
-| **Mô tả** | STUDENT/LECTURER không thể restore user |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Negative - Authorization |
+| **Test Case ID** | TC-ADMIN-RESTORE-002 |
+| **Title** | Restore rejected when user not deleted |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Business Rule |
 
-**Điều kiện tiên quyết:**
-- User login với role STUDENT hoặc LECTURER
+**Preconditions:**
+- User U1 exists with `deleted_at = NULL` (not deleted)
 
-**Các bước thực hiện:**
-1. Gửi POST request đến `/api/admin/users/{userId}/restore`
+**Steps:**
+1. Send POST request to `/api/admin/users/{userId}/restore`
 
-**Kết quả mong đợi:**
-- HTTP Status: `403 FORBIDDEN`
-- Response: "Access denied"
-
----
-
-### TC-ID-054: Admin restore thất bại - User not found
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-054 |
-| **Tên Test Case** | Admin restore fails - User not found |
-| **Mô tả** | Restore user không tồn tại (kể cả trong soft deleted) |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Negative - Business Logic |
-
-**Các bước thực hiện:**
-1. Admin gửi POST request với userId không tồn tại
-
-**Kết quả mong đợi:**
-- HTTP Status: `404 NOT_FOUND`
-- Response: "User not found"
-
----
-
-### TC-ID-055: Admin restore thất bại - User not deleted
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-055 |
-| **Tên Test Case** | Admin restore fails - User is not deleted |
-| **Mô tả** | Restore user chưa bị delete (deleted_at = NULL) |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Negative - Business Rule |
-
-**Điều kiện tiên quyết:**
-- User U1 tồn tại
-- User U1 CHƯA bị soft delete (deleted_at = NULL)
-
-**Các bước thực hiện:**
-1. Admin cố restore U1
-
-**Kết quả mong đợi:**
+**Expected Result:**
 - HTTP Status: `400 BAD_REQUEST`
 - Response: "User is not deleted"
 
 ---
 
-### TC-ID-056: Restore user query bypass @SQLRestriction
+### TC-ADMIN-RESTORE-003: Admin restore fails - User not found
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-056 |
-| **Tên Test Case** | Restore user query bypasses @SQLRestriction to find deleted users |
-| **Mô tả** | Restore query sử dụng native query để bypass soft delete filter |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Positive - Implementation |
+| **Test Case ID** | TC-ADMIN-RESTORE-003 |
+| **Title** | Restore rejected for non-existent user |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Business Rule |
 
-**Các bước thực hiện:**
-1. User U1 bị soft delete
-2. Admin restore U1
-3. Verify query implementation
+**Steps:**
+1. Send POST request to `/api/admin/users/99999/restore`
 
-**Kết quả mong đợi:**
-- Restore service sử dụng native query hoặc `@Query` with explicit filter bypass
-- Có thể find user đã soft delete
-- Example: `@Query("SELECT u FROM User u WHERE u.id = :id")`
+**Expected Result:**
+- HTTP Status: `404 NOT_FOUND`
+- Response: "User not found"
 
 ---
 
-### TC-ID-057: Restored user có thể login lại
+### TC-ADMIN-RESTORE-004: Non-admin cannot restore users
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-057 |
-| **Tén Test Case** | Restored user can login again |
-| **Mô tả** | User sau khi restore có thể login lại bình thường |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Positive - Integration |
+| **Test Case ID** | TC-ADMIN-RESTORE-004 |
+| **Title** | STUDENT/LECTURER cannot restore users |
+| **Priority** | CRITICAL |
+| **Type** | Negative - Authorization |
 
-**Các bước thực hiện:**
-1. User U1 bị soft delete
-2. Admin restore U1
-3. User U1 login
+**Preconditions:**
+- Authenticated user with role = `STUDENT` or `LECTURER`
 
-**Kết quả mong đợi:**
-- Login thành công (200 OK)
-- Nhận được access token và refresh token
-- User visible trong queries (không bị filter)
+**Steps:**
+1. Send POST request to `/api/admin/users/{userId}/restore`
+
+**Expected Result:**
+- HTTP Status: `403 FORBIDDEN`
+- Response: "Access denied"
 
 ---
 
-## 7. ADMIN LOCK ACCOUNT (UC-LOCK-ACCOUNT)
-
-### TC-ID-058: Admin lock account thành công
+### TC-ADMIN-RESTORE-005: Restore query bypasses soft delete filter
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-058 |
-| **Tén Test Case** | Admin lock account successfully |
-| **Mô tả** | ADMIN lock user account, revoke all tokens |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Positive - Happy Path |
+| **Test Case ID** | TC-ADMIN-RESTORE-005 |
+| **Title** | Restore implementation finds soft deleted users |
+| **Priority** | HIGH |
+| **Type** | Positive - Implementation |
 
-**Điều kiện tiên quyết:**
-- Admin login với role ADMIN
-- User U1 tồn tại (status = ACTIVE)
+**Preconditions:**
+- User U1 soft deleted
 
-**Các bước thực hiện:**
-1. Gửi POST request đến `/api/admin/users/{userId}/lock?reason=Suspicious%20activity`
-2. userId = U1
+**Steps:**
+1. Admin restores U1
+2. Verify query implementation
 
-**Kết quả mong đợi:**
+**Expected Result:**
+- Restore service uses native query or explicit filter bypass
+- Example: `@Query("SELECT u FROM User u WHERE u.id = :id")` (no `@SQLRestriction`)
+- Can find and restore soft deleted users
+
+---
+
+### TC-ADMIN-RESTORE-006: Restored user can login again
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ADMIN-RESTORE-006 |
+| **Title** | Restored user can authenticate successfully |
+| **Priority** | HIGH |
+| **Type** | Positive - Integration |
+
+**Preconditions:**
+- User U1 soft deleted then restored
+- User status = `ACTIVE`
+
+**Steps:**
+1. Attempt login with U1 credentials
+
+**Expected Result:**
 - HTTP Status: `200 OK`
-- Response:
+- Login successful, tokens generated
+- User visible in all queries
+
+---
+
+## 8. UC-ADMIN-LOCK-ACCOUNT
+
+### TC-ADMIN-LOCK-001: Admin locks account successfully
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ADMIN-LOCK-001 |
+| **Title** | ADMIN locks user account and revokes all tokens |
+| **Priority** | CRITICAL |
+| **Type** | Positive - Happy Path |
+
+**Preconditions:**
+- Authenticated user with role = `ADMIN`
+- Target user U1 exists with status = `ACTIVE`
+
+**Steps:**
+1. Send POST request to `/api/admin/users/{userId}/lock?reason=Suspicious%20activity`
+
+**Expected Result:**
+- HTTP Status: `200 OK`
+- Response body:
 ```json
 {
   "message": "User locked successfully",
   "userId": "123"
 }
 ```
-- Database:
-  - `users.status = LOCKED`
-  - Tất cả refresh tokens của U1: revoked = true
-- Audit log: Event `ACCOUNT_LOCKED` với reason = "Suspicious activity"
+- Database changes:
+  - `users.status` = `LOCKED`
+  - ALL refresh tokens for U1: `revoked = true`
+- Audit log: Event `ACCOUNT_LOCKED` with reason = "Suspicious activity"
 
 ---
 
-### TC-ID-059: Admin lock account thất bại - Not ADMIN
+### TC-ADMIN-LOCK-002: Admin cannot lock self
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-059 |
-| **Tên Test Case** | Admin lock account fails - Non-ADMIN cannot lock |
-| **Mô tả** | STUDENT/LECTURER không thể lock account |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Negative - Authorization |
+| **Test Case ID** | TC-ADMIN-LOCK-002 |
+| **Title** | ADMIN cannot lock own account (prevent lockout) |
+| **Priority** | CRITICAL |
+| **Type** | Negative - Business Rule |
 
-**Các bước thực hiện:**
-1. User với role STUDENT/LECTURER gửi POST request đến `/api/admin/users/{userId}/lock`
+**Preconditions:**
+- Authenticated ADMIN user with ID = 1
 
-**Kết quả mong đợi:**
+**Steps:**
+1. Send POST request to `/api/admin/users/1/lock` (self)
+
+**Expected Result:**
+- HTTP Status: `400 BAD_REQUEST`
+- Response body:
+```json
+{
+  "code": "INVALID_USER_STATE",
+  "message": "Cannot lock own account",
+  "timestamp": "2026-01-30T10:00:00Z"
+}
+```
+- User NOT locked
+
+---
+
+### TC-ADMIN-LOCK-003: Locked user cannot login
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ADMIN-LOCK-003 |
+| **Title** | Locked user cannot authenticate |
+| **Priority** | CRITICAL |
+| **Type** | Positive - Security |
+
+**Preconditions:**
+- User U1 locked (status = `LOCKED`)
+
+**Steps:**
+1. Attempt login with U1 credentials (CORRECT password)
+
+**Expected Result:**
+- HTTP Status: `403 FORBIDDEN`
+- Response: "Account is locked. Contact admin."
+- No tokens generated
+
+---
+
+### TC-ADMIN-LOCK-004: Locked user cannot refresh token
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ADMIN-LOCK-004 |
+| **Title** | Locked user cannot refresh token |
+| **Priority** | CRITICAL |
+| **Type** | Negative - Security |
+
+**Preconditions:**
+- User U1 logged in at T0 → has valid refresh token
+- Admin locks U1 at T1
+
+**Steps:**
+1. U1 attempts to refresh token at T2
+
+**Expected Result:**
+- HTTP Status: `403 FORBIDDEN`
+- Response: "Account is locked. Contact admin."
+- Covered by TC-AUTH-REFRESH-006
+
+---
+
+### TC-ADMIN-LOCK-005: Admin lock with optional reason parameter
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ADMIN-LOCK-005 |
+| **Title** | Lock account with and without reason parameter |
+| **Priority** | MEDIUM |
+| **Type** | Positive - Optional Parameter |
+
+**Steps:**
+1. Lock user WITH reason: `/api/admin/users/{id}/lock?reason=Brute%20force`
+2. Lock another user WITHOUT reason: `/api/admin/users/{id2}/lock`
+
+**Expected Result:**
+- Both requests succeed (200 OK)
+- Audit log with reason if provided, NULL if not
+
+---
+
+### TC-ADMIN-LOCK-006: Admin lock idempotent
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ADMIN-LOCK-006 |
+| **Title** | Lock already locked account succeeds |
+| **Priority** | MEDIUM |
+| **Type** | Positive - Idempotency |
+
+**Preconditions:**
+- User U1 already locked (status = `LOCKED`)
+
+**Steps:**
+1. Admin locks U1 again
+
+**Expected Result:**
+- HTTP Status: `200 OK`
+- Response: "User locked successfully"
+- Idempotent operation (no error)
+
+---
+
+### TC-ADMIN-LOCK-007: Non-admin cannot lock accounts
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ADMIN-LOCK-007 |
+| **Title** | STUDENT/LECTURER cannot lock accounts |
+| **Priority** | CRITICAL |
+| **Type** | Negative - Authorization |
+
+**Preconditions:**
+- Authenticated user with role = `STUDENT` or `LECTURER`
+
+**Steps:**
+1. Send POST request to `/api/admin/users/{userId}/lock`
+
+**Expected Result:**
 - HTTP Status: `403 FORBIDDEN`
 - Response: "Access denied"
 
 ---
 
-### TC-ID-060: Admin lock account thất bại - Cannot lock self
+### TC-ADMIN-LOCK-008: Admin lock fails - User not found
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-060 |
-| **Tên Test Case** | Admin lock account fails - Cannot lock own account |
-| **Mô tả** | Admin không thể lock chính mình (prevent lockout) |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Negative - Business Rule |
+| **Test Case ID** | TC-ADMIN-LOCK-008 |
+| **Title** | Lock rejected for non-existent user |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Business Rule |
 
-**Điều kiện tiên quyết:**
-- Admin A1 login
-- Target userId = A1's own ID
+**Steps:**
+1. Send POST request to `/api/admin/users/99999/lock`
 
-**Các bước thực hiện:**
-1. Admin A1 cố lock chính mình
-
-**Kết quả mong đợi:**
-- HTTP Status: `400 BAD_REQUEST`
-- Response: "Cannot lock own account"
+**Expected Result:**
+- HTTP Status: `404 NOT_FOUND`
+- Response: "User not found"
 
 ---
 
-### TC-ID-061: Admin lock account idempotent
+## 9. UC-ADMIN-UNLOCK-ACCOUNT
+
+### TC-ADMIN-UNLOCK-001: Admin unlocks account successfully
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-061 |
-| **Tén Test Case** | Admin lock account is idempotent |
-| **Mô tả** | Lock account đã locked trả về 200 OK (no error) |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Positive - Idempotency |
+| **Test Case ID** | TC-ADMIN-UNLOCK-001 |
+| **Title** | ADMIN unlocks locked user account |
+| **Priority** | HIGH |
+| **Type** | Positive - Happy Path |
 
-**Điều kiện tiên quyết:**
-- User U1 đã bị lock (status = LOCKED)
+**Preconditions:**
+- Authenticated user with role = `ADMIN`
+- User U1 locked (status = `LOCKED`)
 
-**Các bước thực hiện:**
-1. Admin lock U1 lần nữa
+**Steps:**
+1. Send POST request to `/api/admin/users/{userId}/unlock`
 
-**Kết quả mong đợi:**
+**Expected Result:**
 - HTTP Status: `200 OK`
-- Response: "User locked successfully"
-- **Design:** Idempotent operation
-- Không tạo duplicate audit log
-
----
-
-### TC-ID-062: Locked user không thể login
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-062 |
-| **Tén Test Case** | Locked user cannot login |
-| **Mô tả** | User bị lock không thể login |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Positive - Security |
-
-**Điều kiện tiên quyết:**
-- User U1 bị lock (status = LOCKED)
-
-**Các bước thực hiện:**
-1. User U1 cố login với credentials đúng
-
-**Kết quả mong đợi:**
-- HTTP Status: `403 FORBIDDEN`
-- Response: "Account is locked"
-- Audit log: Event `LOGIN_DENIED` với outcome = DENIED
-
----
-
-### TC-ID-063: Locked user không thể refresh token
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-063 |
-| **Tên Test Case** | Locked user cannot refresh token |
-| **Mô tả** | User bị lock không thể refresh token (even với valid token trước đó) |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Positive - Security |
-
-**Điều kiện tiên quyết:**
-- User U1 login → nhận refresh token T1
-- Admin lock U1
-
-**Các bước thực hiện:**
-1. User U1 cố refresh với token T1
-
-**Kết quả mong đợi:**
-- HTTP Status: `403 FORBIDDEN`
-- Response: "Account is locked"
-- Token T1 bị revoke
-
----
-
-### TC-ID-064: Lock account với optional reason
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-064 |
-| **Tén Test Case** | Lock account with optional reason parameter |
-| **Mô tả** | Admin có thể lock account với/không có reason |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Positive - Optional Parameter |
-
-**Các bước thực hiện:**
-1. Lock user với reason: `/api/admin/users/{userId}/lock?reason=Brute%20force%20attempt`
-2. Lock user không có reason: `/api/admin/users/{userId}/lock`
-
-**Kết quả mong đợi:**
-- Cả 2 request đều thành công (200 OK)
-- Audit log với reason nếu có, NULL nếu không
-
----
-
-## 8. ADMIN UNLOCK ACCOUNT (UC-UNLOCK-ACCOUNT)
-
-### TC-ID-065: Admin unlock account thành công
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-065 |
-| **Tên Test Case** | Admin unlock account successfully |
-| **Mô tả** | ADMIN unlock user account |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Positive - Happy Path |
-
-**Điều kiện tiên quyết:**
-- Admin login với role ADMIN
-- User U1 bị lock (status = LOCKED)
-
-**Các bước thực hiện:**
-1. Gửi POST request đến `/api/admin/users/{userId}/unlock`
-2. userId = U1
-
-**Kết quả mong đợi:**
-- HTTP Status: `200 OK`
-- Response:
+- Response body:
 ```json
 {
   "message": "User unlocked successfully",
   "userId": "123"
 }
 ```
-- Database: `users.status = ACTIVE`
-- User có thể login lại
+- Database: `users.status` = `ACTIVE`
+- User can login again
 - Audit log: Event `ACCOUNT_UNLOCKED`
 
 ---
 
-### TC-ID-066: Admin unlock thất bại - Not ADMIN
+### TC-ADMIN-UNLOCK-002: Admin unlock fails - User not locked
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-066 |
-| **Tên Test Case** | Admin unlock fails - Non-ADMIN cannot unlock |
-| **Mô tả** | STUDENT/LECTURER không thể unlock account |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Negative - Authorization |
+| **Test Case ID** | TC-ADMIN-UNLOCK-002 |
+| **Title** | Unlock rejected when user not locked |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Business Rule |
 
-**Các bước thực hiện:**
-1. User với role STUDENT/LECTURER gửi POST request đến `/api/admin/users/{userId}/unlock`
+**Preconditions:**
+- User U1 exists with status = `ACTIVE` (not locked)
 
-**Kết quả mong đợi:**
-- HTTP Status: `403 FORBIDDEN`
-- Response: "Access denied"
+**Steps:**
+1. Send POST request to `/api/admin/users/{userId}/unlock`
 
----
-
-### TC-ID-067: Admin unlock thất bại - User not locked
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-067 |
-| **Tén Test Case** | Admin unlock fails - User is not locked |
-| **Mô tả** | Unlock user chưa bị lock (status = ACTIVE) |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Negative - Business Rule |
-
-**Điều kiện tiên quyết:**
-- User U1 tồn tại
-- User U1 status = ACTIVE (not locked)
-
-**Các bước thực hiện:**
-1. Admin cố unlock U1
-
-**Kết quả mong đợi:**
+**Expected Result:**
 - HTTP Status: `400 BAD_REQUEST`
 - Response: "User is not locked"
 
 ---
 
-### TC-ID-068: Unlocked user có thể login lại
+### TC-ADMIN-UNLOCK-003: Unlocked user can login
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-068 |
-| **Tén Test Case** | Unlocked user can login again |
-| **Mô tả** | User sau khi unlock có thể login lại |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Positive - Integration |
+| **Test Case ID** | TC-ADMIN-UNLOCK-003 |
+| **Title** | Unlocked user can authenticate successfully |
+| **Priority** | HIGH |
+| **Type** | Positive - Integration |
 
-**Các bước thực hiện:**
-1. User U1 bị lock
-2. Admin unlock U1
-3. User U1 login
+**Preconditions:**
+- User U1 was locked, then unlocked
 
-**Kết quả mong đợi:**
-- Login thành công (200 OK)
-- Nhận được tokens
+**Steps:**
+1. Attempt login with U1 credentials
+
+**Expected Result:**
+- HTTP Status: `200 OK`
+- Login successful, tokens generated
 
 ---
 
-### TC-ID-069: Admin unlock thất bại - User not found
+### TC-ADMIN-UNLOCK-004: Non-admin cannot unlock accounts
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-069 |
-| **Tén Test Case** | Admin unlock fails - User not found |
-| **Mô tả** | Unlock user không tồn tại |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Negative - Business Logic |
+| **Test Case ID** | TC-ADMIN-UNLOCK-004 |
+| **Title** | STUDENT/LECTURER cannot unlock accounts |
+| **Priority** | CRITICAL |
+| **Type** | Negative - Authorization |
 
-**Các bước thực hiện:**
-1. Admin gửi POST request với userId không tồn tại
+**Preconditions:**
+- Authenticated user with role = `STUDENT` or `LECTURER`
 
-**Kết quả mong đợi:**
+**Steps:**
+1. Send POST request to `/api/admin/users/{userId}/unlock`
+
+**Expected Result:**
+- HTTP Status: `403 FORBIDDEN`
+- Response: "Access denied"
+
+---
+
+### TC-ADMIN-UNLOCK-005: Admin unlock fails - User not found
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ADMIN-UNLOCK-005 |
+| **Title** | Unlock rejected for non-existent user |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Business Rule |
+
+**Steps:**
+1. Send POST request to `/api/admin/users/99999/unlock`
+
+**Expected Result:**
 - HTTP Status: `404 NOT_FOUND`
 - Response: "User not found"
 
 ---
 
-## 9. JWT VALIDATION
+## 10. UC-ADMIN-UPDATE-EXTERNAL-ACCOUNTS
 
-### TC-ID-070: JWT validation - Valid token
+### TC-ADMIN-EXTERNAL-001: Admin updates external accounts successfully
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-070 |
-| **Tên Test Case** | JWT validation - Valid token accepted |
-| **Mô tả** | System accept valid JWT token |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Positive - Security |
+| **Test Case ID** | TC-ADMIN-EXTERNAL-001 |
+| **Title** | ADMIN updates Jira and GitHub account IDs |
+| **Priority** | MEDIUM |
+| **Type** | Positive - Happy Path |
 
-**Các bước thực hiện:**
-1. User login → nhận access token
-2. Gửi request đến protected endpoint với token
+**Preconditions:**
+- Authenticated user with role = `ADMIN`
+- User U1 exists
 
-**Kết quả mong đợi:**
-- Request thành công
-- SecurityContext chứa user info
+**Test Data:**
+```json
+{
+  "jiraAccountId": "jira123456",
+  "githubUsername": "user_github"
+}
+```
+
+**Steps:**
+1. Send PUT request to `/api/admin/users/{userId}/external-accounts`
+
+**Expected Result:**
+- HTTP Status: `200 OK`
+- Response body:
+```json
+{
+  "message": "External accounts updated successfully",
+  "jiraAccountId": "jira123456",
+  "githubUsername": "user_github"
+}
+```
+- Database: User record updated with new values
+- Audit log: Event `EXTERNAL_ACCOUNTS_UPDATED`
 
 ---
 
-### TC-ID-071: JWT validation - Expired token
+### TC-ADMIN-EXTERNAL-002: Admin update fails - Duplicate Jira account ID
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-071 |
-| **Tên Test Case** | JWT validation - Expired token rejected |
-| **Mô tả** | System reject expired JWT token (> 15 minutes) |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Negative - Security |
+| **Test Case ID** | TC-ADMIN-EXTERNAL-002 |
+| **Title** | Update rejected when Jira ID already used |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Business Rule |
 
-**Các bước thực hiện:**
-1. Mock expired token (issued > 15 minutes ago)
-2. Gửi request với expired token
+**Preconditions:**
+- User U2 already has `jiraAccountId = "jira123456"`
 
-**Kết quả mong đợi:**
+**Test Data:**
+```json
+{
+  "jiraAccountId": "jira123456",
+  "githubUsername": "user1_github"
+}
+```
+
+**Steps:**
+1. Send PUT request for User U1 with U2's Jira ID
+
+**Expected Result:**
+- HTTP Status: `409 CONFLICT`
+- Response: "Jira account ID already in use"
+
+---
+
+### TC-ADMIN-EXTERNAL-003: Admin update fails - Duplicate GitHub username
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ADMIN-EXTERNAL-003 |
+| **Title** | Update rejected when GitHub username already used |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Business Rule |
+
+**Preconditions:**
+- User U2 already has `githubUsername = "user_github"`
+
+**Test Data:**
+```json
+{
+  "jiraAccountId": "jira999999",
+  "githubUsername": "user_github"
+}
+```
+
+**Expected Result:**
+- HTTP Status: `409 CONFLICT`
+- Response: "GitHub username already in use"
+
+---
+
+### TC-ADMIN-EXTERNAL-004: Non-admin cannot update external accounts
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ADMIN-EXTERNAL-004 |
+| **Title** | STUDENT/LECTURER cannot update external accounts |
+| **Priority** | HIGH |
+| **Type** | Negative - Authorization |
+
+**Preconditions:**
+- Authenticated user with role = `STUDENT` or `LECTURER`
+
+**Steps:**
+1. Send PUT request to `/api/admin/users/{userId}/external-accounts`
+
+**Expected Result:**
+- HTTP Status: `403 FORBIDDEN`
+- Response: "Access denied"
+
+---
+
+### TC-ADMIN-EXTERNAL-005: Admin update fails - User not found
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ADMIN-EXTERNAL-005 |
+| **Title** | Update rejected for non-existent user |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Business Rule |
+
+**Steps:**
+1. Send PUT request to `/api/admin/users/99999/external-accounts`
+
+**Expected Result:**
+- HTTP Status: `404 NOT_FOUND`
+- Response: "User not found"
+
+---
+
+## 11. JWT Validation
+
+### TC-JWT-001: Valid JWT accepted by protected endpoints
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-JWT-001 |
+| **Title** | Protected endpoint accepts valid JWT token |
+| **Priority** | CRITICAL |
+| **Type** | Positive - Security |
+
+**Preconditions:**
+- User logged in with valid access token
+- Token not expired (< 15 minutes old)
+
+**Steps:**
+1. Send request to protected endpoint (e.g., `/api/admin/users`)
+2. Include `Authorization: Bearer <access_token>` header
+
+**Expected Result:**
+- Request accepted
+- SecurityContext populated with user details
+
+---
+
+### TC-JWT-002: Expired JWT rejected
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-JWT-002 |
+| **Title** | Protected endpoint rejects expired JWT token |
+| **Priority** | CRITICAL |
+| **Type** | Negative - Security |
+
+**Preconditions:**
+- JWT token issued > 15 minutes ago
+
+**Steps:**
+1. Send request with expired token
+
+**Expected Result:**
 - HTTP Status: `401 UNAUTHORIZED`
 - Response: "Token expired"
 
 ---
 
-### TC-ID-072: JWT validation - Invalid signature
+### TC-JWT-003: JWT with invalid signature rejected
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-072 |
-| **Tén Test Case** | JWT validation - Invalid signature rejected |
-| **Mô tả** | System reject token với signature bị modify |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Negative - Security |
+| **Test Case ID** | TC-JWT-003 |
+| **Title** | Protected endpoint rejects tampered JWT |
+| **Priority** | CRITICAL |
+| **Type** | Negative - Security |
 
-**Các bước thực hiện:**
-1. Lấy valid token
-2. Modify payload (change user ID)
-3. Gửi request với modified token
+**Steps:**
+1. Take valid JWT token
+2. Modify payload (e.g., change user ID)
+3. Send request with modified token
 
-**Kết quả mong đợi:**
+**Expected Result:**
 - HTTP Status: `401 UNAUTHORIZED`
 - Response: "Invalid token signature"
 
 ---
 
-### TC-ID-073: JWT validation - Missing token
+### TC-JWT-004: Request without JWT rejected
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-073 |
-| **Tén Test Case** | JWT validation - Missing token rejected |
-| **Mô tả** | System reject request không có token |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Negative - Security |
+| **Test Case ID** | TC-JWT-004 |
+| **Title** | Protected endpoint rejects request without token |
+| **Priority** | CRITICAL |
+| **Type** | Negative - Security |
 
-**Các bước thực hiện:**
-1. Gửi request đến protected endpoint
-2. KHÔNG gửi header Authorization
+**Steps:**
+1. Send request to protected endpoint
+2. Do NOT include Authorization header
 
-**Kết quả mong đợi:**
+**Expected Result:**
 - HTTP Status: `401 UNAUTHORIZED`
 - Response: "Unauthorized"
 
 ---
 
-### TC-ID-074: JWT validation - Malformed token
+### TC-JWT-005: Malformed JWT rejected
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-074 |
-| **Tén Test Case** | JWT validation - Malformed token rejected |
-| **Mô tả** | System reject token không đúng format |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Negative - Security |
+| **Test Case ID** | TC-JWT-005 |
+| **Title** | Protected endpoint rejects malformed JWT |
+| **Priority** | HIGH |
+| **Type** | Negative - Security |
 
-**Các bước thực hiện:**
-1. Gửi request với token không đúng format (e.g., "invalid_token_string")
+**Steps:**
+1. Send request with `Authorization: Bearer invalid_token_string`
 
-**Kết quả mong đợi:**
+**Expected Result:**
 - HTTP Status: `401 UNAUTHORIZED`
 - Response: "Invalid token format"
 
 ---
 
-### TC-ID-075: JWT validation - Wrong algorithm
+### TC-JWT-006: JWT with wrong algorithm rejected
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-075 |
-| **Tén Test Case** | JWT validation - Wrong algorithm rejected |
-| **Mô tả** | System reject token signed với algorithm khác HS256 |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Negative - Security |
+| **Test Case ID** | TC-JWT-006 |
+| **Title** | System rejects JWT signed with wrong algorithm |
+| **Priority** | CRITICAL |
+| **Type** | Negative - Security |
 
-**Các bước thực hiện:**
-1. Tạo token signed với RS256 instead of HS256
-2. Gửi request với token này
+**Steps:**
+1. Create JWT signed with RS256 instead of HS256
+2. Send request with this token
 
-**Kết quả mong đợi:**
+**Expected Result:**
 - HTTP Status: `401 UNAUTHORIZED`
 - Response: "Invalid token"
 
 ---
 
-### TC-ID-076: JWT validation - Invalid token_type claim
+### TC-JWT-007: JWT with wrong token_type claim rejected
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-076 |
-| **Tén Test Case** | JWT validation - Invalid token_type claim |
-| **Mô tả** | System reject token không có claim token_type = ACCESS |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Negative - Security |
+| **Test Case ID** | TC-JWT-007 |
+| **Title** | Access endpoint rejects JWT with token_type=REFRESH |
+| **Priority** | HIGH |
+| **Type** | Negative - Security |
 
-**Các bước thực hiện:**
-1. Tạo token với token_type = REFRESH (not ACCESS)
-2. Gửi request với token này
+**Steps:**
+1. Create JWT with `token_type = "REFRESH"`
+2. Use it for protected endpoint (not refresh endpoint)
 
-**Kết quả mong đợi:**
+**Expected Result:**
 - HTTP Status: `401 UNAUTHORIZED`
 - Response: "Invalid token type"
 
 ---
 
-### TC-ID-077: JWT validation - Extract roles correctly
+### TC-JWT-008: JWT roles extracted to Spring Security authorities
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-077 |
-| **Tén Test Case** | JWT validation - Extract roles correctly |
-| **Mô tả** | System extract roles từ JWT và populate SecurityContext |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Positive - Authorization |
+| **Test Case ID** | TC-JWT-008 |
+| **Title** | JWT roles correctly mapped to Spring Security |
+| **Priority** | HIGH |
+| **Type** | Positive - Authorization |
 
-**Các bước thực hiện:**
-1. User với role STUDENT login
-2. Extract roles từ SecurityContext
+**Preconditions:**
+- User with role = `STUDENT` logged in
 
-**Kết quả mong đợi:**
-- SecurityContext chứa `ROLE_STUDENT`
-- `@PreAuthorize("hasRole('STUDENT')")` work correctly
+**Steps:**
+1. JWT payload contains: `"roles": ["STUDENT"]`
+2. System extracts roles and creates authorities
+3. Check SecurityContext
+
+**Expected Result:**
+- SecurityContext contains `GrantedAuthority` with value `ROLE_STUDENT`
+- `@PreAuthorize("hasRole('STUDENT')")` evaluates to true
+- Spring Security automatically adds `ROLE_` prefix to authorities
 
 ---
 
-## 10. TOKEN REUSE DETECTION
-
-### TC-ID-078: Token reuse detection - Revoke all tokens
+### TC-JWT-009: JWT with missing required claims rejected
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-078 |
-| **Tên Test Case** | Token reuse detection - Revoke all tokens on reuse |
-| **Mô tả** | System detect reuse và revoke tất cả tokens |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Security - Attack Detection |
+| **Test Case ID** | TC-JWT-009 |
+| **Title** | JWT rejected when missing required claims |
+| **Priority** | HIGH |
+| **Type** | Negative - Security |
 
-(Đã cover ở TC-ID-033)
+**Steps:**
+1. Create JWT without `sub` claim
+2. Send request with this token
+
+**Expected Result:**
+- HTTP Status: `401 UNAUTHORIZED`
+- Response: "Invalid token"
 
 ---
 
-### TC-ID-079: Token reuse audit log CRITICAL
+### TC-JWT-010: JWT bearer token format validated
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-079 |
-| **Tén Test Case** | Token reuse audit log with CRITICAL alert level |
-| **Mô tả** | Token reuse event được log với alert level CRITICAL |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Security - Audit |
+| **Test Case ID** | TC-JWT-010 |
+| **Title** | Authorization header requires Bearer scheme |
+| **Priority** | MEDIUM |
+| **Type** | Negative - Validation |
 
-**Các bước thực hiện:**
-1. Trigger token reuse attack (TC-ID-033)
-2. Query audit_logs table
+**Steps:**
+1. Send request with `Authorization: <token>` (without "Bearer")
 
-**Kết quả mong đợi:**
+**Expected Result:**
+- HTTP Status: `401 UNAUTHORIZED`
+- Required format: `Authorization: Bearer <token>`
+
+---
+
+## 12. Token Reuse Detection
+
+### TC-REUSE-001: Token reuse detected and all user tokens revoked
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-REUSE-001 |
+| **Title** | Reused refresh token triggers revocation of all user tokens |
+| **Priority** | CRITICAL |
+| **Type** | Security - Attack Detection |
+
+**Preconditions:**
+- User U1 logged in at T0 → received refresh token R1
+- User U1 refreshed at T1 → R1 revoked, received R2
+- Attacker has copy of R1
+
+**Steps:**
+1. Attacker attempts to use R1 at T2
+2. Verify all tokens revoked
+
+**Expected Result:**
+- HTTP Status: `401 UNAUTHORIZED`
+- Response: "Token reuse detected. All sessions revoked."
+- Database: ALL refresh tokens for U1 have `revoked = true`
+- Legitimate user with R2 also logged out
+- Audit log: Event `REFRESH_REUSE` with alert level `CRITICAL`
+
+---
+
+### TC-REUSE-002: Token reuse audit log captures attacker metadata
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-REUSE-002 |
+| **Title** | Token reuse event logs IP and User-Agent |
+| **Priority** | HIGH |
+| **Type** | Security - Forensics |
+
+**Steps:**
+1. Trigger token reuse from IP = 192.168.1.100
+2. Query audit log
+
+**Expected Result:**
 - Audit log record:
-  - `action = REFRESH_REUSE`
-  - Alert level = CRITICAL
-  - IP address captured
-  - User agent captured
+  - `action` = `REFRESH_REUSE`
+  - `outcome` = `SECURITY_ALERT`
+  - `ip_address` = "192.168.1.100"
+  - `user_agent` captured
+  - Alert level = `CRITICAL`
 
 ---
 
-### TC-ID-080: Token reuse không ảnh hưởng other users
+### TC-REUSE-003: Token reuse isolated per user
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-080 |
-| **Tên Test Case** | Token reuse detection only affects target user |
-| **Mô tả** | Token reuse chỉ revoke tokens của user bị attack, không ảnh hưởng users khác |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Security - Isolation |
+| **Test Case ID** | TC-REUSE-003 |
+| **Title** | Token reuse only affects victim user |
+| **Priority** | HIGH |
+| **Type** | Security - Isolation |
 
-**Các bước thực hiện:**
-1. User U1 có token reuse attack
-2. User U2 (khác user) vẫn active
-3. Verify U2 tokens
+**Preconditions:**
+- User U1 has token reuse attack
+- User U2 (different user) has active sessions
 
-**Kết quả mong đợi:**
-- U1: All tokens revoked
-- U2: Tokens still active (không bị ảnh hưởng)
+**Steps:**
+1. Trigger token reuse for U1
+2. Verify U2 sessions unaffected
+
+**Expected Result:**
+- User U1: All tokens revoked
+- User U2: All tokens remain active
 
 ---
 
-### TC-ID-081: Token reuse IP tracking
+### TC-REUSE-004: Token reuse forces re-authentication
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-081 |
-| **Tên Test Case** | Token reuse detection tracks attacker IP |
-| **Mô tả** | System ghi lại IP address của attacker khi detect reuse |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Security - Forensics |
+| **Test Case ID** | TC-REUSE-004 |
+| **Title** | Token reuse requires user to login again on all devices |
+| **Priority** | CRITICAL |
+| **Type** | Security - Session Management |
 
-**Các bước thực hiện:**
-1. Trigger token reuse từ IP = 192.168.1.100
-2. Query audit log
+**Preconditions:**
+- User has 3 active sessions (3 devices)
+- Token reuse detected
 
-**Kết quả mong đợi:**
-- Audit log chứa `ip_address = "192.168.1.100"`
-- Admin có thể track attacker
+**Steps:**
+1. User attempts API call from any device with existing tokens
+
+**Expected Result:**
+- All 3 devices: `401 UNAUTHORIZED` "Token invalid"
+- User must login again to get new tokens
 
 ---
 
-### TC-ID-082: Token reuse force re-login
+### TC-REUSE-005: Token reuse detection does not affect other users
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-082 |
-| **Tén Test Case** | Token reuse forces user to re-login on all devices |
-| **Mô tả** | Sau khi detect reuse, user phải login lại trên tất cả devices |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Security - Session Management |
+| **Test Case ID** | TC-REUSE-005 |
+| **Title** | Global service availability maintained during token reuse |
+| **Priority** | MEDIUM |
+| **Type** | Security - Availability |
 
-**Các bước thực hiện:**
-1. User có 3 active sessions
-2. Token reuse detected
-3. User cố access API từ bất kỳ device nào
+**Steps:**
+1. User U1 triggers token reuse
+2. User U2 attempts refresh with valid token
 
-**Kết quả mong đợi:**
-- Tất cả 3 devices: 401 UNAUTHORIZED "Token invalid"
-- User phải login lại để nhận tokens mới
+**Expected Result:**
+- User U2 refresh succeeds (200 OK)
+- System remains available for other users
 
 ---
 
-## 11. AUDIT LOGGING
+## 13. Role Format Validation
 
-### TC-ID-083: Audit log async execution
+### TC-ROLE-001: Database stores roles without ROLE_ prefix
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-083 |
-| **Tên Test Case** | Audit logging is asynchronous (non-blocking) |
-| **Mô tả** | Audit logging không block main request |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Performance - Async |
+| **Test Case ID** | TC-ROLE-001 |
+| **Title** | Database users.role column contains plain enum values |
+| **Priority** | HIGH |
+| **Type** | Positive - Data Format |
 
-**Các bước thực hiện:**
-1. Login user
+**Preconditions:**
+- User registered with role = `STUDENT`
+
+**Steps:**
+1. Query database: `SELECT role FROM users WHERE email = ?`
+
+**Expected Result:**
+- Database value: `STUDENT` (NOT `ROLE_STUDENT`)
+- Column type: `VARCHAR(50)`
+- Allowed values: `ADMIN`, `LECTURER`, `STUDENT`
+
+---
+
+### TC-ROLE-002: JWT contains roles without ROLE_ prefix
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ROLE-002 |
+| **Title** | JWT payload roles claim has plain strings |
+| **Priority** | CRITICAL |
+| **Type** | Positive - Token Format |
+
+**Preconditions:**
+- User with role = `ADMIN` logged in
+
+**Steps:**
+1. Extract access token
+2. Decode JWT payload at jwt.io
+
+**Expected Result:**
+- JWT payload contains:
+```json
+{
+  "roles": ["ADMIN"]
+}
+```
+- NOT `["ROLE_ADMIN"]`
+
+---
+
+### TC-ROLE-003: Spring Security authorities have ROLE_ prefix
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ROLE-003 |
+| **Title** | Internal Spring Security authorities use ROLE_ prefix |
+| **Priority** | HIGH |
+| **Type** | Positive - Security Context |
+
+**Preconditions:**
+- User with role = `LECTURER` logged in
+
+**Steps:**
+1. Extract authorities from SecurityContext
+2. Verify format
+
+**Expected Result:**
+- SecurityContext authorities: `[ROLE_LECTURER]`
+- Spring Security adds `ROLE_` prefix internally
+- `JwtAuthenticationFilter` converts `"LECTURER"` → `"ROLE_LECTURER"`
+
+---
+
+### TC-ROLE-004: @PreAuthorize works with hasRole() without prefix
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ROLE-004 |
+| **Title** | Controller @PreAuthorize uses hasRole without prefix |
+| **Priority** | CRITICAL |
+| **Type** | Positive - Authorization |
+
+**Preconditions:**
+- ADMIN user authenticated
+- Controller has `@PreAuthorize("hasRole('ADMIN')")`
+
+**Steps:**
+1. ADMIN user calls endpoint
+
+**Expected Result:**
+- Access granted
+- Spring Security automatically adds `ROLE_` prefix when evaluating
+- `hasRole('ADMIN')` checks for `ROLE_ADMIN` authority
+
+---
+
+### TC-ROLE-005: STUDENT user cannot access ADMIN endpoints
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ROLE-005 |
+| **Title** | Role-based access control enforced correctly |
+| **Priority** | CRITICAL |
+| **Type** | Negative - Authorization |
+
+**Preconditions:**
+- STUDENT user authenticated
+- Endpoint has `@PreAuthorize("hasRole('ADMIN')")`
+
+**Steps:**
+1. STUDENT user calls ADMIN endpoint
+
+**Expected Result:**
+- HTTP Status: `403 FORBIDDEN`
+- Response: "Access denied"
+- SecurityContext has `ROLE_STUDENT` but needs `ROLE_ADMIN`
+
+---
+
+### TC-ROLE-006: Role format documented in API responses
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-ROLE-006 |
+| **Title** | API responses show role without prefix |
+| **Priority** | MEDIUM |
+| **Type** | Positive - API Contract |
+
+**Steps:**
+1. User registers or logs in
+2. Check response body
+
+**Expected Result:**
+- Response JSON:
+```json
+{
+  "user": {
+    "role": "STUDENT"
+  }
+}
+```
+- NOT `"ROLE_STUDENT"`
+
+---
+
+## 14. Audit Logging
+
+### TC-AUDIT-001: Audit logging is asynchronous
+
+| Field | Value |
+|-------|-------|
+| **Test Case ID** | TC-AUDIT-001 |
+| **Title** | Audit logging does not block main request |
+| **Priority** | HIGH |
+| **Type** | Performance - Async |
+
+**Steps:**
+1. User logs in
 2. Measure response time
-3. Verify audit log persist
+3. Verify audit log persisted
 
-**Kết quả mong đợi:**
-- Login response time không bị delay bởi audit logging
-- Audit log được ghi async (`@Async`)
-- Audit log persist trong separate transaction
-
----
-
-### TC-ID-084: Audit log capture IP address
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-084 |
-| **Tén Test Case** | Audit log captures client IP address |
-| **Mô tả** | Audit log ghi lại IP address của client |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Audit - Context Capture |
-
-**Các bước thực hiện:**
-1. Login từ IP = 192.168.1.100
-2. Query audit_logs table
-
-**Kết quả mong đợi:**
-- Audit log: `ip_address = "192.168.1.100"`
-- IP extracted from request before async call
+**Expected Result:**
+- Login response time NOT delayed by audit logging
+- Audit log method has `@Async` annotation
+- Audit persisted in separate thread
 
 ---
 
-### TC-ID-085: Audit log capture User-Agent
+### TC-AUDIT-002: Audit log uses separate transaction
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-085 |
-| **Tén Test Case** | Audit log captures User-Agent header |
-| **Mô tả** | Audit log ghi lại User-Agent string |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Audit - Context Capture |
+| **Test Case ID** | TC-AUDIT-002 |
+| **Title** | Audit log persists even if main transaction rolls back |
+| **Priority** | HIGH |
+| **Type** | Positive - Transactional |
 
-**Các bước thực hiện:**
-1. Login với User-Agent = "Mozilla/5.0..."
-2. Query audit_logs
+**Steps:**
+1. Trigger operation that throws exception after audit log
+2. Verify audit log persisted
 
-**Kết quả mong đợi:**
-- Audit log: `user_agent = "Mozilla/5.0..."`
+**Expected Result:**
+- Main transaction rolled back
+- Audit log STILL persisted
+- Audit method has `@Transactional(propagation = Propagation.REQUIRES_NEW)`
 
 ---
 
-### TC-ID-086: Audit log LOGIN_FAILED vs LOGIN_DENIED
+### TC-AUDIT-003: Audit log distinguishes LOGIN_FAILED vs LOGIN_DENIED
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-086 |
-| **Tén Test Case** | Audit log distinguishes LOGIN_FAILED vs LOGIN_DENIED |
-| **Mô tả** | System ghi LOGIN_FAILED (wrong password) khác LOGIN_DENIED (account locked) |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Audit - Action Types |
+| **Test Case ID** | TC-AUDIT-003 |
+| **Title** | Different audit events for wrong password vs locked account |
+| **Priority** | HIGH |
+| **Type** | Positive - Audit Classification |
 
-**Các bước thực hiện:**
-1. Login với wrong password → query audit log
-2. Login với locked account (correct password) → query audit log
+**Steps:**
+1. Login with wrong password → check audit
+2. Login with locked account (correct password) → check audit
 
-**Kết quả mong đợi:**
-- Wrong password: `action = LOGIN_FAILED`, `outcome = FAILURE`
-- Locked account: `action = LOGIN_DENIED`, `outcome = DENIED`
+**Expected Result:**
+- Wrong password:
+  - `action` = `LOGIN_FAILED`
+  - `outcome` = `FAILURE`
+- Locked account:
+  - `action` = `LOGIN_DENIED`
+  - `outcome` = `DENIED`
 
 ---
 
-### TC-ID-087: Audit log old_value và new_value
+### TC-AUDIT-004: Audit log captures old_value and new_value
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-087 |
-| **Tén Test Case** | Audit log records old_value and new_value for changes |
-| **Mô tả** | Audit log ghi state before/after change |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Audit - State Tracking |
+| **Test Case ID** | TC-AUDIT-004 |
+| **Title** | State changes logged with before/after values |
+| **Priority** | HIGH |
+| **Type** | Positive - Audit Detail |
 
-**Các bước thực hiện:**
-1. Admin lock user (status: ACTIVE → LOCKED)
+**Steps:**
+1. Admin locks user (status: ACTIVE → LOCKED)
 2. Query audit log
 
-**Kết quả mong đợi:**
-- Audit log:
-  - `old_value = {"status": "ACTIVE"}`
-  - `new_value = {"status": "LOCKED"}`
+**Expected Result:**
+- Audit record:
+  - `old_value` = `{"status": "ACTIVE"}`
+  - `new_value` = `{"status": "LOCKED"}`
   - Format: JSON
 
 ---
 
-### TC-ID-088: Audit log actor resolution
+### TC-AUDIT-005: Audit log resolves actor from SecurityContext
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-088 |
-| **Tén Test Case** | Audit log resolves actor from SecurityContext |
-| **Mô tả** | Audit log extract actor_id và actor_email từ JWT |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Audit - Actor Tracking |
+| **Test Case ID** | TC-AUDIT-005 |
+| **Title** | Audit log identifies actor from JWT claims |
+| **Priority** | HIGH |
+| **Type** | Positive - Actor Tracking |
 
-**Các bước thực hiện:**
-1. Admin A1 (userId = 5, email = admin@university.edu) soft delete user U1
+**Steps:**
+1. Admin (ID=5, email="admin@univ.edu") soft deletes user
 2. Query audit log
 
-**Kết quả mong đợi:**
-- Audit log:
-  - `actor_id = 5`
-  - `actor_email = "admin@university.edu"`
+**Expected Result:**
+- Audit record:
+  - `actor_id` = 5
+  - `actor_email` = "admin@univ.edu"
 
 ---
 
-### TC-ID-089: Audit log separate transaction
+### TC-AUDIT-006: Audit query by entity
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-089 |
-| **Tén Test Case** | Audit log persists even if main transaction rolls back |
-| **Mô tả** | Audit log sử dụng `REQUIRES_NEW` transaction |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Audit - Transactional |
+| **Test Case ID** | TC-AUDIT-006 |
+| **Title** | Admin can query audit history of specific entity |
+| **Priority** | MEDIUM |
+| **Type** | Positive - Admin API |
 
-**Các bước thực hiện:**
-1. Trigger operation có exception sau khi audit log
-2. Verify audit log persist
+**Steps:**
+1. Send GET request to `/api/admin/audit/entity/User/123`
 
-**Kết quả mong đợi:**
-- Main transaction rollback
-- Audit log VẪN persist (separate transaction)
-- `@Transactional(propagation = Propagation.REQUIRES_NEW)`
-
----
-
-### TC-ID-090: Audit query endpoint - Get by entity
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-090 |
-| **Tén Test Case** | Admin can query audit logs by entity |
-| **Mô tả** | Admin query audit history của 1 entity cụ thể |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Positive - Admin API |
-
-**Các bước thực hiện:**
-1. Admin gửi GET request đến `/api/admin/audit/entity/User/123`
-
-**Kết quả mong đợi:**
+**Expected Result:**
 - HTTP Status: `200 OK`
-- Response chứa tất cả audit logs cho User ID = 123
+- Response contains all audit logs for User ID 123
 - Sorted by timestamp DESC
 
 ---
 
-### TC-ID-091: Audit query endpoint - Get by actor
+### TC-AUDIT-007: Audit query by actor
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-091 |
-| **Tén Test Case** | Admin can query audit logs by actor |
-| **Mô tả** | Admin query tất cả actions của 1 user/admin |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Positive - Admin API |
+| **Test Case ID** | TC-AUDIT-007 |
+| **Title** | Admin can query all actions performed by user |
+| **Priority** | MEDIUM |
+| **Type** | Positive - Admin API |
 
-**Các bước thực hiện:**
-1. Admin gửi GET request đến `/api/admin/audit/actor/5`
+**Steps:**
+1. Send GET request to `/api/admin/audit/actor/5`
 
-**Kết quả mong đợi:**
+**Expected Result:**
 - HTTP Status: `200 OK`
-- Response chứa tất cả actions performed by user ID = 5
+- Response contains all actions performed by user ID 5
 
 ---
 
-### TC-ID-092: Audit query endpoint - Security events
+### TC-AUDIT-008: Audit query for security events
 
 | Field | Value |
 |-------|-------|
-| **Test Case ID** | TC-ID-092 |
-| **Tén Test Case** | Admin can query security-related events |
-| **Mô tả** | Admin query các security events (token reuse, login failures, etc.) |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Positive - Admin API |
+| **Test Case ID** | TC-AUDIT-008 |
+| **Title** | Admin can filter security-critical events |
+| **Priority** | HIGH |
+| **Type** | Positive - Admin API |
 
-**Các bước thực hiện:**
-1. Admin gửi GET request đến `/api/admin/audit/security-events`
+**Steps:**
+1. Send GET request to `/api/admin/audit/security-events`
 
-**Kết quả mong đợi:**
+**Expected Result:**
 - HTTP Status: `200 OK`
-- Response chứa:
+- Response contains:
   - `REFRESH_REUSE` events
   - Multiple `LOGIN_FAILED` from same IP
   - `LOGIN_DENIED` events
-  - Sorted by priority/timestamp
+- Sorted by priority/timestamp
 
 ---
 
-## 12. VALIDATION RULES
+## Appendix: Test Data Management
 
-### TC-ID-093: Validation - Email RFC 5322
+### Recommended Test Users
 
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-093 |
-| **Tén Test Case** | Validation - Email complies with RFC 5322 |
-| **Mô tả** | Email validation theo RFC 5322 standard |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Positive - Validation |
+| Email | Password | Role | Status |
+|-------|----------|------|--------|
+| admin@university.edu | Admin@123456 | ADMIN | ACTIVE |
+| lecturer@university.edu | Lecturer@123 | LECTURER | ACTIVE |
+| student@university.edu | Student@123 | STUDENT | ACTIVE |
+| locked@university.edu | Locked@123 | STUDENT | LOCKED |
+| deleted@university.edu | Deleted@123 | STUDENT | ACTIVE (soft deleted) |
 
-**Dữ liệu test:**
-```
-✅ valid@example.com
-✅ user.name+tag@company.co.uk
-✅ user_name@sub.domain.com
-❌ invalid@
-❌ @example.com
-❌ no-at-sign.com
-```
+### Test Environment Setup
 
-**Kết quả mong đợi:**
-- Valid emails: accepted
-- Invalid emails: 400 BAD_REQUEST
+```sql
+-- Reset database
+TRUNCATE TABLE refresh_tokens CASCADE;
+TRUNCATE TABLE audit_logs CASCADE;
+TRUNCATE TABLE users CASCADE;
 
----
-
-### TC-ID-094: Validation - Password complexity regex
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-094 |
-| **Tén Test Case** | Validation - Password complexity regex |
-| **Mô tả** | Password validation với regex pattern |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Negative - Validation |
-
-**Pattern:** `^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,128}$`
-
-**Dữ liệu test:**
-```
-✅ SecurePass@123
-✅ MyP@ssw0rd
-❌ alllowercase (no uppercase, no special)
-❌ ALLUPPERCASE (no lowercase, no special)
-❌ NoSpecial123 (no special char)
-❌ Short@1 (< 8 chars)
+-- Insert test users (password = BCrypt hash of specified password)
+INSERT INTO users (email, password_hash, full_name, role, status, created_at) VALUES
+('admin@university.edu', '$2a$10$...', 'System Admin', 'ADMIN', 'ACTIVE', NOW()),
+('lecturer@university.edu', '$2a$10$...', 'Dr. Nguyễn Văn An', 'LECTURER', 'ACTIVE', NOW()),
+('student@university.edu', '$2a$10$...', 'Trần Thị Bình', 'STUDENT', 'ACTIVE', NOW()),
+('locked@university.edu', '$2a$10$...', 'Locked User', 'STUDENT', 'LOCKED', NOW());
 ```
 
 ---
 
-### TC-ID-095: Validation - Full name Unicode support
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-095 |
-| **Tén Test Case** | Validation - Full name supports Unicode (Vietnamese) |
-| **Mô tả** | Full name accept Unicode characters (tiếng Việt có dấu) |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Positive - Validation |
-
-**Pattern:** `^[\p{L}\s\-]{2,100}$`
-
-**Dữ liệu test:**
-```
-✅ Nguyễn Văn Ánh
-✅ Trần Thị Bảo Châu
-✅ Jean-Pierre (hyphen allowed)
-❌ Nguyen123 (no numbers)
-❌ User@Name (no special chars except hyphen)
-```
-
----
-
-### TC-ID-096: Validation - Multiple errors returned
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-096 |
-| **Tén Test Case** | Validation - Multiple validation errors returned |
-| **Mô tả** | System trả về TẤT CẢ validation errors (not just first) |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Negative - Validation |
-
-**Dữ liệu test:**
-```json
-{
-  "email": "invalid",
-  "password": "weak",
-  "confirmPassword": "different",
-  "fullName": "A",
-  "role": "INVALID"
-}
-```
-
-**Kết quả mong đợi:**
-- HTTP Status: `400 BAD_REQUEST`
-- Response chứa errors cho TẤT CẢ 5 fields
-
----
-
-### TC-ID-097: Validation - NotBlank vs NotNull
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-097 |
-| **Tén Test Case** | Validation - NotBlank rejects empty string |
-| **Mô tả** | NotBlank reject cả null và empty string |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Negative - Validation |
-
-**Dữ liệu test:**
-```json
-{
-  "email": "  ",
-  "password": ""
-}
-```
-
-**Kết quả mong đợi:**
-- HTTP Status: `400 BAD_REQUEST`
-- Errors: "Email is required", "Password is required"
-
----
-
-### TC-ID-098: Validation - Trim whitespace
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-098 |
-| **Tén Test Case** | Validation - Trim leading/trailing whitespace |
-| **Mô tả** | System tự động trim whitespace |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Positive - Validation |
-
-**Dữ liệu test:**
-```json
-{
-  "email": "  student@university.edu  ",
-  "fullName": "  Nguyen Van A  "
-}
-```
-
-**Kết quả mong đợi:**
-- Email và fullName được trim
-- Stored without leading/trailing spaces
-
----
-
-### TC-ID-099: Validation - Password max length
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-099 |
-| **Tén Test Case** | Validation - Password max length = 128 |
-| **Mô tả** | Password không vượt quá 128 characters |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Negative - Validation |
-
-**Dữ liệu test:**
-```json
-{
-  "password": "VeryLongPassword@123VeryLongPassword@123VeryLongPassword@123VeryLongPassword@123VeryLongPassword@123VeryLongPassword@123VeryLongPassword@123VeryLongPassword@123"
-}
-```
-
-**Kết quả mong đợi:**
-- HTTP Status: `400 BAD_REQUEST`
-- Error: "Password must not exceed 128 characters"
-
----
-
-### TC-ID-100: Validation - Special char subset
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-100 |
-| **Tén Test Case** | Validation - Password special chars limited to @$!%*?& |
-| **Mô tả** | Password chỉ chấp nhận specific special chars |
-| **Độ ưu tiên** | MEDIUM |
-| **Loại test** | Negative - Validation |
-
-**Dữ liệu test:**
-```json
-{
-  "password": "SecurePass#123"
-}
-```
-
-**Kết quả mong đợi:**
-- HTTP Status: `400 BAD_REQUEST`
-- Error: "Password must contain at least 1 special character (@$!%*?&)"
-- `#` not allowed
-
----
-
-### TC-ID-101: Validation - Role enum constraint
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-101 |
-| **Tén Test Case** | Validation - Role must be valid enum value |
-| **Mô tả** | Role chỉ accept STUDENT (for self-register) |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Negative - Validation |
-
-**Dữ liệu test:**
-```json
-{
-  "role": "SUPERUSER"
-}
-```
-
-**Kết quả mong đợi:**
-- HTTP Status: `400 BAD_REQUEST`
-- Error: "Invalid role specified"
-
----
-
-### TC-ID-102: Validation - Email uniqueness at DB level
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-102 |
-| **Tén Test Case** | Validation - Email uniqueness enforced by database UNIQUE constraint |
-| **Mô tả** | Database UNIQUE constraint as final defense |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Security - Defense in Depth |
-
-**Các bước thực hiện:**
-1. Concurrent registrations với same email (race condition)
-2. Both pass application check
-3. Database constraint catches duplicate
-
-**Kết quả mong đợi:**
-- 1 registration succeeds
-- 1 registration fails with `DataIntegrityViolationException`
-- Database UNIQUE constraint prevents duplicate
-
----
-
-### TC-ID-103: Validation - Email case insensitive uniqueness
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-103 |
-| **Tén Test Case** | Validation - Email uniqueness is case-insensitive |
-| **Mô tả** | Email "user@example.com" === "User@Example.COM" |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Negative - Business Rule |
-
-**Dữ liệu test:**
-```
-User 1: student@university.edu
-User 2: Student@University.EDU (same email, different case)
-```
-
-**Kết quả mong đợi:**
-- User 2 registration fails: 409 CONFLICT "Email already registered"
-- Case-insensitive check: `LOWER(email) = LOWER(?)`
-
----
-
-### TC-ID-104: Validation - Password not in response
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-104 |
-| **Tén Test Case** | Validation - Password never returned in API responses |
-| **Mô tả** | Password hash không bao giờ hiển thị trong response |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Security - Data Leakage |
-
-**Các bước thực hiện:**
-1. Register user
-2. Login user
-3. Verify response không chứa password/password_hash
-
-**Kết quả mong đợi:**
-- Response KHÔNG chứa password hoặc password_hash
-- DTO không expose password field
-
----
-
-## 13. SECURITY TESTS
-
-### TC-ID-105: Security - BCrypt strength 10
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-105 |
-| **Tén Test Case** | Security - BCrypt configured with strength 10 |
-| **Mô tả** | Password encoder sử dụng BCrypt strength 10 |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Security - Configuration |
-
-**Các bước thực hiện:**
-1. Check `SecurityConfig.passwordEncoder()` bean
-2. Verify `BCryptPasswordEncoder(10)`
-
-**Kết quả mong đợi:**
-- BCryptPasswordEncoder với strength = 10
-- Password hash format: `$2a$10$...`
-
----
-
-### TC-ID-106: Security - JWT secret from environment
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-106 |
-| **Tén Test Case** | Security - JWT secret loaded from environment variable |
-| **Mô tả** | JWT_SECRET không hardcode trong code |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Security - Configuration |
-
-**Các bước thực hiện:**
-1. Check JWT configuration
-2. Verify secret loaded from `${JWT_SECRET}`
-
-**Kết quả mong đợi:**
-- JWT_SECRET từ environment variable
-- KHÔNG hardcode trong source code
-- Different secret per environment (dev/staging/prod)
-
----
-
-### TC-ID-107: Security - HTTPS only (production)
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-107 |
-| **Tén Test Case** | Security - HTTPS enforced in production |
-| **Mô tả** | Production environment chỉ accept HTTPS |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Security - Transport |
-
-**Các bước thực hiện:**
-1. Try HTTP request in production
-2. Verify redirect to HTTPS
-
-**Kết quả mong đợi:**
-- HTTP requests redirected to HTTPS
-- HSTS header present
-
----
-
-### TC-ID-108: Security - CORS configuration
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-108 |
-| **Tén Test Case** | Security - CORS properly configured |
-| **Mô tả** | CORS headers configured correctly |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Security - CORS |
-
-**Các bước thực hiện:**
-1. Send OPTIONS request từ allowed origin
-2. Send OPTIONS request từ disallowed origin
-
-**Kết quả mong đợi:**
-- Allowed origin: CORS headers present
-- Disallowed origin: Request blocked
-
----
-
-### TC-ID-109: Security - SQL injection prevention
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-109 |
-| **Tén Test Case** | Security - SQL injection prevention |
-| **Mô tả** | System chống SQL injection |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Security - Injection |
-
-**Dữ liệu test:**
-```json
-{
-  "email": "' OR '1'='1",
-  "password": "anything"
-}
-```
-
-**Kết quả mong đợi:**
-- SQL injection KHÔNG thực thi
-- Prepared statements protect database
-
----
-
-### TC-ID-110: Security - XSS prevention
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-110 |
-| **Tén Test Case** | Security - XSS prevention |
-| **Mô tả** | System chống XSS attacks |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Security - XSS |
-
-**Dữ liệu test:**
-```json
-{
-  "fullName": "<script>alert('XSS')</script>"
-}
-```
-
-**Kết quả mong đợi:**
-- Data được sanitize/escape
-- Response không chứa executable script
-
----
-
-### TC-ID-111: Security - Rate limiting (if implemented)
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-111 |
-| **Tén Test Case** | Security - Rate limiting on login endpoint |
-| **Mô tả** | Login endpoint có rate limiting chống brute force |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Security - Brute Force Prevention |
-
-**Các bước thực hiện:**
-1. Gửi 100+ login requests trong 1 phút
-
-**Kết quả mong đợi:**
-- HTTP Status: `429 TOO_MANY_REQUESTS` sau threshold
-- Response: "Rate limit exceeded"
-
----
-
-### TC-ID-112: Security - Password timing attack prevention
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-112 |
-| **Tén Test Case** | Security - Constant time password comparison |
-| **Mô tả** | Password comparison sử dụng constant-time để prevent timing attacks |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Security - Timing Attack |
-
-**Các bước thực hiện:**
-1. Measure response time for correct vs incorrect password
-2. Verify no significant timing difference
-
-**Kết quả mong đợi:**
-- BCrypt's `matches()` uses constant-time comparison
-- Cannot infer password correctness from timing
-
----
-
-### TC-ID-113: Security - Soft delete prevents data exposure
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-113 |
-| **Tén Test Case** | Security - Soft deleted users not exposed in queries |
-| **Mô tả** | `@SQLRestriction` automatically filter soft deleted users |
-| **Độ ưu tiên** | HIGH |
-| **Loại test** | Security - Data Protection |
-
-**Các bước thực hiện:**
-1. Soft delete user
-2. Try to query user via JPA
-3. Verify user not found
-
-**Kết quả mong đợi:**
-- Soft deleted users không visible trong standard queries
-- `@SQLRestriction("deleted_at IS NULL")` apply automatically
-
----
-
-### TC-ID-114: Security - Admin self-action prevention
-
-| Field | Value |
-|-------|-------|
-| **Test Case ID** | TC-ID-114 |
-| **Tén Test Case** | Security - Admin cannot perform destructive actions on self |
-| **Mô tả** | Admin không thể delete/lock chính mình |
-| **Độ ưu tiên** | CRITICAL |
-| **Loại test** | Security - Account Protection |
-
-**Các bước thực hiện:**
-1. Admin cố delete own account
-2. Admin cố lock own account
-
-**Kết quả mong đợi:**
-- Both actions fail: 400 BAD_REQUEST
-- Error: "Cannot perform this action on own account"
-- Prevent admin lockout
-
----
-
-## Test Execution Guidelines
-
-### Prerequisites
-1. **Database:** PostgreSQL với schema đầy đủ (users, refresh_tokens, audit_logs)
-2. **Environment Variables:** JWT_SECRET configured
-3. **Test Data:** Seed users với different roles (ADMIN, LECTURER, STUDENT)
-4. **Authentication:** JWT token generator for testing
-
-### Test Execution Phases
-
-#### Phase 1: Core Authentication (Priority: CRITICAL)
-- Execute tests TC-ID-001 to TC-ID-027 (Register, Login)
-- Focus: Happy path và password security
-- Duration: 2-3 hours
-
-#### Phase 2: Token Management (Priority: CRITICAL)
-- Execute tests TC-ID-028 to TC-ID-043 (Refresh, Logout, Token Reuse)
-- Focus: Token rotation, reuse detection
-- Duration: 2-3 hours
-
-#### Phase 3: Admin Operations (Priority: CRITICAL)
-- Execute tests TC-ID-044 to TC-ID-069 (Soft Delete, Restore, Lock/Unlock)
-- Focus: Admin authorization, soft delete cascade
-- Duration: 2-3 hours
-
-#### Phase 4: Security & Validation (Priority: CRITICAL + HIGH)
-- Execute tests TC-ID-070 to TC-ID-114 (JWT, Security, Validation)
-- Focus: JWT validation, BCrypt, SQL injection, XSS
-- Duration: 3-4 hours
-
-#### Phase 5: Audit Logging (Priority: HIGH)
-- Execute tests TC-ID-083 to TC-ID-092
-- Focus: Async logging, context capture
-- Duration: 1-2 hours
-
-### Test Tools Recommendation
-1. **Manual Testing:** Postman / Insomnia
-2. **Automated Testing:** REST Assured + JUnit 5 + Mockito
-3. **Security Testing:** OWASP ZAP (for injection tests)
-4. **Load Testing:** JMeter (for rate limiting, concurrent registrations)
-5. **JWT Tools:** jwt.io for token inspection
-
-### Priority Summary
-- **CRITICAL:** 42 tests (Authentication, Token security, Admin operations, JWT validation)
-- **HIGH:** 60 tests (Validation, Audit logging, Security)
-- **MEDIUM:** 12 tests (Edge cases, Optional features)
-- **LOW:** 0 tests
-
-### Expected Test Coverage
-- **Positive Tests:** 45 tests (39%)
-- **Negative Tests:** 55 tests (48%)
-- **Security Tests:** 14 tests (12%)
-
----
-
-## Export to Excel/TestRail Format
-
-Để export file này sang Excel hoặc TestRail, copy từng test case theo format:
-
-| Test Case ID | Name | Description | Prerequisites | Steps | Test Data | Expected Results | Priority | Type |
-|--------------|------|-------------|---------------|-------|-----------|------------------|----------|------|
-| TC-ID-001 | Register successfully | Guest đăng ký tài khoản STUDENT... | Email chưa tồn tại... | 1. POST /api/auth/register... | JSON... | 201 CREATED... | HIGH | Positive |
-
----
-
-**Document Version:** 1.0  
-**Last Updated:** 2026-01-29  
-**Total Test Cases:** 114  
-**Service:** Identity Service (Authentication & Authorization)
+## Document Control
+
+**Version History:**
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 2.0 | 2026-01-30 | Complete rewrite based on latest security fixes and design documents |
+| 1.0 | 2026-01-29 | Initial draft |
+
+**References:**
+- [API_CONTRACT.md](API_CONTRACT.md)
+- [SRS-Auth.md](SRS-Auth.md)
+- [Authentication-Authorization-Design.md](Authentication-Authorization-Design.md)
+- [Security-Review.md](Security-Review.md)
+- [SECURITY_FIXES_SUMMARY.md](SECURITY_FIXES_SUMMARY.md)
+- [ROLE_FORMAT_CLARIFICATION.md](ROLE_FORMAT_CLARIFICATION.md)
+- [Database-Design.md](Database-Design.md)
+
+**Approval:**
+- QA Lead: _____________________
+- Security Reviewer: _____________________
+- Date: _____________________

@@ -23,16 +23,4 @@ public class GroupListResponse {
     private String lecturerName;
     private int memberCount;
     
-    /**
-     * Create GroupListResponse from Group entity.
-     */
-    public static GroupListResponse from(Group group, int memberCount) {
-        return GroupListResponse.builder()
-                .id(group.getId())
-                .groupName(group.getGroupName())
-                .semester(group.getSemester())
-                .lecturerName(group.getLecturer().getFullName())
-                .memberCount(memberCount)
-                .build();
-    }
 }

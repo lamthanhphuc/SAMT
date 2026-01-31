@@ -107,6 +107,32 @@ public class GlobalExceptionHandler {
     }
     
     /**
+     * Handle Service Unavailable exceptions (503).
+     * Typically from gRPC UNAVAILABLE errors.
+     */
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleServiceUnavailableException(
+            ServiceUnavailableException ex) {
+        log.error("Service unavailable: {} - {}", ex.getCode(), ex.getMessage());
+        
+        ErrorResponse response = ErrorResponse.of(ex.getCode(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
+    }
+    
+    /**
+     * Handle Gateway Timeout exceptions (504).
+     * Typically from gRPC DEADLINE_EXCEEDED errors.
+     */
+    @ExceptionHandler(GatewayTimeoutException.class)
+    public ResponseEntity<ErrorResponse> handleGatewayTimeoutException(
+            GatewayTimeoutException ex) {
+        log.error("Gateway timeout: {} - {}", ex.getCode(), ex.getMessage());
+        
+        ErrorResponse response = ErrorResponse.of(ex.getCode(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT).body(response);
+    }
+    
+    /**
      * Handle all other exceptions.
      */
     @ExceptionHandler(Exception.class)

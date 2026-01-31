@@ -5,13 +5,12 @@ import lombok.*;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.time.Instant;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.UUID;
 
 /**
  * Group entity representing student groups.
- * Each group belongs to a semester and has one lecturer.
+ * Each group belongs to a semester and has one lecturer (UUID reference to Identity Service).
+ * NO FK constraint - lecturer validation via gRPC.
  * Supports soft delete via deletedAt field.
  */
 @Entity
@@ -39,9 +38,8 @@ public class Group {
     @Column(name = "semester", nullable = false, length = 20)
     private String semester;
     
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "lecturer_id", nullable = false)
-    private User lecturer;
+    @Column(name = "lecturer_id", nullable = false)
+    private UUID lecturerId;
     
     @Column(name = "deleted_at")
     private Instant deletedAt;
@@ -51,13 +49,6 @@ public class Group {
     
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
-    
-    /**
-     * Members of this group
-     */
-    @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private Set<UserGroup> members = new HashSet<>();
     
     @PrePersist
     protected void onCreate() {

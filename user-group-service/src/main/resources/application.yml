@@ -53,6 +53,13 @@ spring:
 jwt:
   secret: ${JWT_SECRET:dGhpcy1pcy1hLXZlcnktbG9uZy1zZWNyZXQta2V5LWZvci1qd3QtdG9rZW4tc2lnbmluZy1hdC1sZWFzdC0yNTYtYml0cw==}
 
+# gRPC Configuration - Identity Service Integration
+grpc:
+  identity-service:
+    host: ${IDENTITY_SERVICE_GRPC_HOST:localhost}
+    port: ${IDENTITY_SERVICE_GRPC_PORT:9090}
+    deadline-seconds: 5
+
 management:
   endpoints:
     web:

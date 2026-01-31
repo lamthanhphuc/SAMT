@@ -2,6 +2,7 @@ package com.example.user_groupservice.service;
 
 import com.example.user_groupservice.dto.request.CreateGroupRequest;
 import com.example.user_groupservice.dto.request.UpdateGroupRequest;
+import com.example.user_groupservice.dto.request.UpdateLecturerRequest;
 import com.example.user_groupservice.dto.response.GroupDetailResponse;
 import com.example.user_groupservice.dto.response.GroupListResponse;
 import com.example.user_groupservice.dto.response.GroupResponse;
@@ -63,4 +64,14 @@ public interface GroupService {
      * @param groupId Group ID
      */
     void deleteGroup(UUID groupId);
+    
+    /**
+     * UC27 - Update Group Lecturer.
+     * Authorization: ADMIN only
+     * 
+     * @param groupId Group ID
+     * @param request Update lecturer request
+     * @return Updated GroupResponse
+     */
+    GroupResponse updateGroupLecturer(UUID groupId, UpdateLecturerRequest request);
 }

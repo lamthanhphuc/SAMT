@@ -46,21 +46,4 @@ public class GroupDetailResponse {
         private String role;
     }
     
-    /**
-     * Create GroupDetailResponse from Group entity and members.
-     */
-    public static GroupDetailResponse from(Group group, List<MemberInfo> members) {
-        return GroupDetailResponse.builder()
-                .id(group.getId())
-                .groupName(group.getGroupName())
-                .semester(group.getSemester())
-                .lecturer(LecturerInfo.builder()
-                        .id(group.getLecturer().getId())
-                        .fullName(group.getLecturer().getFullName())
-                        .email(group.getLecturer().getEmail())
-                        .build())
-                .members(members)
-                .memberCount(members.size())
-                .build();
-    }
 }

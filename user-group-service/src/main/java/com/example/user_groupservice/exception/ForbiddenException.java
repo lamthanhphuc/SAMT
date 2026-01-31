@@ -8,6 +8,10 @@ import org.springframework.http.HttpStatus;
  */
 public class ForbiddenException extends BaseException {
     
+    public ForbiddenException(String code, String message) {
+        super(code, message, HttpStatus.FORBIDDEN);
+    }
+    
     public ForbiddenException(String message) {
         super("FORBIDDEN", message, HttpStatus.FORBIDDEN);
     }
@@ -32,6 +36,15 @@ public class ForbiddenException extends BaseException {
      */
     public static ForbiddenException lecturerCannotUpdateProfile() {
         return new ForbiddenException("Lecturers cannot update profiles via this API");
+    }
+    
+    /**
+     * Lecturer can only view students.
+     * Per spec (UC21): LECTURER can only view users with STUDENT role.
+     */
+    public static ForbiddenException lecturerCanOnlyViewStudents() {
+        return new ForbiddenException("LECTURER_CANNOT_VIEW_NON_STUDENT", 
+            "Lecturers can only view student profiles");
     }
     
     /**

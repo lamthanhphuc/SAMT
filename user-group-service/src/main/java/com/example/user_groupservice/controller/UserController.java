@@ -4,7 +4,6 @@ import com.example.user_groupservice.dto.request.UpdateUserRequest;
 import com.example.user_groupservice.dto.response.PageResponse;
 import com.example.user_groupservice.dto.response.UserGroupsResponse;
 import com.example.user_groupservice.dto.response.UserResponse;
-import com.example.user_groupservice.entity.UserStatus;
 import com.example.user_groupservice.security.CurrentUser;
 import com.example.user_groupservice.service.UserService;
 import jakarta.validation.Valid;
@@ -78,7 +77,7 @@ public class UserController {
     public ResponseEntity<PageResponse<UserResponse>> listUsers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) UserStatus status,
+            @RequestParam(required = false) String status,
             @RequestParam(required = false) String role) {
         
         PageResponse<UserResponse> response = userService.listUsers(page, size, status, role);

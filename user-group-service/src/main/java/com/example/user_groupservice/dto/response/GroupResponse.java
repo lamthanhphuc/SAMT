@@ -23,16 +23,4 @@ public class GroupResponse {
     private UUID lecturerId;
     private String lecturerName;
     
-    /**
-     * Create GroupResponse from Group entity.
-     */
-    public static GroupResponse from(Group group) {
-        return GroupResponse.builder()
-                .id(group.getId())
-                .groupName(group.getGroupName())
-                .semester(group.getSemester())
-                .lecturerId(group.getLecturer().getId())
-                .lecturerName(group.getLecturer().getFullName())
-                .build();
-    }
 }

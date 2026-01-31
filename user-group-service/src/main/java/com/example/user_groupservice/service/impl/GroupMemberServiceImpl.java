@@ -5,15 +5,18 @@ import com.example.user_groupservice.dto.request.AssignRoleRequest;
 import com.example.user_groupservice.dto.response.GroupMembersResponse;
 import com.example.user_groupservice.dto.response.MemberResponse;
 import com.example.user_groupservice.entity.*;
-import com.example.user_groupservice.exception.ConflictException;
-import com.example.user_groupservice.exception.ResourceNotFoundException;
+import com.example.user_groupservice.exception.*;
+import com.example.user_groupservice.grpc.IdentityServiceClient;
 import com.example.user_groupservice.repository.GroupRepository;
 import com.example.user_groupservice.repository.UserGroupRepository;
-import com.example.user_groupservice.repository.UserRepository;
 import com.example.user_groupservice.service.GroupMemberService;
+import com.samt.identity.grpc.*;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -38,21 +41,44 @@ import java.util.stream.Collectors;
 public class GroupMemberServiceImpl implements GroupMemberService {
     
     private final UserGroupRepository userGroupRepository;
-    private final UserRepository userRepository;
     private final GroupRepository groupRepository;
+    private final IdentityServiceClient identityServiceClient;
     
     @Override
     @Transactional(rollbackFor = Exception.class)
     public MemberResponse addMember(UUID groupId, AddMemberRequest request) {
-        log.info("Adding member to group: groupId={}, userId={}, isLeader={}", 
+        log.info("UC24 - Adding member to group: groupId={}, userId={}, isLeader={}", 
                 groupId, request.getUserId(), request.getIsLeader());
         
-        // Validate user exists and is active
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> ResourceNotFoundException.userNotFound(request.getUserId()));
-        
-        if (user.getStatus() == UserStatus.INACTIVE) {
-            throw ConflictException.userInactive(user.getId());
+        // Validate user exists and is active via gRPC
+        try {
+            VerifyUserResponse verification = identityServiceClient.verifyUserExists(
+                    request.getUserId());
+            
+            if (!verification.getExists()) {
+                throw ResourceNotFoundException.userNotFound(request.getUserId());
+            }
+            
+            if (!verification.getActive()) {
+                throw ConflictException.userInactive(request.getUserId());
+            }
+            
+            // UC24 Validation: Only STUDENT can be added to groups (BR-UG-009)
+            GetUserRoleResponse roleResponse = identityServiceClient.getUserRole(
+                    request.getUserId());
+            
+            if (roleResponse.getRole() != UserRole.STUDENT) {
+                log.warn("UC24 - Attempted to add non-STUDENT to group: userId={}, role={}", 
+                        request.getUserId(), roleResponse.getRole());
+                throw BadRequestException.invalidRole(
+                        roleResponse.getRole().name(), "STUDENT");
+            }
+            
+            log.debug("UC24 - User validated as STUDENT: userId={}", request.getUserId());
+            
+        } catch (StatusRuntimeException e) {
+            log.error("gRPC call failed when validating user: {}", e.getStatus());
+            return handleGrpcError(e, "validate user");
         }
         
         // Validate group exists
@@ -85,22 +111,31 @@ public class GroupMemberServiceImpl implements GroupMemberService {
         
         // Create membership
         UserGroup membership = UserGroup.builder()
-                .user(user)
-                .group(group)
+                .userId(request.getUserId())
+                .groupId(groupId)
                 .role(role)
                 .build();
         
         userGroupRepository.save(membership);
-        log.info("Member added successfully: groupId={}, userId={}, role={}", 
+        log.info("UC24 - Member added successfully: groupId={}, userId={}, role={}", 
                 groupId, request.getUserId(), role);
         
-        return MemberResponse.from(membership);
+        // Fetch user info from Identity Service for response
+        GetUserResponse userInfo = identityServiceClient.getUser(request.getUserId());
+        
+        return MemberResponse.builder()
+                .userId(request.getUserId())
+                .groupId(groupId)
+                .fullName(userInfo.getFullName())
+                .email(userInfo.getEmail())
+                .role(role.name())
+                .build();
     }
     
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class, isolation = Isolation.SERIALIZABLE)
     public MemberResponse assignRole(UUID groupId, UUID userId, AssignRoleRequest request) {
-        log.info("Assigning role: groupId={}, userId={}, role={}", 
+        log.info("UC25 - Assigning role: groupId={}, userId={}, role={}", 
                 groupId, userId, request.getRole());
         
         // Validate group exists - use findById() not existsById() per spec (soft delete caveat)
@@ -113,17 +148,17 @@ public class GroupMemberServiceImpl implements GroupMemberService {
         
         GroupRole newRole = GroupRole.valueOf(request.getRole());
         
-        // If assigning LEADER, demote old leader first with PESSIMISTIC LOCK
-        // Per spec (UC25-LOCK): Use pessimistic lock to prevent race conditions
+        // UC25: If assigning LEADER, demote old leader first with PESSIMISTIC LOCK
+        // Per spec (UC25-LOCK): Use pessimistic lock + SERIALIZABLE isolation to prevent race conditions
         if (newRole == GroupRole.LEADER) {
             Optional<UserGroup> existingLeader = userGroupRepository.findLeaderByGroupIdWithLock(groupId);
             
             if (existingLeader.isPresent()) {
                 UserGroup oldLeader = existingLeader.get();
                 // Only demote if it's a different user
-                if (!oldLeader.getUser().getId().equals(userId)) {
-                    log.info("Demoting old leader: groupId={}, oldLeaderId={}", 
-                            groupId, oldLeader.getUser().getId());
+                if (!oldLeader.getUserId().equals(userId)) {
+                    log.info("UC25 - Demoting old leader: groupId={}, oldLeaderId={}", 
+                            groupId, oldLeader.getUserId());
                     oldLeader.demoteToMember();
                     userGroupRepository.save(oldLeader);
                 }
@@ -132,12 +167,21 @@ public class GroupMemberServiceImpl implements GroupMemberService {
         
         // Assign new role
         membership.setRole(newRole);
-        UserGroup savedMembership = userGroupRepository.save(membership);
+        userGroupRepository.save(membership);
         
-        log.info("Role assigned successfully: groupId={}, userId={}, role={}", 
+        log.info("UC25 - Role assigned successfully: groupId={}, userId={}, role={}", 
                 groupId, userId, newRole);
         
-        return MemberResponse.from(savedMembership);
+        // Fetch user info for response
+        GetUserResponse userInfo = identityServiceClient.getUser(userId);
+        
+        return MemberResponse.builder()
+                .userId(userId)
+                .groupId(groupId)
+                .fullName(userInfo.getFullName())
+                .email(userInfo.getEmail())
+                .role(newRole.name())
+                .build();
     }
     
     @Override
@@ -183,13 +227,34 @@ public class GroupMemberServiceImpl implements GroupMemberService {
             memberships = userGroupRepository.findAllByGroupId(groupId);
         }
         
+        // Batch fetch all user info
+        List<UUID> userIds = memberships.stream()
+                .map(UserGroup::getUserId)
+                .toList();
+        
+        GetUsersResponse usersResponse;
+        try {
+            usersResponse = identityServiceClient.getUsers(userIds);
+        } catch (StatusRuntimeException e) {
+            log.error("gRPC call failed when getting users: {}", e.getStatus());
+            throw new RuntimeException("Failed to get user info: " + e.getStatus().getCode());
+        }
+        
+        // Map user info with deleted user handling
         List<GroupMembersResponse.MemberInfo> members = memberships.stream()
-                .map(ug -> GroupMembersResponse.MemberInfo.builder()
-                        .userId(ug.getUser().getId())
-                        .fullName(ug.getUser().getFullName())
-                        .email(ug.getUser().getEmail())
-                        .role(ug.getRole().name())
-                        .build())
+                .map(ug -> {
+                    GetUserResponse userInfo = usersResponse.getUsersList().stream()
+                            .filter(u -> u.getUserId().equals(ug.getUserId().toString()))
+                            .findFirst()
+                            .orElse(null);
+                    
+                    return GroupMembersResponse.MemberInfo.builder()
+                            .userId(ug.getUserId())
+                            .fullName(userInfo != null ? userInfo.getFullName() : "<Deleted User>")
+                            .email(userInfo != null && !userInfo.getDeleted() ? userInfo.getEmail() : null)
+                            .role(ug.getRole().name())
+                            .build();
+                })
                 .collect(Collectors.toList());
         
         return GroupMembersResponse.builder()
@@ -198,5 +263,27 @@ public class GroupMemberServiceImpl implements GroupMemberService {
                 .members(members)
                 .totalMembers(members.size())
                 .build();
+    }
+    
+    /**
+     * Handle gRPC errors with proper HTTP status mapping per API spec.
+     */
+    private <T> T handleGrpcError(StatusRuntimeException e, String operation) {
+        Status.Code code = e.getStatus().getCode();
+        
+        switch (code) {
+            case UNAVAILABLE:
+                throw ServiceUnavailableException.identityServiceUnavailable();
+            case DEADLINE_EXCEEDED:
+                throw GatewayTimeoutException.identityServiceTimeout();
+            case NOT_FOUND:
+                throw new ResourceNotFoundException("USER_NOT_FOUND", "User not found");
+            case PERMISSION_DENIED:
+                throw new ForbiddenException("FORBIDDEN", "Access denied");
+            case INVALID_ARGUMENT:
+                throw new BadRequestException("BAD_REQUEST", "Invalid request");
+            default:
+                throw new RuntimeException("Failed to " + operation + ": " + code);
+        }
     }
 }

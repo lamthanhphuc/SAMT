@@ -11,6 +11,9 @@ import java.util.UUID;
  * UserGroup entity representing the many-to-many relationship
  * between users and groups, including the group role (LEADER/MEMBER).
  * 
+ * Uses pure UUID references (NO FK constraints) for cross-service data integrity.
+ * User validation via gRPC to Identity Service.
+ * 
  * Business rules:
  * - Each group can have only ONE LEADER
  * - Each user can only be in ONE group per semester
@@ -28,14 +31,12 @@ import java.util.UUID;
 public class UserGroup {
     
     @Id
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
     
     @Id
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "group_id", nullable = false)
-    private Group group;
+    @Column(name = "group_id", nullable = false)
+    private UUID groupId;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 20)

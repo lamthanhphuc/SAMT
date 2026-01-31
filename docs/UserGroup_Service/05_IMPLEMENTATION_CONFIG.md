@@ -705,6 +705,70 @@ Optional<UserGroup> findLeaderByGroupIdWithLock(UUID groupId);
 
 **Note:** LECTURER viewing non-STUDENT target should return `403 FORBIDDEN`. If target role cannot be verified (cross-service), allow with warning log.
 
+#### UC21: LECTURER Authorization - gRPC Fallback Behavior
+
+**Design Decision:** Availability > Strict Security during outages
+
+**Implementation:**
+
+```java
+if (isLecturer) {
+    try {
+        // Attempt to verify target user role
+        GetUserRoleResponse roleResponse = identityServiceClient.getUserRole(targetUserId);
+        
+        if (roleResponse.getRole() == UserRole.STUDENT) {
+            return; // ALLOW - target is STUDENT
+        } else {
+            throw ForbiddenException.lecturerCanOnlyViewStudents(); // 403
+        }
+        
+    } catch (StatusRuntimeException e) {
+        // gRPC failure → FALLBACK BEHAVIOR
+        log.warn("LECTURER {} viewing user {} - gRPC failed ({}). Allowing per spec (fallback).", 
+                actorId, targetUserId, e.getStatus().getCode());
+        return; // ALLOW with warning
+    }
+}
+```
+
+**Behavior Matrix:**
+
+| Scenario | gRPC Response | Target Role | Action | HTTP Status |
+|----------|---------------|-------------|--------|-------------|
+| Normal | SUCCESS | STUDENT | Allow | 200 OK |
+| Normal | SUCCESS | LECTURER | Deny | 403 FORBIDDEN |
+| Normal | SUCCESS | ADMIN | Deny | 403 FORBIDDEN |
+| Outage | UNAVAILABLE | Unknown | Allow + log warning | 200 OK |
+| Outage | DEADLINE_EXCEEDED | Unknown | Allow + log warning | 200 OK |
+
+**Rationale:**
+
+1. **Availability Priority:** During Identity Service outage, LECTURER should still access system
+2. **Graceful Degradation:** Temporary relaxation of strict security better than complete denial
+3. **Audit Trail:** Warning logs track all fallback cases for security review
+4. **Risk Mitigation:** LECTURER accessing non-STUDENT during outage is low risk vs. system unavailability
+
+**Trade-offs:**
+- ✅ System remains available during Identity Service outage
+- ✅ LECTURER can continue work (view students)
+- ⚠️ LECTURER might access non-STUDENT user during outage (logged)
+- ⚠️ Security slightly relaxed during outage
+
+**Alternatives Considered:**
+- **Strict deny on gRPC failure:** Rejected - breaks system during outage
+- **Cache user roles:** Rejected - stale data risk, cache invalidation complexity
+- **Fallback to secondary Identity Service:** Future enhancement
+
+**Monitoring:**
+
+Watch for warning logs indicating fallback usage:
+```
+WARN: LECTURER <uuid> viewing user <uuid> - gRPC failed (UNAVAILABLE). Allowing per spec (fallback).
+```
+
+High frequency suggests Identity Service stability issue.
+
 ---
 
 ### 4. Deferred Features

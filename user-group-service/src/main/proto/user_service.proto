@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package com.samt.identity;
+
+option java_multiple_files = true;
+option java_package = "com.samt.identity.grpc";
+
+service UserGrpcService {
+  // Get basic user info
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  
+  // Get user's system role
+  rpc GetUserRole(GetUserRoleRequest) returns (GetUserRoleResponse);
+  
+  // Verify user exists and is active
+  rpc VerifyUserExists(VerifyUserRequest) returns (VerifyUserResponse);
+  
+  // Batch get users (for group member list)
+  rpc GetUsers(GetUsersRequest) returns (GetUsersResponse);
+  
+  // Update user profile (UC22 - proxy pattern)
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+}
+
+message GetUserRequest {
+  string user_id = 1; // UUID as string
+}
+
+message GetUserResponse {
+  string user_id = 1;
+  string email = 2;
+  string full_name = 3;
+  UserStatus status = 4;
+  UserRole role = 5;
+  bool deleted = 6;
+}
+
+message GetUserRoleRequest {
+  string user_id = 1;
+}
+
+message GetUserRoleResponse {
+  UserRole role = 1;
+}
+
+message VerifyUserRequest {
+  string user_id = 1;
+}
+
+message VerifyUserResponse {
+  bool exists = 1;
+  bool active = 2; // status == ACTIVE
+  string message = 3;
+}
+
+message GetUsersRequest {
+  repeated string user_ids = 1;
+}
+
+message GetUsersResponse {
+  repeated GetUserResponse users = 1;
+}
+
+message UpdateUserRequest {
+  string user_id = 1;
+  string full_name = 2;
+}
+
+message UpdateUserResponse {
+  GetUserResponse user = 1;
+}
+
+enum UserStatus {
+  ACTIVE = 0;
+  INACTIVE = 1;
+  LOCKED = 2;
+}
+
+enum UserRole {
+  ADMIN = 0;
+  LECTURER = 1;
+  STUDENT = 2;
+}
