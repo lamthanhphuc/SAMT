@@ -7,11 +7,18 @@ import com.example.user_groupservice.dto.response.UserResponse;
 import com.example.user_groupservice.entity.Group;
 import com.example.user_groupservice.entity.UserGroup;
 import com.example.user_groupservice.exception.*;
+import com.example.user_groupservice.grpc.GetUserResponse;
+import com.example.user_groupservice.grpc.GetUsersResponse;
 import com.example.user_groupservice.grpc.IdentityServiceClient;
+import com.example.user_groupservice.grpc.UpdateUserResponse;
+import com.example.user_groupservice.mapper.UserGrpcMapper;
 import com.example.user_groupservice.repository.GroupRepository;
 import com.example.user_groupservice.repository.UserGroupRepository;
 import com.example.user_groupservice.service.UserService;
-import com.samt.identity.grpc.*;
+import com.example.user_groupservice.grpc.VerifyUserResponse;
+import com.example.user_groupservice.grpc.GetUserRoleResponse;
+import com.example.user_groupservice.grpc.UserRole;
+
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import lombok.RequiredArgsConstructor;
@@ -55,8 +62,8 @@ public class UserServiceImpl implements UserService {
             if (user.getDeleted()) {
                 throw ResourceNotFoundException.userNotFound(userId);
             }
-            
-            return UserResponse.fromGrpc(user);
+
+            return UserGrpcMapper.toUserResponse(user);
             
         } catch (StatusRuntimeException e) {
             log.error("gRPC call failed when getting user: {}", e.getStatus());
@@ -96,8 +103,9 @@ public class UserServiceImpl implements UserService {
                     userId, request.getFullName());
             
             log.info("User profile updated via Identity Service: userId={}", userId);
-            return UserResponse.fromGrpc(grpcResponse.getUser());
-            
+            return UserGrpcMapper.toUserResponse(grpcResponse.getUser());
+
+
         } catch (StatusRuntimeException e) {
             log.error("gRPC call failed when updating user: {}", e.getStatus());
             return handleGrpcError(e, "update user");
@@ -121,14 +129,15 @@ public class UserServiceImpl implements UserService {
             
             // Convert to UserResponse DTOs
             List<UserResponse> users = usersResponse.getUsersList().stream()
-                    .map(UserResponse::fromGrpc)
+                    .map(UserGrpcMapper::toUserResponse)
                     .toList();
             
             // Apply filters if provided
             if (status != null && !status.isBlank()) {
                 String statusUpper = status.toUpperCase();
                 users = users.stream()
-                        .filter(u -> u.getStatus().name().equals(statusUpper))
+                        .filter(u -> u.getStatus().equals(statusUpper))
+
                         .toList();
             }
             

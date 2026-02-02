@@ -55,10 +55,12 @@ jwt:
 
 # gRPC Configuration - Identity Service Integration
 grpc:
-  identity-service:
-    host: ${IDENTITY_SERVICE_GRPC_HOST:localhost}
-    port: ${IDENTITY_SERVICE_GRPC_PORT:9091}
-    deadline-seconds: 5
+  client:
+    identity-service:
+      address: static://${IDENTITY_SERVICE_GRPC_HOST:localhost}:${IDENTITY_SERVICE_GRPC_PORT:9091}
+      negotiationType: plaintext
+      deadline-seconds: 5
+
 
 management:
   endpoints:

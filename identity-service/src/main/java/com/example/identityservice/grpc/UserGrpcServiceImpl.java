@@ -2,7 +2,7 @@ package com.example.identityservice.grpc;
 
 import com.example.identityservice.entity.User;
 import com.example.identityservice.repository.UserRepository;
-import com.samt.identity.grpc.*;
+import com.example.identityservice.grpc.UserGrpcServiceGrpc;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;

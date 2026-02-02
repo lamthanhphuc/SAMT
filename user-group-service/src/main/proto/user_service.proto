@@ -1,9 +1,9 @@
 syntax = "proto3";
 
-package com.samt.identity;
+//package com.samt.identity;
 
 option java_multiple_files = true;
-option java_package = "com.samt.identity.grpc";
+option java_package = "com.example.user_groupservice.grpc";
 
 service UserGrpcService {
   // Get basic user info
@@ -72,8 +72,7 @@ message UpdateUserResponse {
 
 enum UserStatus {
   ACTIVE = 0;
-  INACTIVE = 1;
-  LOCKED = 2;
+  LOCKED = 1;
 }
 
 enum UserRole {
