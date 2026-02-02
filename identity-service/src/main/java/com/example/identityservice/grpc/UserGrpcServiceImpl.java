@@ -8,6 +8,9 @@ import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -245,4 +248,80 @@ public class UserGrpcServiceImpl extends UserGrpcServiceGrpc.UserGrpcServiceImpl
             case STUDENT -> UserRole.STUDENT;
         };
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void listUsers(ListUsersRequest request,
+                          StreamObserver<ListUsersResponse> responseObserver) {
+        try {
+            int page = Math.max(0, request.getPage());
+            int size = Math.max(1, Math.min(100, request.getSize())); // Max 100 items per page
+            
+            log.info("gRPC ListUsers called: page={}, size={}, status={}, role={}", 
+                    page, size, request.getStatus(), request.getRole());
+
+            // Parse optional filters
+            User.Status status = parseStatus(request.getStatus());
+            User.Role role = parseRole(request.getRole());
+
+            // Query with pagination and filters
+            Pageable pageable = PageRequest.of(page, size);
+            Page<User> userPage = userRepository.findAllWithFilters(status, role, pageable);
+
+            // Build response
+            List<GetUserResponse> userResponses = userPage.getContent().stream()
+                    .map(this::buildGetUserResponse)
+                    .toList();
+
+            ListUsersResponse response = ListUsersResponse.newBuilder()
+                    .addAllUsers(userResponses)
+                    .setTotalElements(userPage.getTotalElements())
+                    .build();
+
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+            
+            log.info("gRPC ListUsers completed: returned {} users out of {} total", 
+                    userResponses.size(), userPage.getTotalElements());
+
+        } catch (Exception e) {
+            log.error("Error in gRPC ListUsers: {}", e.getMessage(), e);
+            responseObserver.onError(Status.INTERNAL
+                    .withDescription("Internal server error")
+                    .asRuntimeException());
+        }
+    }
+
+    /**
+     * Parse status string to User.Status enum.
+     * Returns null for empty/invalid values (means no filter).
+     */
+    private User.Status parseStatus(String statusStr) {
+        if (statusStr == null || statusStr.isBlank()) {
+            return null;
+        }
+        try {
+            return User.Status.valueOf(statusStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid status value: {}", statusStr);
+            return null;
+        }
+    }
+
+    /**
+     * Parse role string to User.Role enum.
+     * Returns null for empty/invalid values (means no filter).
+     */
+    private User.Role parseRole(String roleStr) {
+        if (roleStr == null || roleStr.isBlank()) {
+            return null;
+        }
+        try {
+            return User.Role.valueOf(roleStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid role value: {}", roleStr);
+            return null;
+        }
+    }
+
 }

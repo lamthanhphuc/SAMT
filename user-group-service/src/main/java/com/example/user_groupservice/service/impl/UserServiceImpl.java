@@ -10,6 +10,7 @@ import com.example.user_groupservice.exception.*;
 import com.example.user_groupservice.grpc.GetUserResponse;
 import com.example.user_groupservice.grpc.GetUsersResponse;
 import com.example.user_groupservice.grpc.IdentityServiceClient;
+import com.example.user_groupservice.grpc.ListUsersResponse;
 import com.example.user_groupservice.grpc.UpdateUserResponse;
 import com.example.user_groupservice.mapper.UserGrpcMapper;
 import com.example.user_groupservice.repository.GroupRepository;
@@ -23,13 +24,9 @@ import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -123,12 +120,11 @@ public class UserServiceImpl implements UserService {
         try {
             // For now, get users by known IDs (1, 2, 3 from database)
             // TODO: Add proper ListUsers gRPC method with pagination to Identity Service
-            List<Long> allUserIds = List.of(1L, 2L, 3L);
-            
-            GetUsersResponse usersResponse = identityServiceClient.getUsers(allUserIds);
-            
+            ListUsersResponse response =
+                identityServiceClient.listUsers(page, size, status, role);
+
             // Convert to UserResponse DTOs
-            List<UserResponse> users = usersResponse.getUsersList().stream()
+            List<UserResponse> users = response.getUsersList().stream()
                     .map(UserGrpcMapper::toUserResponse)
                     .toList();
             

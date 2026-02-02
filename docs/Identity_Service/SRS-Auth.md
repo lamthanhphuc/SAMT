@@ -369,66 +369,8 @@ HTTP/1.1 204 No Content
 
 ---
 
-## UC-OAUTH-LOGIN-GOOGLE – Login with Google OAuth
+## API Endpoints Summary
 
-### Actor
-
-- Guest (unauthenticated user)
-
-### Pre-conditions
-
-- ❌ None (public endpoint)
-
-### Flow
-
-```mermaid
-sequenceDiagram
-    User->>Frontend: Click "Continue with Google"
-    Frontend->>Backend: GET /api/auth/oauth2/authorize/google
-    Backend->>Google: Redirect to OAuth consent page
-    Google->>User: Show consent screen (openid, profile, email)
-    User->>Google: Grant permissions
-    Google->>Backend: Callback with authorization code
-    Backend->>Google: Exchange code for access token
-    Google->>Backend: Return access token + user info
-    Backend->>Database: Find user by email
-    alt User exists
-        Backend->>Database: Link Google provider to user
-    else User not exists
-        Backend->>Database: Create user (STUDENT role)
-    end
-    Backend->>Database: Store OAuth provider info
-    Backend->>Backend: Generate JWT tokens
-    Backend->>Frontend: Redirect with tokens in URL fragment
-    Frontend->>Frontend: Store tokens, redirect to dashboard
-```
-
-### Response (Success)
-
-Frontend receives redirect to:
-```
-https://frontend.com/#/auth/callback?access_token=<JWT>&refresh_token=<UUID>
-```
-
-### Business Rules
-
-- BR-OAUTH-G-01: Email must be verified by Google (no SAMT confirmation)
-- BR-OAUTH-G-02: New users created with `role = STUDENT`, `status = ACTIVE`
-- BR-OAUTH-G-03: Cannot link if email exists with different user (409 CONFLICT)
-- BR-OAUTH-G-04: Profile sync (name from Google) on every login
-- BR-OAUTH-G-05: OAuth tokens encrypted with AES-256-GCM
-
-### Error Codes
-
-| Code | Condition | Message |
-|------|-----------|---------|
-| 400 | Invalid authorization code | "Invalid OAuth authorization code" |
-| 409 | Email conflict | "Email already associated with another account" |
-| 500 | OAuth provider error | "Failed to authenticate with Google" |
-
----
-
-## UC-OAUTH-LOGIN-GITHUB – Login with GitHub OAuth
 
 ### Actor
 
@@ -467,11 +409,7 @@ https://frontend.com/#/auth/callback?access_token=<JWT>&refresh_token=<UUID>
 |------|-----------|---------|
 | 400 | Invalid authorization code | "Invalid OAuth authorization code" |
 | 409 | Username conflict | "GitHub username already associated with another account" |
-| 500 | OAuth provider error | "Failed to authenticate with GitHub" |
 
----
-
-## UC-OAUTH-LINK-ACCOUNT – Link OAuth Provider
 
 ### Actor
 
@@ -527,53 +465,8 @@ https://frontend.com/#/auth/callback?access_token=<JWT>&refresh_token=<UUID>
 | 400 | Email mismatch | "OAuth email does not match account email" |
 | 409 | Already linked | "Provider already linked to this account" |
 
----
 
-## UC-OAUTH-UNLINK-ACCOUNT – Unlink OAuth Provider
 
-### Actor
-
-- Authenticated user (any role)
-
-### Pre-conditions
-
-- ✅ Valid access token in Authorization header
-- ✅ User has at least 2 login methods
-
-### Input
-
-**Path parameter:** `provider` (GOOGLE or GITHUB)
-
-### Main Flow
-
-1. User goes to Settings → Connected Accounts
-2. User clicks "Unlink Google" or "Unlink GitHub"
-3. Frontend sends `DELETE /api/users/me/oauth/{provider}`
-4. Backend validates user has at least one login method remaining
-5. Backend deletes record from `oauth_providers` table
-6. Backend returns success
-
-### Response (Success)
-
-```json
-{
-  "message": "Google account unlinked successfully"
-}
-```
-
-### Business Rules
-
-- BR-OAUTH-U-01: Cannot unlink if only login method (400 BAD REQUEST)
-  - Must have email/password OR another OAuth provider
-- BR-OAUTH-U-02: Delete row from `oauth_providers` table
-- BR-OAUTH-U-03: Audit log required (action: `OAUTH_UNLINK_ACCOUNT`)
-
-### Error Codes
-
-| Code | Condition | Message |
-|------|-----------|---------|
-| 400 | Last login method | "Cannot unlink: no other login method available" |
-| 404 | Provider not linked | "Provider not linked to this account" |
 
 ---
 
@@ -1238,86 +1131,6 @@ Action: `MAP_EXTERNAL_ACCOUNTS` or `UNMAP_EXTERNAL_ACCOUNTS`
 | Body | `{ jiraAccountId?: string \| null, githubUsername?: string \| null }` |
 | Success | 200 OK |
 | Errors | 401 (Unauthorized), 403 (Not Admin), 404 (User not found), 400 (User deleted), 409 (Duplicate mapping) |
-
----
-
-## OAuth 2.0 Endpoints
-
-### GET `/api/auth/oauth2/authorize/{provider}` – Initiate OAuth Login
-
-Redirect user to OAuth provider (Google/GitHub) for authentication.
-
-| Property | Value |
-|----------|-------|
-| Method | GET |
-| Path Param | `provider`: "google" or "github" |
-| Auth | None (public endpoint) |
-| Response | 302 Redirect to OAuth provider |
-
-### GET `/api/auth/oauth2/callback/{provider}` – OAuth Callback
-
-OAuth provider redirects here after user grants permissions.
-
-| Property | Value |
-|----------|-------|
-| Method | GET |
-| Path Param | `provider`: "google" or "github" |
-| Query Params | `code` (authorization code), `state` (CSRF token) |
-| Response | 302 Redirect to frontend with tokens in URL fragment |
-| Success URL | `https://frontend.com/#/auth/callback?access_token=<JWT>&refresh_token=<UUID>` |
-| Errors | 400 (Invalid code/state), 409 (Email conflict), 500 (OAuth provider error) |
-
-### POST `/api/users/me/oauth/link` – Link OAuth Provider
-
-Link Google/GitHub to existing account.
-
-| Property | Value |
-|----------|-------|
-| Method | POST |
-| Auth | Bearer Token (any role) |
-| Body | `{ provider: "GOOGLE" \| "GITHUB", authorizationCode: string }` |
-| Success | 200 OK |
-| Errors | 400 (Email mismatch), 409 (Already linked) |
-
-### DELETE `/api/users/me/oauth/{provider}` – Unlink OAuth Provider
-
-Remove OAuth provider from account.
-
-| Property | Value |
-|----------|-------|
-| Method | DELETE |
-| Path Param | `provider`: "GOOGLE" or "GITHUB" |
-| Auth | Bearer Token (any role) |
-| Success | 200 OK |
-| Errors | 400 (Last login method) |
-
-### GET `/api/users/me/oauth/providers` – List Linked Providers
-
-Get list of OAuth providers linked to current user.
-
-| Property | Value |
-|----------|-------|
-| Method | GET |
-| Auth | Bearer Token (any role) |
-| Response | `[{ provider: "GOOGLE", linkedAt: "2026-01-30T10:00:00Z", lastUsedAt: "2026-01-30T12:00:00Z" }]` |
-
-**Response Example:**
-```json
-[
-  {
-    "provider": "GOOGLE",
-    "providerEmail": "student@gmail.com",
-    "linkedAt": "2026-01-30T10:00:00Z",
-    "lastUsedAt": "2026-01-30T12:00:00Z"
-  },
-  {
-    "provider": "GITHUB",
-    "providerUsername": "student-github",
-    "linkedAt": "2026-01-25T08:00:00Z",
-    "lastUsedAt": "2026-01-28T14:30:00Z"
-  }
-]
-```
 
 ---
 

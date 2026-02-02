@@ -20,6 +20,20 @@ service UserGrpcService {
   
   // Update user profile (UC22 - proxy pattern)
   rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+
+  rpc ListUsers (ListUsersRequest) returns (ListUsersResponse);
+}
+
+message ListUsersRequest {
+  int32 page = 1;
+  int32 size = 2;
+  string status = 3;
+  string role = 4;
+}
+
+message ListUsersResponse {
+  repeated GetUserResponse users = 1;
+  int64 total_elements = 2;
 }
 
 message GetUserRequest {

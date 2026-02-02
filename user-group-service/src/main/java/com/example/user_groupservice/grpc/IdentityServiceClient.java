@@ -141,4 +141,29 @@ public class IdentityServiceClient {
             throw e;
         }
     }
+
+    public ListUsersResponse listUsers(int page, int size, String status, String role) {
+        log.debug("Listing users via Identity Service: page={}, size={}", page, size);
+
+        try {
+            ListUsersRequest.Builder builder = ListUsersRequest.newBuilder()
+                    .setPage(page)
+                    .setSize(size);
+
+            if (status != null && !status.isBlank()) {
+                builder.setStatus(status);
+            }
+            if (role != null && !role.isBlank()) {
+                builder.setRole(role);
+            }
+
+            return userStub
+                    .withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS)
+                    .listUsers(builder.build());
+
+        } catch (StatusRuntimeException e) {
+            log.error("Failed to list users: {}", e.getStatus());
+            throw e;
+        }
+    }
 }
