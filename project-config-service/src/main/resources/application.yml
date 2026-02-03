@@ -63,6 +63,19 @@ management:
     health:
       show-details: when-authorized
 
+# JWT Configuration - MUST match identity-service
+jwt:
+  secret: ${JWT_SECRET:samt-super-secret-key-for-jwt-hs256-algorithm-minimum-32-chars}
+
+# gRPC Configuration - User-Group Service Integration
+grpc:
+  client:
+    user-group-service:
+      address: static://${USER_GROUP_SERVICE_GRPC_HOST:localhost}:${USER_GROUP_SERVICE_GRPC_PORT:9092}
+      negotiationType: plaintext
+      deadline-seconds: 5
+
+
 logging:
   level:
     root: ${LOG_LEVEL:INFO}

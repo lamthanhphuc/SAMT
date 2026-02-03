@@ -8,6 +8,20 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import com.example.user_groupservice.grpc.UserGroupGrpcServiceImpl;
+import com.example.user_groupservice.grpc.UserGrpcServiceGrpc;
+import com.example.user_groupservice.grpc.GetUserRequest;
+import com.example.user_groupservice.grpc.GetUserResponse;
+import com.example.user_groupservice.grpc.GetUserRoleRequest;
+import com.example.user_groupservice.grpc.GetUserRoleResponse;
+import com.example.user_groupservice.grpc.VerifyUserRequest;
+import com.example.user_groupservice.grpc.VerifyUserResponse;
+import com.example.user_groupservice.grpc.GetUsersRequest;
+import com.example.user_groupservice.grpc.GetUsersResponse;
+import com.example.user_groupservice.grpc.UpdateUserRequest;
+import com.example.user_groupservice.grpc.UpdateUserResponse;
+import com.example.user_groupservice.grpc.ListUsersRequest;
+import com.example.user_groupservice.grpc.ListUsersResponse;
 
 /**
  * gRPC client for Identity Service integration.

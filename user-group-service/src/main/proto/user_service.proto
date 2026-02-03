@@ -8,21 +8,23 @@ option java_package = "com.example.user_groupservice.grpc";
 service UserGrpcService {
   // Get basic user info
   rpc GetUser(GetUserRequest) returns (GetUserResponse);
-  
+
   // Get user's system role
   rpc GetUserRole(GetUserRoleRequest) returns (GetUserRoleResponse);
-  
+
   // Verify user exists and is active
   rpc VerifyUserExists(VerifyUserRequest) returns (VerifyUserResponse);
-  
+
   // Batch get users (for group member list)
   rpc GetUsers(GetUsersRequest) returns (GetUsersResponse);
-  
+
   // Update user profile (UC22 - proxy pattern)
   rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
 
   rpc ListUsers (ListUsersRequest) returns (ListUsersResponse);
 }
+
+
 
 message ListUsersRequest {
   int32 page = 1;

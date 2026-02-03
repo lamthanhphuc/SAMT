@@ -1,0 +1,84 @@
+syntax = "proto3";
+
+//package samt.usergroup.v1;
+
+option java_multiple_files = true;
+option java_package = "com.example.project_configservice.grpc";
+
+/**
+ * User-Group Service gRPC API
+ * Provides group validation and membership checking for external services.
+ */
+service UserGroupGrpcService {
+  // Verify if a group exists and is not soft-deleted
+  rpc VerifyGroupExists (VerifyGroupRequest) returns (VerifyGroupResponse);
+  
+  // Check if a user is the LEADER of a group
+  rpc CheckGroupLeader (CheckGroupLeaderRequest) returns (CheckGroupLeaderResponse);
+  
+  // Check if a user is a MEMBER (any role) of a group
+  rpc CheckGroupMember (CheckGroupMemberRequest) returns (CheckGroupMemberResponse);
+  
+  // Get group details (optional - for future use)
+  rpc GetGroup (GetGroupRequest) returns (GetGroupResponse);
+}
+
+// ============================================================================
+// VerifyGroupExists Messages
+// ============================================================================
+
+message VerifyGroupRequest {
+  string group_id = 1; // UUID as string
+}
+
+message VerifyGroupResponse {
+  bool exists = 1;     // true if group found in database
+  bool deleted = 2;    // true if group has deletedAt != null
+  string message = 3;  // Optional descriptive message
+}
+
+// ============================================================================
+// CheckGroupLeader Messages
+// ============================================================================
+
+message CheckGroupLeaderRequest {
+  string group_id = 1; // UUID as string
+  string user_id = 2;  // Long as string
+}
+
+message CheckGroupLeaderResponse {
+  bool is_leader = 1;  // true if user has LEADER role in this group
+  string message = 2;  // Optional descriptive message
+}
+
+// ============================================================================
+// CheckGroupMember Messages
+// ============================================================================
+
+message CheckGroupMemberRequest {
+  string group_id = 1; // UUID as string
+  string user_id = 2;  // Long as string
+}
+
+message CheckGroupMemberResponse {
+  bool is_member = 1;   // true if user is in group (any role)
+  string role = 2;      // "LEADER" or "MEMBER" if is_member=true, empty otherwise
+  string message = 3;   // Optional descriptive message
+}
+
+// ============================================================================
+// GetGroup Messages
+// ============================================================================
+
+message GetGroupRequest {
+  string group_id = 1; // UUID as string
+}
+
+message GetGroupResponse {
+  string group_id = 1;
+  string group_name = 2;
+  string semester = 3;
+  string lecturer_id = 4;  // Long as string
+  string created_at = 5;   // ISO-8601 timestamp
+  string updated_at = 6;   // ISO-8601 timestamp
+}

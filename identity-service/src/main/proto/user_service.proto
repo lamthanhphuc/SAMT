@@ -5,6 +5,7 @@ syntax = "proto3";
 option java_multiple_files = true;
 option java_package = "com.example.identityservice.grpc";
 
+
 service UserGrpcService {
   // Get basic user info
   rpc GetUser(GetUserRequest) returns (GetUserResponse);
