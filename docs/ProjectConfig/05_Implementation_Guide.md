@@ -19,7 +19,7 @@ project-config-service/
 ├── src/
 │   ├── main/
 │   │   ├── java/
-│   │   │   └── com/fpt/projectconfig/
+│   │   │   └── com/example/projectconfig/
 │   │   │       ├── ProjectConfigServiceApplication.java
 │   │   │       ├── controller/
 │   │   │       │   ├── ProjectConfigController.java

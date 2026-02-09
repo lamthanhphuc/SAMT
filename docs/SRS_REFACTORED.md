@@ -2,46 +2,51 @@
 
 ## **Project: SWP391 Academic Management Tool (SAMT)**
 
-**Version:** 1.2
+**Version:** 1.3
 
-**Date:** January 13, 2026
+**Date:** February 3, 2026
 
-**Status:** Final Version
+**Status:** Final Version (Refactored)
 
 ---
 
-## **1\. GIỚI THIỆU (INTRODUCTION)**
+## **1. GIỚI THIỆU (INTRODUCTION) [CLO1]**
 
-### **1.1 Mục tiêu (Purpose) \[CLO1\]**
+### **1.1 Mục tiêu (Purpose)**
 
 Tài liệu này xác định các yêu cầu kỹ thuật và nghiệp vụ cho hệ thống **SAMT**. Hệ thống giúp tự động hóa việc tổng hợp dữ liệu từ Jira và GitHub để hỗ trợ sinh viên tạo tài liệu SRS chuẩn và giúp Giảng viên theo dõi tiến độ thực tế của dự án.
 
-### **1.2 Phạm vi (Scope) \[CLO1\]**
+### **1.2 Phạm vi (Scope)**
 
 * **Hệ thống:** Ứng dụng Web/Mobile tích hợp AI.  
 * **Tích hợp:** Kết nối trực tiếp với Jira Software API và GitHub API.  
-* **Đầu ra:** Báo cáo tiến độ, chỉ số đóng góp cá nhân và file đặc tả SRS.  
-  ---
+* **Đầu ra:** Báo cáo tiến độ, chỉ số đóng góp cá nhân và file đặc tả SRS.
 
-  ## **2\. MÔ TẢ TỔNG QUAN (OVERALL DESCRIPTION)**
+---
 
-  ### **2.1 Kiến trúc hệ thống \[CLO2\]**
+## **2. MÔ TẢ TỔNG QUAN (OVERALL DESCRIPTION) [CLO1]**
+
+### **2.1 Kiến trúc hệ thống**
 
 Hệ thống triển khai theo mô hình **Microservices** trên nền tảng **Docker**, bao gồm:
 
 1. **Identity Service:** Quản lý xác thực, phân quyền, và thông tin người dùng (authentication, users, roles, refresh tokens).
 2. **User/Group Service:** Quản lý nhóm dự án và membership. Lấy thông tin user từ Identity Service qua **gRPC**.
-3. **Project Config Service:** Quản lý cấu hình tích hợp Jira/GitHub cho từng nhóm.
+3. **Project Config Service:** Quản lý cấu hình tích hợp Jira/GitHub cho từng nhóm. Sử dụng **gRPC** để validate groups và check leadership. **No REST API** - gRPC-only communication.
 4. **Sync Service (Planned):** Đảm nhận việc crawl dữ liệu từ Jira/GitHub.
 5. **AI Analysis Service (Planned):** Phân tích ngôn ngữ tự nhiên và chất lượng code.
 6. **Reporting Service (Planned):** Xuất dữ liệu ra các định dạng văn bản học thuật.
 
 **Inter-Service Communication:**
-- **gRPC:** User/Group Service ↔ Identity Service (synchronous, type-safe, high-performance)
-- **REST API:** Client ↔ All Services (qua API Gateway)
-- **Internal API:** Sync Service ↔ Project Config Service (service-to-service authentication với X-Service-Name/X-Service-Key headers)
+- **gRPC:** 
+  - User/Group Service ↔ Identity Service (user data, validation)
+  - Project Config Service ↔ User-Group Service (group validation, leadership check)
+  - Sync Service ↔ Project Config Service (get decrypted tokens)
+- **Client Communication:**
+  - REST: Identity Service, User-Group Service (via API Gateway)
+  - gRPC: Project Config Service (metadata authentication: userId, roles)
 
-   ### **2.2 Các tác nhân (User Classes) \[CLO7\]**
+### **2.2 Các tác nhân (User Classes)**
 
 #### **2.2.1 System Roles (Vai trò hệ thống)**
 
@@ -84,14 +89,17 @@ Bên cạnh System Role, sinh viên còn có vai trò trong nhóm dự án:
   - Cập nhật trạng thái công việc
   - Xem thống kê cá nhân
 
-**Lưu ý:** Group Role KHÔNG thay thế System Role. Một sinh viên có `System Role = STUDENT` và `Group Role = LEADER` hoặc `MEMBER`.  
-  ---
+**Lưu ý:** Group Role KHÔNG thay thế System Role. Một sinh viên có `System Role = STUDENT` và `Group Role = LEADER` hoặc `MEMBER`.
 
-  ## **3\. YÊU CẦU CHỨC NĂNG (FUNCTIONAL REQUIREMENTS) \[CLO1\]**
+---
 
-  ### **3.1 TỔNG QUAN BIỂU ĐỒ USE CASE**
+## **3. YÊU CẦU CHỨC NĂNG (FUNCTIONAL REQUIREMENTS) [CLO1]**
+
+### **3.1 TỔNG QUAN BIỂU ĐỒ USE CASE**
 
 Hệ thống bao gồm 4 tác nhân chính tương tác với các nhóm chức năng: Quản trị hệ thống, Quản lý đào tạo, Quản lý dự án nhóm và Theo dõi cá nhân.
+
+**[INSERT OVERALL USE CASE DIAGRAM HERE]**
 
 ---
 
@@ -168,13 +176,16 @@ Hệ thống bao gồm 4 tác nhân chính tương tác với các nhóm chức 
 * **UC-LOGOUT:** Đăng xuất hệ thống
 * **UC22: Update User Profile:** Cập nhật thông tin cá nhân
 
-##### **B. Quản lý Cấu hình Dự án (Project Config Service)**
+##### **B. Quản lý Cấu hình Dự án (Project Config Service - gRPC)**
 
-* **UC30: Create Project Config:** Tạo cấu hình tích hợp Jira/GitHub cho nhóm
-* **UC31: Get Project Config:** Lấy thông tin cấu hình (tokens được mask)
+* **UC30: Create Project Config:** Tạo cấu hình tích hợp Jira/GitHub cho nhóm (gRPC method)
+* **UC31: Get Project Config:** Lấy thông tin cấu hình (tokens được mask theo role)
 * **UC32: Update Project Config:** Cập nhật Jira/GitHub credentials
 * **UC33: Delete Project Config:** Xóa cấu hình (soft delete)
-* **UC34: Verify Config Connection:** Kiểm tra tính hợp lệ của cấu hình trước/sau khi lưu
+* **UC34: Verify Config Connection:** Kiểm tra tính hợp lệ của cấu hình Jira/GitHub
+* **UC35: Restore Project Config:** Khôi phục cấu hình đã xóa (Admin only)
+
+**Giao tiếp:** Client gửi gRPC requests với metadata (userId, roles). Service validate qua User-Group Service (gRPC) để check group leadership.
 
 ##### **C. Quản lý Dự án & Tạo SRS (Chưa implement)**
 
@@ -227,13 +238,15 @@ Tất cả vai trò đều có thể:
 
 ---
 
-### **3.3 MÔ TẢ USE CASE DIAGRAM (PLANTUML)**  **![][image1]**
+### **3.4 MÔ TẢ USE CASE DIAGRAM (PLANTUML)**
+
+**![][image1]**
 
 https://app.diagrams.net/\#G1dIYlz7NYFMqShsOqYqw3pEyXYfOpgjYT\#%7B%22pageId%22%3A%22t-SDqpFQ4dpL-EcVTPzM%22%7D
 
 ---
 
-## **4\. YÊU CẦU PHI CHỨC NĂNG (NON-FUNCTIONAL REQUIREMENTS) \[CLO2\]**
+## **4. YÊU CẦU PHI CHỨC NĂNG (NON-FUNCTIONAL REQUIREMENTS) [CLO1]**
 
 ### **4.1 Hiệu năng (Performance)**
 
@@ -310,23 +323,18 @@ https://app.diagrams.net/\#G1dIYlz7NYFMqShsOqYqw3pEyXYfOpgjYT\#%7B%22pageId%22%3
   - 1 group chỉ có 1 LEADER (enforced bằng pessimistic lock)
   - 1 group chỉ có 1 config (UNIQUE constraint)
   - 1 user chỉ thuộc 1 group mỗi semester (enforced ở service layer)
-  ---
-
-Dựa trên tài liệu SRS đã cung cấp, dưới đây là nội dung mở rộng chi tiết cho **Mục 5: THIẾT KẾ KIẾN TRÚC VÀ MÔ HÌNH PHÂN TÍCH**, tập trung vào việc áp dụng các Design Patterns để giải quyết các bài toán kỹ thuật cụ thể của hệ thống SAMT.
 
 ---
 
-## **5\. THIẾT KẾ KIẾN TRÚC VÀ MÔ HÌNH PHÂN TÍCH \[CLO3\]**
+## **5. ÁP DỤNG DESIGN PATTERNS (DESIGN PATTERNS APPLICATION) [CLO6]**
 
 Việc thiết kế hệ thống SAMT tuân theo kiến trúc Microservices đòi hỏi sự phối hợp chặt chẽ giữa các thành phần để đảm bảo tính linh hoạt, khả năng bảo trì và hiệu năng. Phần này trình bày chi tiết việc áp dụng các mẫu thiết kế (Design Patterns) tiêu chuẩn để giải quyết các vấn đề về khởi tạo đối tượng, cấu trúc hệ thống và hành vi tương tác giữa các module.
 
-### **5.1 Áp dụng Design Patterns \[CLO3\]**
-
-#### **A. Nhóm Creational Patterns (Mẫu Khởi tạo)**
+### **5.1 Nhóm Creational Patterns (Mẫu Khởi tạo)**
 
 Nhóm này giải quyết các vấn đề liên quan đến việc khởi tạo đối tượng, giúp hệ thống độc lập với cách thức các đối tượng được tạo ra, cấu thành và biểu diễn.
 
-**1\. Singleton Pattern (Đơn bản)**
+#### **5.1.1 Singleton Pattern (Đơn bản)**
 
 * **Áp dụng:** Class DatabaseConnector trong module quản lý dữ liệu.  
 * **Mô tả kỹ thuật:**  
@@ -336,7 +344,7 @@ Nhóm này giải quyết các vấn đề liên quan đến việc khởi tạo
   * **Quản lý tài nguyên:** Ngăn chặn việc tạo tràn lan các kết nối thừa thãi gây quá tải cho PostgreSQL server.  
   * **Tính nhất quán:** Đảm bảo tất cả các luồng xử lý (threads) khi truy xuất dữ liệu Users hay Groups đều đi qua một điểm kiểm soát cấu hình duy nhất (Connection Pool).
 
-**2\. Factory Method Pattern (Phương thức nhà máy)**
+#### **5.1.2 Factory Method Pattern (Phương thức nhà máy)**
 
 * **Áp dụng:** Module ExportService phục vụ chức năng xuất báo cáo.  
 * **Mô tả kỹ thuật:**  
@@ -346,13 +354,15 @@ Nhóm này giải quyết các vấn đề liên quan đến việc khởi tạo
 * **Lợi ích trong SAMT:**  
   * **Tính mở rộng (Open/Closed Principle):** Nếu trong tương lai Giảng viên yêu cầu xuất báo cáo dạng Excel (.xlsx) hoặc Markdown (.md), lập trình viên chỉ cần tạo thêm class mới hiện thực IReportExporter mà không cần sửa đổi mã nguồn cốt lõi của chức năng xuất file.
 
-  ---
+**[INSERT UML CLASS DIAGRAM – CREATIONAL PATTERNS HERE]**
 
-  #### **B. Nhóm Structural Patterns (Mẫu Cấu trúc)**
+---
+
+### **5.2 Nhóm Structural Patterns (Mẫu Cấu trúc)**
 
 Nhóm này tập trung vào việc tổ chức các lớp và đối tượng để tạo nên các cấu trúc lớn hơn, giúp tích hợp các hệ thống con khác biệt.
 
-**1\. Adapter Pattern (Người chuyển đổi)**
+#### **5.2.1 Adapter Pattern (Người chuyển đổi)**
 
 * **Áp dụng:** Tầng tích hợp Sync Service kết nối với Jira và GitHub.  
 * **Mô tả kỹ thuật:**  
@@ -362,7 +372,7 @@ Nhóm này tập trung vào việc tổ chức các lớp và đối tượng đ
 * **Lợi ích trong SAMT:**  
   * **Độc lập hệ thống:** Nếu Jira hoặc GitHub thay đổi phiên bản API, chỉ cần sửa đổi logic trong lớp Adapter. Các module xử lý nghiệp vụ như tính điểm hay tạo SRS không bị ảnh hưởng.
 
-**2\. Facade Pattern (Mặt tiền)**
+#### **5.2.2 Facade Pattern (Mặt tiền)**
 
 * **Áp dụng:** Lớp ProjectSummaryFacade phục vụ cho Frontend Dashboard.  
 * **Mô tả kỹ thuật:**  
@@ -372,13 +382,15 @@ Nhóm này tập trung vào việc tổ chức các lớp và đối tượng đ
   * **Tối ưu hiệu năng mạng:** Giảm số lượng request từ client đến server.  
   * **Ẩn giấu sự phức tạp:** Frontend không cần biết logic lấy dữ liệu phân tán nằm ở đâu, chỉ cần giao tiếp với Facade.
 
-  ---
+**[INSERT UML CLASS DIAGRAM – STRUCTURAL PATTERNS HERE]**
 
-  #### **C. Nhóm Behavioral Patterns (Mẫu Hành vi)**
+---
+
+### **5.3 Nhóm Behavioral Patterns (Mẫu Hành vi)**
 
 Nhóm này giải quyết các vấn đề về phân công trách nhiệm và giao tiếp giữa các đối tượng, giúp luồng điều khiển linh hoạt hơn.
 
-**1\. Observer Pattern (Người quan sát)**
+#### **5.3.1 Observer Pattern (Người quan sát)**
 
 * **Áp dụng:** Hệ thống thông báo (Notification System) dành cho Giảng viên.  
 * **Mô tả kỹ thuật:**  
@@ -390,7 +402,7 @@ Nhóm này giải quyết các vấn đề về phân công trách nhiệm và g
   * **Phản ứng thời gian thực:** Giảng viên nắm bắt ngay lập tức các hành vi bất thường hoặc các mốc quan trọng của dự án mà không cần phải vào hệ thống kiểm tra thủ công liên tục.  
   * **Lỏng lẻo (Loose Coupling):** Module đồng bộ dữ liệu không cần biết chi tiết về cách gửi email/thông báo, chỉ cần phát đi sự kiện.
 
-**2\. Strategy Pattern (Chiến lược)**
+#### **5.3.2 Strategy Pattern (Chiến lược)**
 
 * **Áp dụng:** Module Đánh giá và Chấm điểm (Grading Service).  
 * **Mô tả kỹ thuật:**  
@@ -402,35 +414,32 @@ Nhóm này giải quyết các vấn đề về phân công trách nhiệm và g
 * **Lợi ích trong SAMT:**  
   * **Tính linh hoạt cao:** Đáp ứng đa dạng nhu cầu đánh giá của Giảng viên mà không cần viết lại code logic nghiệp vụ (Business Logic).
 
-### 
+**[INSERT UML SEQUENCE / INTERACTION DIAGRAM – BEHAVIORAL PATTERNS HERE]**
 
-  ---
+---
 
-  ## **6\. THIẾT KẾ CƠ SỞ DỮ LIỆU (DATABASE DESIGN) \[CLO4\]**
+## **6. THIẾT KẾ CƠ SỞ DỮ LIỆU (DATABASE DESIGN) [CLO5]**
 
-#### Hệ thống **SAMT** sử dụng hệ quản trị cơ sở dữ liệu quan hệ (RDBMS) là **PostgreSQL**. Thiết kế dưới đây tuân thủ chuẩn hóa mức 3 (3NF) để giảm thiểu dư thừa dữ liệu và đảm bảo tính nhất quán khi đồng bộ từ nhiều nguồn (Jira, GitHub).
+Hệ thống **SAMT** sử dụng hệ quản trị cơ sở dữ liệu quan hệ (RDBMS) là **PostgreSQL**. Thiết kế dưới đây tuân thủ chuẩn hóa mức 3 (3NF) để giảm thiểu dư thừa dữ liệu và đảm bảo tính nhất quán khi đồng bộ từ nhiều nguồn (Jira, GitHub).
 
 ### **6.1 Các thực thể chính (Entities)**
 
-#### Dựa trên phân tích nghiệp vụ, các thực thể dữ liệu chính bao gồm:
+Dựa trên phân tích nghiệp vụ, các thực thể dữ liệu chính bao gồm:
 
-1. #### **Users (Người dùng):** Quản lý thông tin định danh của Admin, Giảng viên và Sinh viên.
+1. **Users (Người dùng):** Quản lý thông tin định danh của Admin, Giảng viên và Sinh viên.
+2. **Groups (Nhóm dự án):** Đơn vị quản lý chính của lớp học phần SWP391.
+3. **Project\_Configs (Cấu hình dự án):** Lưu trữ thông tin nhạy cảm về kết nối API.
+4. **Jira\_Issues (Yêu cầu/Công việc):** Bản sao dữ liệu các Ticket từ Jira.
+5. **Github\_Commits (Mã nguồn):** Dữ liệu lịch sử commit và các chỉ số phân tích.
+6. **Reports (Báo cáo):** Lưu trữ các file SRS hoặc báo cáo đã được hệ thống tạo ra.
 
-2. #### **Groups (Nhóm dự án):** Đơn vị quản lý chính của lớp học phần SWP391.
+### **6.2 Lược đồ Quan hệ Thực thể (ERD \- PlantUML)**
 
-3. #### **Project\_Configs (Cấu hình dự án):** Lưu trữ thông tin nhạy cảm về kết nối API.
+Dưới đây là mã nguồn để sinh lược đồ ERD minh họa mối quan hệ giữa các bảng:
 
-4. #### **Jira\_Issues (Yêu cầu/Công việc):** Bản sao dữ liệu các Ticket từ Jira.
+**[INSERT ENTITY RELATIONSHIP DIAGRAM (ERD) HERE]**
 
-5. #### **Github\_Commits (Mã nguồn):** Dữ liệu lịch sử commit và các chỉ số phân tích.
-
-6. #### **Reports (Báo cáo):** Lưu trữ các file SRS hoặc báo cáo đã được hệ thống tạo ra.
-
-   ### **6.2 Lược đồ Quan hệ Thực thể (ERD \- PlantUML)**
-
-#### Dưới đây là mã nguồn để sinh lược đồ ERD minh họa mối quan hệ giữa các bảng:
-
-![][image2]
+### **6.3 Chi tiết các bảng dữ liệu**
 
 #### **6.3.1 Bảng Users**
 
@@ -458,7 +467,7 @@ Lưu trữ thông tin người dùng hệ thống với khả năng soft delete 
 
 ---
 
-#### **6.3.1.1 Bảng Refresh_Tokens (Identity Service)**
+#### **6.3.2 Bảng Refresh_Tokens (Identity Service)**
 
 Lưu trữ refresh tokens với khả năng rotation và reuse detection.
 
@@ -477,7 +486,7 @@ Lưu trữ refresh tokens với khả năng rotation và reuse detection.
 - Logout: Thu hồi token cụ thể
 - Lock/Delete account: Thu hồi tất cả tokens
 
-#### **6.3.2 Bảng Groups**
+#### **6.3.3 Bảng Groups**
 
 Quản lý thông tin nhóm dự án (Capstone/SWP Project) với soft delete.
 
@@ -495,7 +504,7 @@ Quản lý thông tin nhóm dự án (Capstone/SWP Project) với soft delete.
 
 ---
 
-#### **6.3.3 Bảng User_Groups (Bảng nối với Group Roles)**
+#### **6.3.4 Bảng User_Groups (Bảng nối với Group Roles)**
 
 Giải quyết mối quan hệ N-N giữa Sinh viên và Nhóm, đồng thời xác định vai trò LEADER/MEMBER.
 
@@ -514,7 +523,7 @@ Giải quyết mối quan hệ N-N giữa Sinh viên và Nhóm, đồng thời x
 
 **Lưu ý:** Group Role (LEADER/MEMBER) KHÁC với System Role (ADMIN/LECTURER/STUDENT)
 
-#### **6.3.4 Bảng Project\_Configs**
+#### **6.3.5 Bảng Project\_Configs**
 
 Lưu trữ cấu hình tích hợp với soft delete và state machine. Tokens được mã hóa AES-256-GCM.
 
@@ -552,7 +561,7 @@ Lưu trữ cấu hình tích hợp với soft delete và state machine. Tokens �
 - Khi trả về client, tokens được mask (VD: `ghp_***...`)
 - Internal service (Sync Service) lấy decrypted tokens qua endpoint `/internal/project-configs/{id}/tokens`
 
-#### **6.3.5 Bảng Jira\_Issues**
+#### **6.3.6 Bảng Jira\_Issues**
 
 Lưu trữ dữ liệu đồng bộ từ Jira. Đây là nguồn dữ liệu chính để tạo SRS (User Stories) và Dashboard (Tasks).
 
@@ -567,7 +576,7 @@ Lưu trữ dữ liệu đồng bộ từ Jira. Đây là nguồn dữ liệu ch�
 | story\_points | INT | DEFAULT 0 | Điểm độ phức tạp. |
 | **assignee\_id** | UUID | **FK** (Ref Users) | Người được giao việc (map qua jira\_account\_id). |
 
-#### **6.3.6 Bảng Github\_Commits**
+#### **6.3.7 Bảng Github\_Commits**
 
 Lưu trữ dữ liệu đồng bộ từ GitHub và kết quả phân tích từ Module AI.
 
@@ -583,7 +592,7 @@ Lưu trữ dữ liệu đồng bộ từ GitHub và kết quả phân tích từ
 | ai\_quality\_score | DECIMAL(4,2) | NULL | Điểm chất lượng code (0-10) do AI chấm. |
 | ai\_analysis | TEXT | NULL | Nhận xét tự động của AI về commit này. |
 
-#### **6.3.7 Bảng Reports**
+#### **6.3.8 Bảng Reports**
 
 Lưu trữ lịch sử các báo cáo đã tạo để Giảng viên/Sinh viên tải lại khi cần.
 
@@ -621,20 +630,13 @@ Lưu trữ lịch sử các báo cáo đã tạo để Giảng viên/Sinh viên 
 - **No database-level foreign keys** across services
 - **Runtime validation** via gRPC/REST API calls
 - **Eventual consistency** for cross-service references
-- **Soft delete propagation:** Khi Identity Service soft delete user, các services khác check `deleted` flag qua gRPC  
-     
-   ---
-
-   ## **7\. ỨNG DỤNG AI VÀ CẢI TIẾN \[CLO5\]**
-
-* **AI Requirement Polishing:** Tự động sửa lỗi ngữ pháp và định dạng cho các yêu cầu phần mềm để đảm bảo tính chuyên nghiệp trong file SRS.  
-* **Predictive Analytics:** Sử dụng máy học (Machine Learning) để dự báo ngày hoàn thành dự án dựa trên tốc độ làm việc hiện tại của nhóm.
+- **Soft delete propagation:** Khi Identity Service soft delete user, các services khác check `deleted` flag qua gRPC
 
 ---
 
-## **8. COMET-BASED ANALYSIS MODEL \[CLO2\]**
+## **7. COMET-BASED ANALYSIS MODEL [CLO2]**
 
-### **8.1 Tổng quan phương pháp COMET**
+### **7.1 Tổng quan phương pháp COMET**
 
 COMET (Concurrent Object Modeling and Architectural Design Method) là phương pháp phân tích hướng đối tượng tập trung vào việc phân loại các đối tượng theo trách nhiệm. Hệ thống SAMT áp dụng mô hình 3 lớp:
 
@@ -642,9 +644,9 @@ COMET (Concurrent Object Modeling and Architectural Design Method) là phương 
 * **Control Objects (Đối tượng điều khiển):** Điều phối luồng xử lý nghiệp vụ giữa các thành phần
 * **Entity Objects (Đối tượng thực thể):** Lưu trữ dữ liệu nghiệp vụ và logic miền
 
-### **8.2 Phân tích Use Case → Object Responsibility**
+### **7.2 Phân tích Use Case → Object Responsibility**
 
-#### **UC-LOGIN (User Authentication)**
+#### **7.2.1 UC-LOGIN (User Authentication)**
 
 | Object Type | Object Name | Responsibility |
 |-------------|-------------|----------------|
@@ -659,24 +661,31 @@ COMET (Concurrent Object Modeling and Architectural Design Method) là phương 
 3. AuthService tạo JWT và RefreshToken (Entity)
 4. LoginController trả response cho client
 
-#### **UC30 (Create Project Config)**
+#### **7.2.2 UC30 (Create Project Config - gRPC)**
 
 | Object Type | Object Name | Responsibility |
 |-------------|-------------|----------------|
-| **Boundary** | ProjectConfigController | Nhận request tạo config, trả về masked tokens |
+| **Boundary** | ProjectConfigGrpcService | Nhận gRPC request với metadata (userId, roles) |
 | **Control** | ProjectConfigService | Kiểm tra quyền LEADER, encrypt tokens, lưu database |
 | **Control** | TokenEncryptionService | Mã hóa/giải mã tokens với AES-256-GCM |
-| **Control** | UserGroupGrpcClient | Verify user là LEADER của group qua gRPC |
+| **Control** | UserGroupServiceGrpcClient | Verify user là LEADER của group qua gRPC |
 | **Entity** | ProjectConfig | Lưu trữ encrypted tokens và state machine |
 
 **Luồng tương tác:**
-1. ProjectConfigController nhận request
-2. ProjectConfigService gọi UserGroupGrpcClient để verify LEADER
-3. TokenEncryptionService encrypt Jira và GitHub tokens
-4. ProjectConfig entity được lưu vào database với state = DRAFT
-5. Controller trả về response với masked tokens
+1. Client gửi gRPC request với metadata: userId, roles
+2. AuthenticationInterceptor extract userId/roles từ metadata
+3. ProjectConfigGrpcService nhận CreateConfigRequest protobuf
+4. ProjectConfigService gọi UserGroupServiceGrpcClient để verify LEADER
+5. TokenEncryptionService encrypt Jira và GitHub tokens (AES-256-GCM)
+6. ProjectConfig entity được lưu vào database với state = DRAFT
+7. ProjectConfigGrpcService trả về ProjectConfigResponse với masked tokens
 
-#### **UC-SYNC-PROJECT-DATA (Planned)**
+**Security:**
+- gRPC metadata authentication thay vì JWT headers
+- Service-to-service auth cho internal methods (x-service-name, x-service-key)
+- Tokens luôn được mã hóa trong database, mask khi trả về client
+
+#### **7.2.3 UC-SYNC-PROJECT-DATA (Planned)**
 
 | Object Type | Object Name | Responsibility |
 |-------------|-------------|----------------|
@@ -687,9 +696,9 @@ COMET (Concurrent Object Modeling and Architectural Design Method) là phương 
 | **Entity** | JiraIssue | Lưu trữ tasks/stories từ Jira |
 | **Entity** | GithubCommit | Lưu trữ commit history và metrics |
 
-### **8.3 COMET Object Model Diagram**
+### **7.3 COMET Object Model Diagram**
 
-**[INSERT COMET OBJECT MODEL DIAGRAM HERE]**
+**[INSERT COMET OBJECT MODEL DIAGRAM (BOUNDARY–CONTROL–ENTITY) HERE]**
 
 *Diagram cần minh họa:*
 - Phân lớp Boundary / Control / Entity cho các use case chính
@@ -698,13 +707,13 @@ COMET (Concurrent Object Modeling and Architectural Design Method) là phương 
 
 ---
 
-## **9. SOFTWARE ANALYSIS MODEL (UML) \[CLO3\]**
+## **8. SOFTWARE ANALYSIS MODEL (UML) [CLO3]**
 
-### **9.1 Class Diagram (Core Domain Model)**
+### **8.1 Class Diagram (Core Domain Model)**
 
 Class diagram mô tả cấu trúc tĩnh của các entity chính trong hệ thống và mối quan hệ giữa chúng.
 
-**[INSERT CLASS DIAGRAM HERE]**
+**[INSERT UML CLASS DIAGRAM HERE]**
 
 *Diagram cần bao gồm:*
 - **Identity Service:** User, RefreshToken, AuditLog
@@ -722,11 +731,11 @@ Class diagram mô tả cấu trúc tĩnh của các entity chính trong hệ th�
 - User "1" ←→ "0..*" JiraIssue (via assignee_id)
 - User "1" ←→ "0..*" GithubCommit (via author_id)
 
-### **9.2 Sequence Diagrams**
+### **8.2 Sequence Diagrams**
 
-#### **9.2.1 UC-LOGIN (User Authentication)**
+#### **8.2.1 UC-LOGIN (User Authentication)**
 
-**[INSERT SEQUENCE DIAGRAM – LOGIN HERE]**
+**[INSERT UML SEQUENCE DIAGRAM – UC-LOGIN HERE]**
 
 *Sequence diagram cần thể hiện:*
 1. Client → LoginController: POST /api/auth/login {email, password}
@@ -745,9 +754,9 @@ Class diagram mô tả cấu trúc tĩnh của các entity chính trong hệ th�
 - Nếu credentials invalid → 401 Unauthorized
 - Nếu account locked → 403 Forbidden
 
-#### **9.2.2 UC-SYNC-PROJECT-DATA (Planned)**
+#### **8.2.2 UC-SYNC-PROJECT-DATA (Planned)**
 
-**[INSERT SEQUENCE DIAGRAM – SYNC PROJECT DATA HERE]**
+**[INSERT UML SEQUENCE DIAGRAM – UC-SYNC-PROJECT-DATA HERE]**
 
 *Sequence diagram cần thể hiện:*
 1. LEADER → SyncController: POST /api/sync/projects/{groupId}
@@ -764,9 +773,9 @@ Class diagram mô tả cấu trúc tĩnh của các entity chính trong hệ th�
 10. SyncOrchestrator → NotificationService: notifyObservers(syncComplete)
 11. SyncController → LEADER: 200 OK {syncedCount, lastSyncTime}
 
-#### **9.2.3 UC-GENERATE-SRS (Planned)**
+#### **8.2.3 UC-GENERATE-SRS (Planned)**
 
-**[INSERT SEQUENCE DIAGRAM – GENERATE SRS HERE]**
+**[INSERT UML SEQUENCE DIAGRAM – UC-GENERATE-SRS HERE]**
 
 *Sequence diagram cần thể hiện:*
 1. LEADER → ReportController: POST /api/reports/generate {type: SRS}
@@ -780,11 +789,11 @@ Class diagram mô tả cấu trúc tĩnh của các entity chính trong hệ th�
 9. ReportingService → ReportRepository: INSERT INTO reports
 10. ReportController → LEADER: 200 OK {reportId, downloadUrl}
 
-### **9.3 Statechart Diagrams**
+### **8.3 Statechart Diagrams**
 
-#### **9.3.1 User Account Lifecycle**
+#### **8.3.1 User Account Lifecycle**
 
-**[INSERT STATECHART DIAGRAM – USER ACCOUNT HERE]**
+**[INSERT UML STATECHART DIAGRAM – USER ACCOUNT HERE]**
 
 *States:*
 - **ACTIVE:** Account hoạt động bình thường
@@ -804,9 +813,9 @@ Class diagram mô tả cấu trúc tĩnh của các entity chính trong hệ th�
 - softDelete(): Set deleted_at=NOW(), revoke all tokens
 - restore(): Set deleted_at=NULL
 
-#### **9.3.2 Project Config State Machine**
+#### **8.3.2 Project Config State Machine**
 
-**[INSERT STATECHART DIAGRAM – PROJECT CONFIG HERE]**
+**[INSERT UML STATECHART DIAGRAM – PROJECT CONFIG HERE]**
 
 *States:*
 - **DRAFT:** Config mới tạo hoặc đã update chưa verify
@@ -830,13 +839,13 @@ Class diagram mô tả cấu trúc tĩnh của các entity chính trong hệ th�
 
 ---
 
-## **10. SOFTWARE ARCHITECTURE DESIGN \[CLO4\]**
+## **9. SOFTWARE ARCHITECTURE DESIGN [CLO4]**
 
-### **10.1 Component Architecture**
+### **9.1 Component Architecture**
 
 Hệ thống SAMT được thiết kế theo kiến trúc Microservices với các thành phần độc lập, mỗi service đảm nhận một nhóm chức năng nghiệp vụ cụ thể.
 
-**[INSERT COMPONENT DIAGRAM HERE]**
+**[INSERT UML COMPONENT DIAGRAM HERE]**
 
 *Diagram cần thể hiện:*
 
@@ -867,9 +876,9 @@ Hệ thống SAMT được thiết kế theo kiến trúc Microservices với c�
 - gRPC: Service ↔ Service (synchronous)
 - Message Queue: Service → Service (asynchronous events)
 
-### **10.2 Deployment Architecture**
+### **9.2 Deployment Architecture**
 
-**[INSERT DEPLOYMENT DIAGRAM HERE]**
+**[INSERT UML DEPLOYMENT DIAGRAM HERE]**
 
 *Diagram cần thể hiện:*
 
@@ -913,9 +922,9 @@ Hệ thống SAMT được thiết kế theo kiến trúc Microservices với c�
 - Logging: ELK Stack (Elasticsearch, Logstash, Kibana)
 - Secret management: HashiCorp Vault
 
-### **10.3 Architectural Analysis and AI-Driven Improvements**
+### **9.3 Architectural Analysis and AI-Driven Improvements**
 
-#### **10.3.1 Current Architecture Strengths**
+#### **9.3.1 Current Architecture Strengths**
 
 **Microservices Benefits:**
 - **Independent scaling:** Sync Service có thể scale riêng khi có nhiều requests crawl data
@@ -928,7 +937,7 @@ Hệ thống SAMT được thiết kế theo kiến trúc Microservices với c�
 - Tránh lock contention khi nhiều services cùng truy xuất
 - Dễ dàng migrate sang database khác nhau (PostgreSQL cho Identity, MongoDB cho AI Analysis)
 
-#### **10.3.2 Identified Architectural Risks**
+#### **9.3.2 Identified Architectural Risks**
 
 **Performance Bottlenecks:**
 - gRPC calls giữa services tăng latency (network overhead)
@@ -945,7 +954,7 @@ Hệ thống SAMT được thiết kế theo kiến trúc Microservices với c�
 - Không có circuit breaker pattern → cascading failures risk
 - Reporting Service đồng bộ → block request khi generate file lớn
 
-#### **10.3.3 AI-Assisted Architectural Improvements**
+#### **9.3.3 AI-Assisted Architectural Improvements**
 
 **Recommendation 1: Implement API Gateway with Rate Limiting**
 
@@ -1008,11 +1017,11 @@ Hệ thống SAMT được thiết kế theo kiến trúc Microservices với c�
 
 ---
 
-## **11. AI TOOLS UTILIZATION IN SOFTWARE DEVELOPMENT \[CLO7\]**
+## **10. AI TOOLS UTILIZATION IN SOFTWARE DEVELOPMENT [CLO7]**
 
-### **11.1 AI-Assisted Requirements Analysis**
+### **10.1 AI-Assisted Requirements Analysis**
 
-#### **11.1.1 ChatGPT for Eliciting and Refining Requirements**
+#### **10.1.1 ChatGPT for Eliciting and Refining Requirements**
 
 **Use Case: Chuyển đổi Jira Issues thành Functional Requirements**
 
@@ -1054,7 +1063,7 @@ Priority: HIGH
 - **Completeness:** AI gợi ý preconditions/postconditions thiếu
 - **Time-saving:** Giảm 60% thời gian viết requirements thủ công
 
-#### **11.1.2 AI for Requirements Validation**
+#### **10.1.2 AI for Requirements Validation**
 
 *Validation prompt:*
 ```
@@ -1073,9 +1082,9 @@ SRS Section:
 - Missing error handling: What if Jira API rate limited?
 - Contradiction: FR-001 says "real-time sync", FR-002 says "batch sync every hour"
 
-### **11.2 PlantUML for Automated Diagram Generation**
+### **10.2 PlantUML for Automated Diagram Generation**
 
-#### **11.2.1 ChatGPT → PlantUML Workflow**
+#### **10.2.1 ChatGPT → PlantUML Workflow**
 
 **Prompt engineering for diagram generation:**
 
@@ -1150,7 +1159,7 @@ member --> UC11
 - **Consistency:** AI generate theo template chuẩn
 - **Rapid prototyping:** Thay đổi description → AI re-generate diagram trong < 10 giây
 
-#### **11.2.2 AI-Generated Sequence Diagrams**
+#### **10.2.2 AI-Generated Sequence Diagrams**
 
 *Prompt:*
 ```
@@ -1175,9 +1184,9 @@ Include error scenarios:
 
 *AI generates complete sequence diagram với alt/opt fragments cho error handling*
 
-### **11.3 AI-Driven Architecture Evaluation**
+### **10.3 AI-Driven Architecture Evaluation**
 
-#### **11.3.1 Architectural Smells Detection**
+#### **10.3.1 Architectural Smells Detection**
 
 *AI analysis prompt:*
 ```
@@ -1208,7 +1217,7 @@ Identify:
 - **Missing API gateway:** No centralized authentication → duplicate JWT validation code
 - **Synchronous reporting:** Generate SRS blocks HTTP thread → use async job queue
 
-#### **11.3.2 AI-Suggested Design Patterns**
+#### **10.3.2 AI-Suggested Design Patterns**
 
 *Scenario: How to handle token refresh across microservices?*
 
@@ -1232,9 +1241,9 @@ Benefits:
 - Cached validation → low latency (< 5ms)
 ```
 
-### **11.4 AI for Documentation Generation**
+### **10.4 AI for Documentation Generation**
 
-#### **11.4.1 Code → API Documentation**
+#### **10.4.1 Code → API Documentation**
 
 *AI prompt:*
 ```
@@ -1303,7 +1312,7 @@ paths:
           description: Invalid credentials
 ```
 
-#### **11.4.2 Automated Test Case Generation**
+#### **10.4.2 Automated Test Case Generation**
 
 *AI prompt:*
 ```
@@ -1319,7 +1328,7 @@ Use Mockito for mocking dependencies.
 
 *AI generates 5 test methods với proper assertions và mocking setup*
 
-### **11.5 Limitations and Ethical Considerations**
+### **10.5 Limitations and Ethical Considerations**
 
 **AI Tool Limitations:**
 - **Hallucination risk:** AI có thể generate code không chạy được → cần human review
@@ -1339,4 +1348,21 @@ Use Mockito for mocking dependencies.
 
 ---
 
-**END OF SUPPLEMENTARY SECTIONS**
+## **APPENDIX: CLO MAPPING SUMMARY**
+
+| Section | Title | CLO |
+|---------|-------|-----|
+| 1 | GIỚI THIỆU (INTRODUCTION) | CLO1 |
+| 2 | MÔ TẢ TỔNG QUAN (OVERALL DESCRIPTION) | CLO1 |
+| 3 | YÊU CẦU CHỨC NĂNG (FUNCTIONAL REQUIREMENTS) | CLO1 |
+| 4 | YÊU CẦU PHI CHỨC NĂNG (NON-FUNCTIONAL REQUIREMENTS) | CLO1 |
+| 5 | ÁP DỤNG DESIGN PATTERNS (DESIGN PATTERNS APPLICATION) | CLO6 |
+| 6 | THIẾT KẾ CƠ SỞ DỮ LIỆU (DATABASE DESIGN) | CLO5 |
+| 7 | COMET-BASED ANALYSIS MODEL | CLO2 |
+| 8 | SOFTWARE ANALYSIS MODEL (UML) | CLO3 |
+| 9 | SOFTWARE ARCHITECTURE DESIGN | CLO4 |
+| 10 | AI TOOLS UTILIZATION IN SOFTWARE DEVELOPMENT | CLO7 |
+
+---
+
+**END OF DOCUMENT**

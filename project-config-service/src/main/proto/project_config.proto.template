@@ -1,0 +1,142 @@
+/*
+ * Project Config Service - gRPC Proto Definition
+ * 
+ * NOTE: Đây là template proto file cho Project Config Service
+ * User cần:
+ * 1. Tạo file .proto trong src/main/proto/
+ * 2. Configure protobuf-maven-plugin trong pom.xml
+ * 3. Run mvn clean compile để generate Java classes
+ * 4. Update ProjectConfigGrpcService để extends generated base class
+ */
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.fpt.projectconfig.grpc.proto";
+option java_outer_classname = "ProjectConfigProto";
+
+package projectconfig;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+// ========================================
+// Service Definition
+// ========================================
+
+service ProjectConfigService {
+  // UC30: Create Project Config
+  rpc CreateProjectConfig(CreateConfigRequest) returns (ProjectConfigResponse);
+  
+  // UC31: Get Project Config by Group ID
+  rpc GetProjectConfig(GetConfigRequest) returns (ProjectConfigResponse);
+  
+  // UC32: Update Project Config
+  rpc UpdateProjectConfig(UpdateConfigRequest) returns (ProjectConfigResponse);
+  
+  // UC33: Delete Project Config (Soft Delete)
+  rpc DeleteProjectConfig(DeleteConfigRequest) returns (google.protobuf.Empty);
+  
+  // UC34: Verify Connection (Test Jira/GitHub)
+  rpc VerifyConnection(VerifyConfigRequest) returns (VerificationResult);
+  
+  // UC35: Restore Deleted Config (Admin only)
+  rpc RestoreProjectConfig(RestoreConfigRequest) returns (ProjectConfigResponse);
+  
+  // Internal: Get Decrypted Config (For Sync Service)
+  rpc InternalGetDecryptedConfig(GetConfigRequest) returns (DecryptedConfigResponse);
+}
+
+// ========================================
+// Request Messages
+// ========================================
+
+message CreateConfigRequest {
+  int64 group_id = 1;
+  string jira_host_url = 2;
+  string jira_api_token = 3;
+  string github_repo_url = 4;
+  string github_access_token = 5;
+}
+
+message GetConfigRequest {
+  oneof identifier {
+    int64 group_id = 1;
+    string config_id = 2;
+  }
+}
+
+message UpdateConfigRequest {
+  string config_id = 1;
+  optional string jira_host_url = 2;
+  optional string jira_api_token = 3;
+  optional string github_repo_url = 4;
+  optional string github_access_token = 5;
+}
+
+message DeleteConfigRequest {
+  string config_id = 1;
+}
+
+message VerifyConfigRequest {
+  string config_id = 1;
+}
+
+message RestoreConfigRequest {
+  string config_id = 1;
+}
+
+// ========================================
+// Response Messages
+// ========================================
+
+message ProjectConfigResponse {
+  string id = 1;
+  int64 group_id = 2;
+  string jira_host_url = 3;
+  string jira_api_token = 4;  // Masked based on role
+  string github_repo_url = 5;
+  string github_access_token = 6;  // Masked based on role
+  string state = 7;  // DRAFT, VERIFIED, INVALID, DELETED
+  string invalid_reason = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+  int64 created_by = 11;
+  int64 updated_by = 12;
+}
+
+message VerificationResult {
+  string config_id = 1;
+  int64 group_id = 2;
+  bool overall_success = 3;
+  string state = 4;
+  
+  ServiceVerification jira_result = 5;
+  ServiceVerification github_result = 6;
+}
+
+message ServiceVerification {
+  bool success = 1;
+  string message = 2;
+}
+
+message DecryptedConfigResponse {
+  string config_id = 1;
+  int64 group_id = 2;
+  string jira_host_url = 3;
+  string jira_api_token = 4;  // Full token (decrypted)
+  string github_repo_url = 5;
+  string github_access_token = 6;  // Full token (decrypted)
+  string state = 7;
+}
+
+// ========================================
+// Common Types
+// ========================================
+
+enum ConfigState {
+  DRAFT = 0;
+  VERIFIED = 1;
+  INVALID = 2;
+  DELETED = 3;
+}

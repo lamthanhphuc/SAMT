@@ -16,26 +16,27 @@ SAMT (Student Assignment Management Tool) is a microservices-based system for ma
 ┌────────────────────────────────────────────────────────────────┐
 │                        API Gateway                              │
 │                 (Authentication & Routing)                      │
-└─────────────┬──────────────────────────────────┬───────────────┘
-              │                                  │
-              ▼                                  ▼
-┌─────────────────────────┐          ┌─────────────────────────┐
-│   Identity Service      │◄────────►│ User-Group Service      │
-│                         │  gRPC    │                         │
-│ - Authentication        │          │ - Group Management      │
-│ - User CRUD             │          │ - Member Management     │
-│ - JWT Generation        │          │ - User Profile Proxy    │
-│ - Audit Logging         │          │                         │
-└─────────────────────────┘          └─────────────────────────┘
-         │                                      │
-         │ JPA                                  │ JPA
-         ▼                                      ▼
-┌─────────────────────────┐          ┌─────────────────────────┐
-│  PostgreSQL             │          │  PostgreSQL             │
-│  - users                │          │  - groups               │
-│  - refresh_tokens       │          │  - user_groups          │
-│  - audit_logs           │          │                         │
-└─────────────────────────┘          └─────────────────────────┘
+└─────────┬──────────────────┬──────────────────┬───────────────┘
+          │                  │                  │
+          ▼                  ▼                  ▼
+┌────────────────────┐ ┌────────────────────┐ ┌────────────────────┐
+│ Identity Service   │ │ User-Group Service │ │ Project Config     │
+│                    │◄┤                    │◄┤ Service            │
+│ - Authentication   │ │ - Group Management │ │                    │
+│ - User CRUD        │ │ - Member Mgmt      │ │ - Jira/GitHub      │
+│ - JWT Generation   │ │ - User Profile     │ │   Config Mgmt      │
+│ - Audit Logging    │ │   Proxy (gRPC)     │ │ - Token Encryption │
+└──────────┬─────────┘ └──────────┬─────────┘ │ - Verification     │
+           │ gRPC                 │ gRPC       │ - Group Validation │
+           │ (9090)               │ (9091)     │   (gRPC)           │
+           ▼                      ▼            └──────────┬─────────┘
+┌────────────────────┐ ┌────────────────────┐            │ gRPC
+│  PostgreSQL        │ │  PostgreSQL        │            │ (9092)
+│  - users           │ │  - groups          │            ▼
+│  - refresh_tokens  │ │  - user_groups     │ ┌────────────────────┐
+│  - audit_logs      │ └────────────────────┘ │  PostgreSQL        │
+└────────────────────┘                        │  - project_configs │
+                                              └────────────────────┘
 ```
 
 ---
@@ -85,9 +86,48 @@ SAMT (Student Assignment Management Tool) is a microservices-based system for ma
 
 ---
 
+### 3. Project Config Service
+**Port:** 8083 (HTTP), 9092 (gRPC)  
+**Responsibilities:**
+- Jira and GitHub integration configuration management
+- Token encryption (AES-256-GCM) for API credentials
+- Connection verification to external APIs
+- Token masking for secure display
+- Soft delete with 90-day retention
+- Group validation via User-Group Service (gRPC)
+
+**Technology Stack:**
+- Spring Boot 3.x
+- gRPC (client to User-Group Service, server for internal API)
+- PostgreSQL (JPA/Hibernate)
+- AES-256-GCM encryption
+- No REST API (gRPC-only)
+
+**Communication Patterns:**
+- **Client → Project Config:** gRPC metadata authentication (userId, roles)
+- **Project Config → User-Group:** gRPC (group validation, leadership check)
+- **Sync Service → Project Config:** gRPC service-to-service auth (decrypted tokens)
+
+**Use Cases:**
+- UC30: Create project configuration (LEADER only)
+- UC31: Get configuration (masked tokens for STUDENT, full for ADMIN/LECTURER)
+- UC32: Update configuration
+- UC33: Soft delete configuration
+- UC34: Verify Jira/GitHub connectivity
+- UC35: Restore deleted configuration (ADMIN only)
+
+**Does NOT:**
+- Store Jira issues or GitHub commits (delegated to Sync Service)
+- Manage user groups (delegates to User-Group Service)
+- Perform automatic synchronization (triggered by Sync Service)
+
+---
+
 ## Inter-Service Communication
 
-### gRPC Contract (Identity → User-Group)
+### gRPC Contracts
+
+#### 1. Identity Service → User-Group Service
 
 **Proto Definition:** `user_service.proto`
 
@@ -99,6 +139,30 @@ SAMT (Student Assignment Management Tool) is a microservices-based system for ma
 | `GetUsers`          | Batch fetch users (N+1 避免)      | Group detail, list    |
 | `UpdateUser`        | Proxy profile update (UC22)      | User-Group Service    |
 | `ListUsers`         | List users with filters          | Admin user listing    |
+
+#### 2. User-Group Service → Project Config Service
+
+**Proto Definition:** `usergroup_service.proto`
+
+| RPC Method          | Purpose                          | Used By               |
+|---------------------|----------------------------------|-----------------------|
+| `VerifyGroupExists` | Check group exists & not deleted | UC30-UC35             |
+| `CheckGroupLeader`  | Verify user is group leader      | Config create/update  |
+| `CheckGroupMember`  | Verify user is group member      | Config read access    |
+
+#### 3. Project Config Service → Internal Services
+
+**Proto Definition:** `project_config_service.proto`
+
+| RPC Method                    | Purpose                     | Used By       |
+|-------------------------------|-----------------------------|---------------|
+| `CreateProjectConfig`         | Create config (UC30)        | Client        |
+| `GetProjectConfig`            | Get config (UC31)           | Client        |
+| `UpdateProjectConfig`         | Update config (UC32)        | Client        |
+| `DeleteProjectConfig`         | Soft delete (UC33)          | Client        |
+| `VerifyConnection`            | Test Jira/GitHub (UC34)     | Client        |
+| `RestoreProjectConfig`        | Restore config (UC35)       | Client        |
+| `InternalGetDecryptedConfig`  | Get full tokens (internal)  | Sync Service  |
 
 **Error Handling:**
 - gRPC errors (NOT_FOUND, INVALID_ARGUMENT, etc.) are mapped to HTTP status codes

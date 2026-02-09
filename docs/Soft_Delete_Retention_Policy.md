@@ -20,7 +20,7 @@ Tất cả entities có 2 columns:
 
 ```sql
 deleted_at TIMESTAMP NULL,        -- NULL = active, NOT NULL = soft deleted
-deleted_by UUID NULL REFERENCES users(id)  -- Admin who performed deletion
+deleted_by BIGINT NULL REFERENCES users(id)  -- User ID who performed deletion (Long/BIGINT to match Identity Service)
 ```
 
 ### 2.2 Query Behavior
@@ -176,7 +176,9 @@ WHERE deleted_at IS NOT NULL
 
 **Actor:** **Super Admin**
 
-**API Endpoint:** `DELETE /api/admin/project-configs/{configId}/permanent?force=true`
+**gRPC Method:** `PermanentDeleteProjectConfig(configId, userId, reason)`
+
+**Note:** API details depend on .proto definition. Implementation via scheduled job or admin interface.
 
 **Business Rules:**
 - BR-HD-09: Config phải soft delete ≥ 90 days
