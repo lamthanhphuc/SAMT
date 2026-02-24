@@ -1,10 +1,6 @@
 # ==============================================
-# API GATEWAY - APPLICATION CONFIG
+# API GATEWAY - PRODUCTION CONFIG
 # ==============================================
-# Architecture: Client → REST/JSON → Gateway → gRPC Transcoding → Microservices
-# - JWT validation tại Gateway
-# - Inject user info (userId, email, role) vào headers
-# - gRPC metadata được tự động forward cho services
 
 server:
   port: ${SERVER_PORT:8080}
@@ -17,90 +13,110 @@ spring:
   lifecycle:
     timeout-per-shutdown-phase: 30s
 
+  codec:
+    max-in-memory-size: 10MB
+
   data:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:redis}
       port: ${SPRING_DATA_REDIS_PORT:6379}
       timeout: 3000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 2
 
   cloud:
     gateway:
-      default-filters: [] # Disable implicit default filters for strict order
+
+      httpclient:
+        connect-timeout: 3000
+        response-timeout: 30s
+
+      default-filters: []   # Strict filter order control
+
+      redis-rate-limiter:
+        replenishRate: 100
+        burstCapacity: 200
+
       routes:
+
+        # ==========================================
+        # IDENTITY SERVICE
+        # ==========================================
         - id: identity-service
           uri: http://identity-service:8081
           predicates:
             - Path=/api/identity/**
           filters:
-            - name: CorsWebFilter
-              args: { order: 0 }
-            - name: JwtAuthenticationFilter
-              args: { order: 1 }
-            - name: SignedHeaderFilter
-              args: { order: 2 }
+            - StripPrefix=2
             - name: RequestRateLimiter
               args:
-                order: 3
                 key-resolver: '#{@ipKeyResolver}'
                 redis-rate-limiter.replenishRate: 10
                 redis-rate-limiter.burstCapacity: 20
+
+        # ==========================================
+        # USER-GROUP SERVICE
+        # ==========================================
+        - id: user-group-service
+          uri: http://user-group-service:8082
+          predicates:
+            - Path=/api/groups/**,/api/users/**
+          filters:
+            - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                key-resolver: '#{@ipKeyResolver}'
+
+        # ==========================================
+        # PROJECT CONFIG SERVICE
+        # ==========================================
+        - id: project-config-service
+          uri: http://project-config-service:8083
+          predicates:
+            - Path=/api/project-configs/**
+          filters:
             - StripPrefix=2
-            - AddRequestHeader=X-Forwarded-Host, gateway
 
-        - id: login-endpoint
-          uri: http://identity-service:8081
+        # ==========================================
+        # SYNC SERVICE
+        # ==========================================
+        - id: sync-service
+          uri: http://sync-service:8084
           predicates:
-            - Path=/login
+            - Path=/api/sync/**
           filters:
-            - name: CorsWebFilter
-              args: { order: 0 }
-            - name: JwtAuthenticationFilter
-              args: { order: 1 }
-            - name: SignedHeaderFilter
-              args: { order: 2 }
-            - name: RequestRateLimiter
-              args:
-                order: 3
-                key-resolver: '#{@ipKeyResolver}'
-                redis-rate-limiter.replenishRate: 5
-                redis-rate-limiter.burstCapacity: 10
-            - AddRequestHeader=X-Forwarded-Host, gateway
+            - StripPrefix=2
 
-        - id: register-endpoint
-          uri: http://identity-service:8081
+        # ==========================================
+        # ANALYSIS SERVICE
+        # ==========================================
+        - id: analysis-service
+          uri: http://analysis-service:8085
           predicates:
-            - Path=/register
+            - Path=/api/analysis/**
           filters:
-            - name: CorsWebFilter
-              args: { order: 0 }
-            - name: JwtAuthenticationFilter
-              args: { order: 1 }
-            - name: SignedHeaderFilter
-              args: { order: 2 }
-            - name: RequestRateLimiter
-              args:
-                order: 3
-                key-resolver: '#{@ipKeyResolver}'
-                redis-rate-limiter.replenishRate: 2
-                redis-rate-limiter.burstCapacity: 5
-            - AddRequestHeader=X-Forwarded-Host, gateway
+            - StripPrefix=2
+
+        # ==========================================
+        # REPORT SERVICE
+        # ==========================================
+        - id: report-service
+          uri: http://report-service:8086
+          predicates:
+            - Path=/api/reports/**
+          filters:
+            - StripPrefix=2
+
 
 # ==============================================
 # JWT CONFIGURATION
 # ==============================================
-# CRITICAL: jwt.secret PHẢI giống Identity Service
+# MUST be provided via environment variable
 jwt:
-  secret: ${JWT_SECRET:your-256-bit-secret-key-change-this-in-production-environment-please}
+  secret: ${JWT_SECRET}
+
 
 # ==============================================
-# SWAGGER CONFIGURATION
+# SPRINGDOC (Aggregated Swagger)
 # ==============================================
-# Aggregated Swagger UI tại Gateway
 springdoc:
   swagger-ui:
     enabled: true
@@ -110,11 +126,14 @@ springdoc:
         url: http://identity-service:8081/v3/api-docs
       - name: User-Group Service
         url: http://user-group-service:8082/v3/api-docs
+      - name: Project Config Service
+        url: http://project-config-service:8083/v3/api-docs
   api-docs:
     enabled: true
 
+
 # ==============================================
-# MANAGEMENT & MONITORING
+# MANAGEMENT
 # ==============================================
 management:
   endpoints:
@@ -125,67 +144,12 @@ management:
     health:
       show-details: when-authorized
 
+
+# ==============================================
+# LOGGING
+# ==============================================
 logging:
   level:
     root: ${LOG_LEVEL:INFO}
     com.example.gateway: ${LOG_LEVEL:DEBUG}
     org.springframework.cloud.gateway: ${GATEWAY_LOG_LEVEL:INFO}
-
-logging:
-  level:
-    root: ${LOG_LEVEL:INFO}
-    org.springframework.cloud.gateway: ${GATEWAY_LOG_LEVEL:DEBUG}
-
----
-# ==============================================
-# LOCAL PROFILE (for IDE development)
-# ==============================================
-spring:
-  config:
-    activate:
-      on-profile: local
-
-  cloud:
-    gateway:
-      routes:
-        - id: identity-service
-          uri: http://localhost:8081
-          predicates:
-            - Path=/identity/**
-          filters:
-            - StripPrefix=1
-
-        - id: sync-service
-          uri: http://localhost:8082
-          predicates:
-            - Path=/sync/**
-          filters:
-            - StripPrefix=1
-
-        - id: analysis-service
-          uri: http://localhost:8083
-          predicates:
-            - Path=/analysis/**
-          filters:
-            - StripPrefix=1
-
-        - id: report-service
-          uri: http://localhost:8084
-          predicates:
-            - Path=/report/**
-          filters:
-            - StripPrefix=1
-
-        - id: notification-service
-          uri: http://localhost:8085
-          predicates:
-            - Path=/notification/**
-          filters:
-            - StripPrefix=1
-
-  data:
-    redis:
-      host: localhost
-
-server:
-  port: 9080
