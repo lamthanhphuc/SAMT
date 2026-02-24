@@ -5,7 +5,8 @@ import com.example.user_groupservice.dto.response.PageResponse;
 import com.example.user_groupservice.dto.response.UserGroupsResponse;
 import com.example.user_groupservice.dto.response.UserResponse;
 import com.example.user_groupservice.entity.Group;
-import com.example.user_groupservice.entity.UserGroup;
+import com.example.user_groupservice.entity.Semester;
+import com.example.user_groupservice.entity.UserSemesterMembership;
 import com.example.user_groupservice.exception.*;
 import com.example.user_groupservice.grpc.GetUserResponse;
 import com.example.user_groupservice.grpc.GetUsersResponse;
@@ -14,21 +15,22 @@ import com.example.user_groupservice.grpc.ListUsersResponse;
 import com.example.user_groupservice.grpc.UpdateUserResponse;
 import com.example.user_groupservice.mapper.UserGrpcMapper;
 import com.example.user_groupservice.repository.GroupRepository;
-import com.example.user_groupservice.repository.UserGroupRepository;
+import com.example.user_groupservice.repository.SemesterRepository;
+import com.example.user_groupservice.repository.UserSemesterMembershipRepository;
 import com.example.user_groupservice.service.UserService;
 import com.example.user_groupservice.grpc.VerifyUserResponse;
 import com.example.user_groupservice.grpc.GetUserRoleResponse;
 import com.example.user_groupservice.grpc.UserRole;
+import com.example.user_groupservice.grpc.GrpcExceptionHandler;
 
-import io.grpc.Status;
-import io.grpc.StatusRuntimeException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import io.grpc.StatusRuntimeException;
+
 
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -42,8 +44,10 @@ import java.util.stream.Collectors;
 public class UserServiceImpl implements UserService {
     
     private final IdentityServiceClient identityServiceClient;
-    private final UserGroupRepository userGroupRepository;
+    private final UserSemesterMembershipRepository membershipRepository;
     private final GroupRepository groupRepository;
+    private final SemesterRepository semesterRepository;
+    private final GrpcExceptionHandler grpcExceptionHandler;
     
     @Override
     public UserResponse getUserById(Long userId, Long actorId, List<String> actorRoles) {
@@ -53,22 +57,15 @@ public class UserServiceImpl implements UserService {
         checkGetUserAuthorization(userId, actorId, actorRoles);
         
         // Fetch user from Identity Service via gRPC
-        try {
-            GetUserResponse user = identityServiceClient.getUser(userId);
-            
-            if (user.getDeleted()) {
-                throw ResourceNotFoundException.userNotFound(userId);
-            }
-
-            return UserGrpcMapper.toUserResponse(user);
-            
-        } catch (StatusRuntimeException e) {
-            log.error("gRPC call failed when getting user: {}", e.getStatus());
-            if (e.getStatus().getCode() == io.grpc.Status.Code.NOT_FOUND) {
-                throw ResourceNotFoundException.userNotFound(userId);
-            }
-            throw new RuntimeException("Failed to get user: " + e.getStatus().getCode());
+        GetUserResponse user = grpcExceptionHandler.handleGrpcCall(
+                () -> identityServiceClient.getUser(userId),
+                "getUser");
+        
+        if (user.getDeleted()) {
+            throw ResourceNotFoundException.userNotFound(userId);
         }
+
+        return UserGrpcMapper.toUserResponse(user);
     }
     
     @Override
@@ -95,76 +92,66 @@ public class UserServiceImpl implements UserService {
         // UC22 Implementation: Proxy to Identity Service via gRPC
         // Per spec: User & Group Service does not manage user data, 
         // but must forward update requests to Identity Service
-        try {
-            UpdateUserResponse grpcResponse = identityServiceClient.updateUser(
-                    userId, request.getFullName());
-            
-            log.info("User profile updated via Identity Service: userId={}", userId);
-            return UserGrpcMapper.toUserResponse(grpcResponse.getUser());
-
-
-        } catch (StatusRuntimeException e) {
-            log.error("gRPC call failed when updating user: {}", e.getStatus());
-            return handleGrpcError(e, "update user");
-        }
-    }
-    
-    @Override
-    public PageResponse<UserResponse> listUsers(int page, int size, 
-                                                String status, String role) {
-        log.info("Listing users: page={}, size={}, status={}, role={}", 
-                page, size, status, role);
+        UpdateUserResponse grpcResponse = grpcExceptionHandler.handleGrpcCall(
+                () -> identityServiceClient.updateUser(userId, request.getFullName()),
+                "updateUser");
         
-        // Get all users from Identity Service (no pagination in proto yet)
-        // This is a workaround - ideally should add ListUsers RPC to proto
-        try {
-            // For now, get users by known IDs (1, 2, 3 from database)
-            // TODO: Add proper ListUsers gRPC method with pagination to Identity Service
-            ListUsersResponse response =
-                identityServiceClient.listUsers(page, size, status, role);
-
-            // Convert to UserResponse DTOs
-            List<UserResponse> users = response.getUsersList().stream()
-                    .map(UserGrpcMapper::toUserResponse)
-                    .toList();
-            
-            // Apply filters if provided
-            if (status != null && !status.isBlank()) {
-                String statusUpper = status.toUpperCase();
-                users = users.stream()
-                        .filter(u -> u.getStatus().equals(statusUpper))
-
-                        .toList();
-            }
-            
-            if (role != null && !role.isBlank()) {
-                String roleUpper = role.toUpperCase();
-                users = users.stream()
-                        .filter(u -> u.getRoles().contains(roleUpper))
-                        .toList();
-            }
-            
-            // Manual pagination
-            int start = page * size;
-            int end = Math.min(start + size, users.size());
-            List<UserResponse> pageContent = (start < users.size()) 
-                    ? users.subList(start, end) 
-                    : List.of();
-            
-            return PageResponse.<UserResponse>builder()
-                    .content(pageContent)
-                    .page(page)
-                    .size(size)
-                    .totalElements(users.size())
-                    .totalPages((int) Math.ceil((double) users.size() / size))
-                    .build();
-            
-        } catch (StatusRuntimeException e) {
-            log.error("gRPC call failed when listing users: {}", e.getStatus());
-            return handleGrpcError(e, "list users");
-        }
+        log.info("User profile updated via Identity Service: userId={}", userId);
+        return UserGrpcMapper.toUserResponse(grpcResponse.getUser());
     }
-    
+
+    @Override
+    public PageResponse<UserResponse> listUsers(int page, int size,
+                                                String status, String role) {
+
+        log.info("Listing users: page={}, size={}, status={}, role={}",
+                page, size, status, role);
+
+        // Gọi Identity Service thông qua GrpcExceptionHandler
+        ListUsersResponse response = grpcExceptionHandler.handleGrpcCall(
+                () -> identityServiceClient.listUsers(page, size, status, role),
+                "listUsers"
+        );
+
+        // Convert sang DTO
+        List<UserResponse> users = response.getUsersList().stream()
+                .map(UserGrpcMapper::toUserResponse)
+                .toList();
+
+        // Filter theo status (nếu có)
+        if (status != null && !status.isBlank()) {
+            String statusUpper = status.toUpperCase();
+            users = users.stream()
+                    .filter(u -> u.getStatus().equalsIgnoreCase(statusUpper))
+                    .toList();
+        }
+
+        // Filter theo role (nếu có)
+        if (role != null && !role.isBlank()) {
+            String roleUpper = role.toUpperCase();
+            users = users.stream()
+                    .filter(u -> u.getRoles().contains(roleUpper))
+                    .toList();
+        }
+
+        // Manual pagination
+        int start = page * size;
+        int end = Math.min(start + size, users.size());
+
+        List<UserResponse> pageContent =
+                (start < users.size()) ? users.subList(start, end) : List.of();
+
+        return PageResponse.<UserResponse>builder()
+                .content(pageContent)
+                .page(page)
+                .size(size)
+                .totalElements(users.size())
+                .totalPages(size == 0 ? 0 :
+                        (int) Math.ceil((double) users.size() / size))
+                .build();
+    }
+
+
     @Override
     public UserGroupsResponse getUserGroups(Long userId, String semester,
                                             Long actorId, List<String> actorRoles) {
@@ -175,27 +162,19 @@ public class UserServiceImpl implements UserService {
         checkGetUserAuthorization(userId, actorId, actorRoles);
         
         // Verify user exists via gRPC
-        try {
-            VerifyUserResponse verification = identityServiceClient.verifyUserExists(userId);
-            if (!verification.getExists()) {
-                throw ResourceNotFoundException.userNotFound(userId);
-            }
-        } catch (StatusRuntimeException e) {
-            log.error("gRPC call failed when verifying user: {}", e.getStatus());
-            throw new RuntimeException("Failed to verify user: " + e.getStatus().getCode());
+        VerifyUserResponse verification = grpcExceptionHandler.handleGrpcCall(
+                () -> identityServiceClient.verifyUserExists(userId),
+                "verifyUserExists");
+        if (!verification.getExists()) {
+            throw ResourceNotFoundException.userNotFound(userId);
         }
         
         // Get user memberships
-        List<UserGroup> memberships;
-        if (semester != null && !semester.isBlank()) {
-            memberships = userGroupRepository.findAllByUserIdAndSemester(userId, semester);
-        } else {
-            memberships = userGroupRepository.findAllByUserId(userId);
-        }
+        List<UserSemesterMembership> memberships = membershipRepository.findAllByUserId(userId);
         
         // Get all unique group IDs
-        List<UUID> groupIds = memberships.stream()
-                .map(UserGroup::getGroupId)
+        List<Long> groupIds = memberships.stream()
+                .map(UserSemesterMembership::getGroupId)
                 .distinct()
                 .toList();
         
@@ -208,20 +187,18 @@ public class UserServiceImpl implements UserService {
                 .distinct()
                 .toList();
         
-        GetUsersResponse lecturersResponse;
-        try {
-            lecturersResponse = identityServiceClient.getUsers(lecturerIds);
-        } catch (StatusRuntimeException e) {
-            log.error("gRPC call failed when getting lecturers: {}", e.getStatus());
-            throw new RuntimeException("Failed to get lecturer info: " + e.getStatus().getCode());
-        }
+        GetUsersResponse lecturersResponse = grpcExceptionHandler.handleGrpcCall(
+                () -> identityServiceClient.getUsers(lecturerIds),
+                "getUsers[getUserGroups]");
         
         // Map group info with lecturer data
         List<UserGroupsResponse.GroupInfo> groupInfos = memberships.stream()
-                .map(ug -> {
+                .filter(m -> semester == null || semester.isBlank() || 
+                        groups.stream().anyMatch(g -> g.getId().equals(m.getGroupId()) && g.getSemesterId().equals(m.getId().getSemesterId())))
+                .map(m -> {
                     // Find the group for this membership
                     Group group = groups.stream()
-                            .filter(g -> g.getId().equals(ug.getGroupId()))
+                            .filter(g -> g.getId().equals(m.getGroupId()))
                             .findFirst()
                             .orElse(null);
                     
@@ -240,11 +217,15 @@ public class UserServiceImpl implements UserService {
                             ? lecturer.getFullName() 
                             : "<Deleted User>";
                     
+                    // Resolve semester code from local database
+                    String semesterCode = resolveSemesterCode(m.getId().getSemesterId());
+                    
                     return UserGroupsResponse.GroupInfo.builder()
-                            .groupId(ug.getGroupId())
+                            .groupId(m.getGroupId())
                             .groupName(group.getGroupName())
-                            .semester(group.getSemester())
-                            .role(ug.getRole().name())
+                            .semesterId(m.getId().getSemesterId())
+                            .semesterCode(semesterCode)
+                            .role(m.getGroupRole().name())
                             .lecturerName(lecturerName)
                             .build();
                 })
@@ -258,11 +239,28 @@ public class UserServiceImpl implements UserService {
     }
     
     /**
+     * Resolve semester code from local database.
+     * 
+     * @param semesterId Semester ID
+     * @return Semester code (e.g., "SPRING2025")
+     * @throws ResourceNotFoundException if semester not found
+     */
+    private String resolveSemesterCode(Long semesterId) {
+        Semester semester = semesterRepository.findById(semesterId)
+                .orElseThrow(() -> ResourceNotFoundException.semesterNotFound(semesterId));
+        return semester.getSemesterCode();
+    }
+    
+    /**
      * Check authorization for viewing user profile.
      * Per spec (UC21-AUTH):
      * - ADMIN: can view all users
      * - LECTURER: can only view users with STUDENT role (if cannot verify, allow with warning)
      * - STUDENT: can only view self
+     * 
+     * PRIVACY ENHANCEMENT (Issue 6.1 Fix):
+     * - LECTURER can only view STUDENTS they supervise (not all students in system)
+     * - This prevents lecturers from accessing student data outside their responsibility
      */
     private void checkGetUserAuthorization(Long targetUserId, Long actorId, 
                                            List<String> actorRoles) {
@@ -280,15 +278,27 @@ public class UserServiceImpl implements UserService {
             return;
         }
         
-        // LECTURER can view students only
+        // LECTURER can view students only (with additional privacy check)
         // Per spec: Try to verify role first, if fail -> allow with warning (fallback)
         if (isLecturer) {
             try {
-                GetUserRoleResponse roleResponse = identityServiceClient.getUserRole(targetUserId);
+                GetUserRoleResponse roleResponse = grpcExceptionHandler.handleGrpcCall(
+                        () -> identityServiceClient.getUserRole(targetUserId),
+                        "getUserRole[checkAuth]");
                 
                 // Check if target is STUDENT
                 if (roleResponse.getRole() == UserRole.STUDENT) {
-                    log.debug("LECTURER {} viewing STUDENT {}: ALLOWED", actorId, targetUserId);
+                    // Privacy check: Verify lecturer supervises this student
+                    boolean lecturerSupervisesStudent = groupRepository
+                            .existsByLecturerAndStudent(actorId, targetUserId);
+                    
+                    if (!lecturerSupervisesStudent) {
+                        log.warn("LECTURER {} attempted to view STUDENT {} who is not in their groups", 
+                                actorId, targetUserId);
+                        throw ForbiddenException.lecturerCanOnlyViewSupervisedStudents();
+                    }
+                    
+                    log.debug("LECTURER {} viewing supervised STUDENT {}: ALLOWED", actorId, targetUserId);
                     return;
                 } else {
                     // Target is not STUDENT -> FORBIDDEN
@@ -297,37 +307,20 @@ public class UserServiceImpl implements UserService {
                     throw ForbiddenException.lecturerCanOnlyViewStudents();
                 }
                 
-            } catch (StatusRuntimeException e) {
+            } catch (ResourceNotFoundException | ForbiddenException | ConflictException | 
+                     ServiceUnavailableException | GatewayTimeoutException | BadRequestException | 
+                     UnauthorizedException e) {
+                // Business exceptions should be thrown normally
+                throw e;
+            } catch (RuntimeException e) {
                 // gRPC failure -> fallback behavior: ALLOW with warning
                 log.warn("LECTURER {} viewing user {} - gRPC failed ({}). Allowing per spec (fallback).", 
-                        actorId, targetUserId, e.getStatus().getCode());
+                        actorId, targetUserId, e.getMessage());
                 return;
             }
         }
         
         // STUDENT trying to view another user
         throw ForbiddenException.cannotAccessOtherUser();
-    }
-    
-    /**
-     * Handle gRPC errors with proper HTTP status mapping per API spec.
-     */
-    private <T> T handleGrpcError(StatusRuntimeException e, String operation) {
-        Status.Code code = e.getStatus().getCode();
-        
-        switch (code) {
-            case UNAVAILABLE:
-                throw ServiceUnavailableException.identityServiceUnavailable();
-            case DEADLINE_EXCEEDED:
-                throw GatewayTimeoutException.identityServiceTimeout();
-            case NOT_FOUND:
-                throw new ResourceNotFoundException("USER_NOT_FOUND", "User not found");
-            case PERMISSION_DENIED:
-                throw new ForbiddenException("FORBIDDEN", "Access denied");
-            case INVALID_ARGUMENT:
-                throw new BadRequestException("BAD_REQUEST", "Invalid request");
-            default:
-                throw new RuntimeException("Failed to " + operation + ": " + code);
-        }
     }
 }

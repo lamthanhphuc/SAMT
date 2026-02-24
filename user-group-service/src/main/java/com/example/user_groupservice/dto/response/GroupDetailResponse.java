@@ -1,13 +1,11 @@
 package com.example.user_groupservice.dto.response;
 
-import com.example.user_groupservice.entity.Group;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Response DTO for group details including members.
@@ -18,9 +16,10 @@ import java.util.UUID;
 @AllArgsConstructor
 public class GroupDetailResponse {
     
-    private UUID id;
+    private Long id;
     private String groupName;
-    private String semester;
+    private Long semesterId;
+    private String semesterCode;
     private LecturerInfo lecturer;
     private List<MemberInfo> members;
     private int memberCount;

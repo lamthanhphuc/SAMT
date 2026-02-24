@@ -8,8 +8,6 @@ import com.example.user_groupservice.dto.response.GroupListResponse;
 import com.example.user_groupservice.dto.response.GroupResponse;
 import com.example.user_groupservice.dto.response.PageResponse;
 
-import java.util.UUID;
-
 /**
  * Service interface for group operations.
  */
@@ -31,7 +29,7 @@ public interface GroupService {
      * @param groupId Group ID
      * @return GroupDetailResponse with members
      */
-    GroupDetailResponse getGroupById(UUID groupId);
+    GroupDetailResponse getGroupById(Long groupId);
     
     /**
      * List groups with pagination and filters.
@@ -39,12 +37,12 @@ public interface GroupService {
      * 
      * @param page Page number (0-based)
      * @param size Page size
-     * @param semester Optional semester filter
+     * @param semesterId Optional semester ID filter
      * @param lecturerId Optional lecturer filter
      * @return Paginated list of groups
      */
     PageResponse<GroupListResponse> listGroups(int page, int size, 
-                                               String semester, Long lecturerId);
+                                               Long semesterId, Long lecturerId);
     
     /**
      * Update a group.
@@ -55,15 +53,16 @@ public interface GroupService {
      * @param request Update request
      * @return Updated GroupResponse
      */
-    GroupResponse updateGroup(UUID groupId, UpdateGroupRequest request);
+    GroupResponse updateGroup(Long groupId, UpdateGroupRequest request);
     
     /**
      * Delete a group (soft delete).
      * Authorization: ADMIN only
      * 
      * @param groupId Group ID
+     * @param deletedByUserId User ID who performs the deletion
      */
-    void deleteGroup(UUID groupId);
+    void deleteGroup(Long groupId, Long deletedByUserId);
     
     /**
      * UC27 - Update Group Lecturer.
@@ -73,5 +72,5 @@ public interface GroupService {
      * @param request Update lecturer request
      * @return Updated GroupResponse
      */
-    GroupResponse updateGroupLecturer(UUID groupId, UpdateLecturerRequest request);
+    GroupResponse updateGroupLecturer(Long groupId, UpdateLecturerRequest request);
 }

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    
+    <!-- 
+        Logback Configuration for Project Config Service
+        
+        Features:
+        - Console output for development/container environments
+        - Rolling file appender for production log persistence
+        - Correlation ID included in all log entries via MDC
+        - Time-based log rotation with 30-day retention
+        
+        MDC Context:
+        - correlationId: Distributed tracing ID set by CorrelationIdFilter
+        - Propagated across async threads via MdcTaskDecorator
+        - Visible in all appenders for request tracing
+    -->
+    
+    <!-- Unified log pattern with correlation ID -->
+    <property name="LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{correlationId}] [%thread] %-5level %logger{36} - %msg%n"/>
+    
+    <!-- Console Appender - for container stdout/stderr -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+    
+    <!-- Rolling File Appender - for production log persistence -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/config-service.log</file>
+        
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- Daily rollover with date suffix -->
+            <fileNamePattern>logs/config-service.%d{yyyy-MM-dd}.log</fileNamePattern>
+            
+            <!-- Keep 30 days of history -->
+            <maxHistory>30</maxHistory>
+            
+            <!-- Total size cap: 10GB -->
+            <totalSizeCap>10GB</totalSizeCap>
+        </rollingPolicy>
+        
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+    
+    <!-- Root logger configuration -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+    
+    <!-- Service-specific logger (inherits from application.yml) -->
+    <logger name="com.samt.projectconfig" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </logger>
+    
+    <!-- Spring Framework logger -->
+    <logger name="org.springframework.security" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </logger>
+    
+    <!-- Hibernate SQL logger (controlled by application.yml) -->
+    <logger name="org.hibernate.SQL" level="WARN" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </logger>
+    
+</configuration>

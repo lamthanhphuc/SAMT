@@ -28,10 +28,10 @@ SAMT (Student Assignment Management Tool) is a microservices-based system for ma
 │ - Audit Logging    │ │   Proxy (gRPC)     │ │ - Token Encryption │
 └──────────┬─────────┘ └──────────┬─────────┘ │ - Verification     │
            │ gRPC                 │ gRPC       │ - Group Validation │
-           │ (9090)               │ (9091)     │   (gRPC)           │
+           │ (9091)               │ (9095)     │   (gRPC)           │
            ▼                      ▼            └──────────┬─────────┘
-┌────────────────────┐ ┌────────────────────┐            │ gRPC
-│  PostgreSQL        │ │  PostgreSQL        │            │ (9092)
+┌────────────────────┐ ┌────────────────────┐            │ gRPC Client
+│  PostgreSQL        │ │  PostgreSQL        │            │ Only
 │  - users           │ │  - groups          │            ▼
 │  - refresh_tokens  │ │  - user_groups     │ ┌────────────────────┐
 │  - audit_logs      │ └────────────────────┘ │  PostgreSQL        │
@@ -87,26 +87,27 @@ SAMT (Student Assignment Management Tool) is a microservices-based system for ma
 ---
 
 ### 3. Project Config Service
-**Port:** 8083 (HTTP), 9092 (gRPC)  
+**Port:** 8083 (REST)  
 **Responsibilities:**
 - Jira and GitHub integration configuration management
 - Token encryption (AES-256-GCM) for API credentials
 - Connection verification to external APIs
 - Token masking for secure display
+- gRPC client to User-Group Service (port 9095)
 - Soft delete with 90-day retention
 - Group validation via User-Group Service (gRPC)
 
 **Technology Stack:**
 - Spring Boot 3.x
-- gRPC (client to User-Group Service, server for internal API)
+- REST API (routed via API Gateway for client access)
+- gRPC (client to User-Group Service, server for internal service-to-service communication)
 - PostgreSQL (JPA/Hibernate)
 - AES-256-GCM encryption
-- No REST API (gRPC-only)
 
 **Communication Patterns:**
-- **Client → Project Config:** gRPC metadata authentication (userId, roles)
+- **Client → Project Config:** REST via API Gateway (JWT authentication)
 - **Project Config → User-Group:** gRPC (group validation, leadership check)
-- **Sync Service → Project Config:** gRPC service-to-service auth (decrypted tokens)
+- **Sync Service → Project Config:** gRPC service-to-service (decrypted tokens)
 
 **Use Cases:**
 - UC30: Create project configuration (LEADER only)
@@ -140,6 +141,8 @@ SAMT (Student Assignment Management Tool) is a microservices-based system for ma
 | `UpdateUser`        | Proxy profile update (UC22)      | User-Group Service    |
 | `ListUsers`         | List users with filters          | Admin user listing    |
 
+**📄 Full Contract:** [Identity Service - GRPC_CONTRACT.md](Identity_Service/GRPC_CONTRACT.md)
+
 #### 2. User-Group Service → Project Config Service
 
 **Proto Definition:** `usergroup_service.proto`
@@ -149,6 +152,8 @@ SAMT (Student Assignment Management Tool) is a microservices-based system for ma
 | `VerifyGroupExists` | Check group exists & not deleted | UC30-UC35             |
 | `CheckGroupLeader`  | Verify user is group leader      | Config create/update  |
 | `CheckGroupMember`  | Verify user is group member      | Config read access    |
+
+**📄 Full Contract:** [User-Group Service - GRPC_CONTRACT.md](UserGroup_Service/GRPC_CONTRACT.md)
 
 #### 3. Project Config Service → Internal Services
 
@@ -163,6 +168,8 @@ SAMT (Student Assignment Management Tool) is a microservices-based system for ma
 | `VerifyConnection`            | Test Jira/GitHub (UC34)     | Client        |
 | `RestoreProjectConfig`        | Restore config (UC35)       | Client        |
 | `InternalGetDecryptedConfig`  | Get full tokens (internal)  | Sync Service  |
+
+**📄 Full Contract:** [Project Config Service - GRPC_CONTRACT.md](ProjectConfig/GRPC_CONTRACT.md)
 
 **Error Handling:**
 - gRPC errors (NOT_FOUND, INVALID_ARGUMENT, etc.) are mapped to HTTP status codes

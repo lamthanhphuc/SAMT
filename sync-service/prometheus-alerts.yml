@@ -1,0 +1,268 @@
+# ==============================================
+# PROMETHEUS ALERT RULES - SYNC SERVICE
+# ==============================================
+# 
+# This file defines alert rules for production monitoring of the Sync Service.
+# 
+# Deploy instructions:
+# 1. Copy this file to your Prometheus server's rules directory
+# 2. Add to prometheus.yml:
+#    rule_files:
+#      - "prometheus-alerts.yml"
+# 3. Reload Prometheus configuration:
+#    curl -X POST http://localhost:9090/-/reload
+# 
+# Verify alerts:
+# - Check Prometheus UI: http://localhost:9090/alerts
+# - Check AlertManager: http://localhost:9093
+# 
+# ==============================================
+
+groups:
+  - name: sync_service_alerts
+    interval: 30s
+    rules:
+      # ==============================================
+      # 1. CONSTRAINT VIOLATION ALERT (CRITICAL)
+      # ==============================================
+      # Triggers when ANY constraint violation is detected in a 5-minute window
+      # This indicates potential data integrity issues or race conditions
+      # 
+      # Expected: 0 violations in normal operation (UPSERT prevents duplicates)
+      # Action: Investigate database logs, check concurrent sync jobs
+      # ==============================================
+      - alert: SyncConstraintViolation
+        expr: increase(constraint_violation_count[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: sync-service
+          component: database
+        annotations:
+          summary: "Constraint violation detected in Sync Service"
+          description: "Database constraint violation occurred. This may indicate data integrity issues, race conditions, or UPSERT logic failure. Immediate investigation required."
+          value: "{{ $value }} violations in the last 5 minutes"
+          runbook: "Check sync-service logs for DataIntegrityViolationException or PSQLException. Verify UPSERT logic in JiraIssueRepositoryImpl, GithubCommitRepositoryImpl, and UnifiedActivityRepositoryImpl."
+
+      # ==============================================
+      # 2. SYNC QUEUE SATURATION (WARNING)
+      # ==============================================
+      # Triggers when sync tasks are rejected due to queue full
+      # This indicates thread pool capacity exhaustion
+      # 
+      # Expected: 0 rejections in normal operation
+      # Action: Increase sync.async.core-pool-size or sync.async.max-pool-size
+      # ==============================================
+      - alert: SyncQueueSaturation
+        expr: rate(sync_tasks_rejected_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+          service: sync-service
+          component: async-executor
+        annotations:
+          summary: "Sync task queue is saturated"
+          description: "Sync tasks are being rejected due to queue full. Thread pool capacity exhausted. Increase core-pool-size or max-pool-size."
+          value: "{{ $value }} rejections/sec in the last 5 minutes"
+          runbook: "Check sync-service logs for RejectedExecutionException. Increase sync.async.core-pool-size (default: 2) or sync.async.max-pool-size (default: 5) in application.yml. Current queue capacity: 100. Consider horizontal scaling if sustained high load."
+
+      # ==============================================
+      # 3. PARSER WARNING SPIKE - RATIO-BASED (WARNING)
+      # ==============================================
+      # Triggers when parser warning rate exceeds 5% of total parsed records
+      # This is SCALABLE - adjusts automatically to traffic volume
+      # 
+      # Expected: <0.1% parse failures (1 in 1000 records)
+      # Abnormal: >5% parse failures (API format change or data corruption)
+      # Action: Check external API responses, update parsing logic if needed
+      # ==============================================
+      - alert: ParserWarningRatioHigh
+        expr: |
+          (
+            increase(parser_warning_count[5m])
+            /
+            (increase(records_parsed_total[5m]) + 1)
+          ) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          service: sync-service
+          component: data-mapper
+        annotations:
+          summary: "High parser warning rate detected (ratio-based)"
+          description: "Parser warning rate exceeds 5% of total records processed in the last 5 minutes. This indicates API format changes or data quality issues from external sources (Jira/GitHub)."
+          value: "{{ $value | humanizePercentage }} parse failure rate"
+          runbook: "Check sync-service logs for 'Failed to parse' warnings with recordId and rawValue. Review external API responses from Jira and GitHub. Verify parseIsoDateTime() logic in DataMapper. This is record-level ratio, accurate even when sync jobs fail."
+
+      # ==============================================
+      # 3. SYNC FAILURE RATE - RATIO-BASED (CRITICAL)
+      # ==============================================
+      # Triggers when sync job failure rate exceeds 10% over 5 minutes
+      # This is SCALABLE - adjusts automatically to traffic volume
+      # 
+      # Expected: <1% failure rate (1 in 100 jobs)
+      # Abnormal: >10% failure rate (external API down, auth issues, DB problems)
+      # Action: Check external API status, verify credentials, check database health
+      # ==============================================
+      - alert: SyncFailureRateHigh
+        expr: |
+          (
+            rate(sync_job_failure_count[5m])
+            /
+            rate(sync_job_total_count[5m])
+          ) > 0.10
+        for: 5m
+        labels:
+          severity: critical
+          service: sync-service
+          component: orchestrator
+        annotations:
+          summary: "High sync failure rate detected (ratio-based)"
+          description: "Sync job failure rate exceeds 10% over the last 5 minutes. This indicates critical issues with external APIs (Jira/GitHub), authentication, network connectivity, or database availability."
+          value: "{{ $value | humanizePercentage }} failure rate"
+          runbook: "Check sync-service logs for exception stack traces. Verify Jira and GitHub API status. Check circuit breaker state. Verify database connectivity. Review SyncOrchestrator execution logs. This is ratio-based and scales with traffic volume."
+
+      # ==============================================
+      # 4. SYNC JOB DURATION ANOMALY (WARNING)
+      # ==============================================
+      # Triggers when sync job duration exceeds 300 seconds (5 minutes)
+      # This indicates performance degradation or large dataset processing
+      # 
+      # Expected: <60 seconds for typical sync jobs
+      # Abnormal: >300 seconds (external API slow, large dataset, DB performance)
+      # Action: Check external API latency, optimize queries, review batch size
+      # ==============================================
+      - alert: SyncJobDurationAnomaly
+        expr: histogram_quantile(0.95, rate(sync_duration_seconds_bucket[5m])) > 300
+        for: 5m
+        labels:
+          severity: warning
+          service: sync-service
+          component: performance
+        annotations:
+          summary: "Sync job duration exceeds threshold"
+          description: "95th percentile of sync job duration is above 300 seconds. This may indicate performance issues with external APIs, large dataset processing, or database performance degradation."
+          value: "{{ $value }} seconds (95th percentile)"
+          runbook: "Check sync-service metrics for sync_duration_seconds. Review external API response times. Check database query performance. Consider optimizing batch size or enabling pagination."
+
+      # ==============================================
+      # 5. CIRCUIT BREAKER OPEN (WARNING)
+      # ==============================================
+      # Triggers when circuit breaker is open for more than 2 minutes
+      # This indicates external API is consistently failing
+      # 
+      # Expected: Circuit breaker closed in normal operation
+      # Abnormal: Circuit breaker open (external API down, auth issues)
+      # Action: Check external API status, verify credentials, review retry config
+      # ==============================================
+      - alert: CircuitBreakerOpen
+        expr: |
+          (
+            resilience4j_circuitbreaker_state{name=~"jiraCircuitBreaker|githubCircuitBreaker", state="open"}
+            or
+            resilience4j_circuitbreaker_state{name=~"jiraCircuitBreaker|githubCircuitBreaker", state="forced_open"}
+          ) == 1
+        for: 2m
+        labels:
+          severity: warning
+          service: sync-service
+          component: resilience
+        annotations:
+          summary: "Circuit breaker is open for {{ $labels.name }}"
+          description: "Circuit breaker {{ $labels.name }} has been open for more than 2 minutes. External API calls are being blocked. The system is in degraded mode and returning fallback responses."
+          value: "Circuit {{ $labels.name }} state: {{ $labels.state }}"
+          runbook: "Check external API (Jira/GitHub) status and availability. Verify API credentials. Review circuit breaker configuration in application.yml. Check sync-service logs for failure patterns."
+
+      # ==============================================
+      # 6. SYNC SERVICE HEALTH CHECK FAILED (CRITICAL)
+      # ==============================================
+      # Triggers when sync-service health check endpoint returns DOWN
+      # This indicates critical service failure
+      # 
+      # Expected: Health check UP in normal operation
+      # Abnormal: Health check DOWN (service crash, DB connection lost)
+      # Action: Check service logs, restart service, verify DB connectivity
+      # ==============================================
+      - alert: SyncServiceDown
+        expr: up{job="sync-service"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: sync-service
+          component: service
+        annotations:
+          summary: "Sync Service is down"
+          description: "Sync Service has been unreachable for more than 2 minutes. The service may have crashed or the health check endpoint is failing."
+          runbook: "Check sync-service container/pod status. Review service logs for crash or fatal errors. Verify database connectivity. Restart service if necessary."
+
+      # ==============================================
+      # 7. HIGH THREAD POOL QUEUE SIZE (WARNING)
+      # ==============================================
+      # Triggers when thread pool queue size exceeds 80% capacity
+      # This indicates sync job backlog and potential processing delays
+      # 
+      # Expected: Queue size <20 in normal operation
+      # Abnormal: Queue size >80 (too many concurrent configs, slow processing)
+      # Action: Increase thread pool size, optimize sync duration
+      # ==============================================
+      - alert: HighSyncThreadPoolQueue
+        expr: thread_pool_queue_size{executor="sync-"} > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: sync-service
+          component: threading
+        annotations:
+          summary: "Sync thread pool queue is filling up"
+          description: "Sync task executor queue size exceeds 80. This may indicate a backlog of sync jobs and processing delays. Current queue size: {{ $value }}/100."
+          value: "{{ $value }} tasks queued"
+          runbook: "Check sync-service thread pool metrics. Review sync job duration. Consider increasing thread pool size in application.yml (sync.async.max-pool-size). Verify no stuck sync jobs."
+
+# ==============================================
+# DEPLOYMENT CHECKLIST
+# ==============================================
+# 
+# Before deploying to production:
+# 
+# ✅ 1. Configure AlertManager
+#    - Set up notification channels (Slack, PagerDuty, Email)
+#    - Configure routing rules for severity levels
+#    - Test alert notifications
+# 
+# ✅ 2. Set up Prometheus scraping
+#    - Add sync-service scrape config to prometheus.yml:
+#      - job_name: 'sync-service'
+#        scrape_interval: 15s
+#        metrics_path: '/actuator/prometheus'
+#        static_configs:
+#          - targets: ['sync-service:8080']
+# 
+# ✅ 3. Verify metrics exposure
+#    - Confirm metrics are visible: curl http://localhost:8084/actuator/prometheus
+#    - Verify all required metrics exist:
+#      * sync_job_failure_count (for failure rate)
+#      * sync_job_total_count (for failure rate denominator)
+#      * constraint_violation_count (for unique constraint violations)
+#      * parser_warning_count (for parse failure rate)
+#      * sync_jobs_total{status=\"success\"} (for records processed estimation)
+# 
+# ✅ 4. Test alert rules
+#    - Use Prometheus expression browser to verify queries
+#    - Simulate failure scenarios to test alerts
+#    - Verify alert routing to notification channels
+#    - Confirm ratio-based alerts scale properly with traffic
+# 
+# ✅ 5. Document runbooks
+#    - Create detailed investigation guides for each alert
+#    - Document escalation procedures
+#    - Update on-call rotation
+# 
+# ==============================================
+# 
+# PRODUCTION IMPROVEMENTS (IMPLEMENTED):
+# ✅ Ratio-based alerts for parser warnings and sync failures (scales with traffic)
+# ✅ sync_job_total_count metric added for accurate failure rate calculation
+# ✅ Constraint violation only counts unique violations (SQLState 23505)
+# ✅ Parser warning logs include contextual data (recordId, fieldName, rawValue)
+# 
+# ==============================================

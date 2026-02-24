@@ -1,9 +1,9 @@
 # ==============================================
-# ANALYSIS SERVICE - APPLICATION CONFIG
+# PROJECT CONFIG SERVICE - APPLICATION CONFIG
 # ==============================================
 
 server:
-  port: ${SERVER_PORT:8087}
+  port: ${SERVER_PORT:8083}
   shutdown: graceful
 
 spring:
@@ -14,11 +14,9 @@ spring:
     timeout-per-shutdown-phase: 30s
 
   datasource:
-    # Local dev: default password là 12345 (khớp với Docker PostgreSQL)
-    # Docker: sẽ override bởi SPRING_DATASOURCE_PASSWORD từ .env
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/samt_core?serverTimezone=UTC&ApplicationName=analysis-service}
-    username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:12345}
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5434/projectconfig_db}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:12345}
     driver-class-name: org.postgresql.Driver
     hikari:
       connection-timeout: 30000
@@ -28,20 +26,9 @@ spring:
       max-lifetime: 1800000
       leak-detection-threshold: 60000
 
-  data:
-    redis:
-      host: ${SPRING_DATA_REDIS_HOST:localhost}
-      port: ${SPRING_DATA_REDIS_PORT:6379}
-      timeout: 3000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 2
-
   jpa:
     hibernate:
-      ddl-auto: ${DDL_AUTO:update}
+      ddl-auto: ${DDL_AUTO:validate}
     show-sql: ${SHOW_SQL:false}
     open-in-view: false
     properties:
@@ -54,33 +41,204 @@ spring:
         order_inserts: true
         order_updates: true
 
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+# ============================================
+#   JWT CONFIGURATION
+# ============================================
+jwt:
+  secret: ${JWT_SECRET:samt-super-secret-key-for-jwt-hs256-algorithm-minimum-64-chars-long}
+
+# ============================================
+#   ENCRYPTION CONFIGURATION (AES-256-GCM)
+# ============================================
+encryption:
+  secret-key: ${ENCRYPTION_SECRET_KEY:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+
+# ============================================
+#   SERVICE-TO-SERVICE AUTHENTICATION
+# ============================================
+service-to-service:
+  sync-service:
+    key: ${SERVICE_TO_SERVICE_SYNC_KEY:s3cr3t_k3y_f0r_sync_s3rv1c3_ch4ng3_1n_pr0duct10n}
+
+# ============================================
+#   VERIFICATION TIMEOUTS
+# ============================================
+verification:
+  jira:
+    timeout-seconds: ${JIRA_TIMEOUT:6}
+  github:
+    timeout-seconds: ${GITHUB_TIMEOUT:6}
+
+# ============================================
+#   CLEANUP JOB
+# ============================================
+cleanup:
+  retention-days: ${CLEANUP_RETENTION_DAYS:90}
+  cron: ${CLEANUP_CRON:0 0 2 * * *}
+
+# ============================================
+#   GRPC CONFIGURATION
+# ============================================
+grpc:
+  client:
+    user-group-service:
+      address: static://${USER_GROUP_SERVICE_GRPC_HOST:user-group-service}:${USER_GROUP_SERVICE_GRPC_PORT:9095}
+      negotiation-type: plaintext
+      deadline: 2000
+
+# ============================================
+#   RESILIENCE4J CONFIGURATION
+# ============================================
+resilience4j:
+  # Enable metrics export for all Resilience4j components
+  metrics:
+    enabled: true
+  
+  retry:
+    configs:
+      default:
+        maxAttempts: 2
+        waitDuration: 100ms
+        retryExceptions:
+          - java.net.SocketTimeoutException
+          - java.net.ConnectException
+          - org.springframework.web.client.ResourceAccessException
+        ignoreExceptions:
+          - org.springframework.web.client.HttpClientErrorException
+          - org.springframework.web.client.HttpServerErrorException
+          - io.github.resilience4j.bulkhead.BulkheadFullException
+          - io.github.resilience4j.circuitbreaker.CallNotPermittedException
+          - java.lang.IllegalArgumentException
+    instances:
+      verificationRetry:
+        baseConfig: default
+        maxAttempts: 2
+        waitDuration: 100ms
+  
+  circuitbreaker:
+    configs:
+      default:
+        registerHealthIndicator: true
+        slidingWindowSize: 100
+        minimumNumberOfCalls: 10
+        permittedNumberOfCallsInHalfOpenState: 5
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+        slowCallRateThreshold: 50
+        slowCallDurationThreshold: 5s
+        eventConsumerBufferSize: 10
+    instances:
+      userGroupService:
+        baseConfig: default
+        slidingWindowSize: 50
+        minimumNumberOfCalls: 5
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 40
+        slowCallDurationThreshold: 1500ms
+      jiraVerification:
+        baseConfig: default
+        slidingWindowSize: 50
+        minimumNumberOfCalls: 10
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+        slowCallRateThreshold: 50
+        slowCallDurationThreshold: 5s
+        ignoreExceptions:
+          - io.github.resilience4j.bulkhead.BulkheadFullException
+      githubVerification:
+        baseConfig: default
+        slidingWindowSize: 50
+        minimumNumberOfCalls: 10
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+        slowCallRateThreshold: 50
+        slowCallDurationThreshold: 5s
+        ignoreExceptions:
+          - io.github.resilience4j.bulkhead.BulkheadFullException
+  
+  # ============================================
+  # BULKHEAD CONFIGURATION
+  # ============================================
+  # Current Type: SEMAPHORE (default)
+  # - Executes on caller thread (no new threads created)
+  # - MDC propagation: NOT required (same thread as HTTP request)
+  # 
+  # NOTE: If resilience4j bulkhead type is switched to THREADPOOL,
+  # ensure MDC propagation is configured for bulkhead executor as well.
+  # THREADPOOL bulkhead creates separate thread pool and requires TaskDecorator.
+  # ============================================
+  bulkhead:
+    configs:
+      default:
+        maxConcurrentCalls: 100
+        maxWaitDuration: 0ms
+    instances:
+      jiraVerification:
+        maxConcurrentCalls: 100
+        maxWaitDuration: 0ms
+      githubVerification:
+        maxConcurrentCalls: 100
+        maxWaitDuration: 0ms
+
+# ============================================
+#   SPRINGDOC OPENAPI (SWAGGER)
+# ============================================
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    tags-sorter: alpha
+    operations-sorter: alpha
+  show-actuator: false
+
+# ============================================
+#   ACTUATOR
+# ============================================
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
   endpoint:
     health:
-      show-details: when-authorized
+      show-details: always
+      probes:
+        enabled: true
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
 
-# JWT Configuration - MUST match identity-service
-jwt:
-  secret: ${JWT_SECRET:samt-super-secret-key-for-jwt-hs256-algorithm-minimum-32-chars}
-
-# gRPC Configuration - User-Group Service Integration
-grpc:
-  client:
-    user-group-service:
-      address: static://${USER_GROUP_SERVICE_GRPC_HOST:localhost}:${USER_GROUP_SERVICE_GRPC_PORT:9092}
-      negotiationType: plaintext
-      deadline-seconds: 5
-
-
+# ============================================
+#   LOGGING
+# ============================================
 logging:
   level:
     root: ${LOG_LEVEL:INFO}
-    com.example: ${LOG_LEVEL:DEBUG}
+    com.samt.projectconfig: ${LOG_LEVEL:DEBUG}
+    org.springframework.security: DEBUG
     org.hibernate.SQL: ${SQL_LOG_LEVEL:WARN}
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%X{correlationId}] [%thread] %-5level %logger{36} - %msg%n"
 
 ---
 # ==============================================
@@ -92,11 +250,7 @@ spring:
       on-profile: docker
 
   datasource:
-    url: jdbc:postgresql://postgres-core:5432/samt_core?serverTimezone=UTC&ApplicationName=analysis-service
-
-  data:
-    redis:
-      host: redis
+    url: jdbc:postgresql://postgres-projectconfig:5432/projectconfig_db
 
 server:
   port: 8080
@@ -104,4 +258,5 @@ server:
 logging:
   level:
     root: INFO
-    com.example: INFO
+    com.samt.projectconfig: INFO
+

@@ -2,8 +2,6 @@ package com.example.user_groupservice.exception;
 
 import org.springframework.http.HttpStatus;
 
-import java.util.UUID;
-
 /**
  * Exception for resource not found errors (HTTP 404).
  */
@@ -19,17 +17,17 @@ public class ResourceNotFoundException extends BaseException {
     public static ResourceNotFoundException userNotFound(Long userId) {
         return new ResourceNotFoundException(
             "USER_NOT_FOUND",
-            String.format("User with ID %s not found", userId)
+            String.format("User with ID %d not found", userId)
         );
     }
     
     /**
      * Group not found.
      */
-    public static ResourceNotFoundException groupNotFound(UUID groupId) {
+    public static ResourceNotFoundException groupNotFound(Long groupId) {
         return new ResourceNotFoundException(
             "GROUP_NOT_FOUND",
-            String.format("Group with ID %s not found", groupId)
+            String.format("Group with ID %d not found", groupId)
         );
     }
     
@@ -39,17 +37,27 @@ public class ResourceNotFoundException extends BaseException {
     public static ResourceNotFoundException lecturerNotFound(Long lecturerId) {
         return new ResourceNotFoundException(
             "LECTURER_NOT_FOUND",
-            String.format("Lecturer with ID %s not found", lecturerId)
+            String.format("Lecturer with ID %d not found", lecturerId)
         );
     }
     
     /**
      * Member not found in group.
      */
-    public static ResourceNotFoundException memberNotFound(Long userId, UUID groupId) {
+    public static ResourceNotFoundException memberNotFound(Long userId, Long groupId) {
         return new ResourceNotFoundException(
             "USER_NOT_FOUND",
-            String.format("User %s is not a member of group %s", userId, groupId)
+            String.format("User %d is not a member of group %d", userId, groupId)
+        );
+    }
+    
+    /**
+     * Semester not found.
+     */
+    public static ResourceNotFoundException semesterNotFound(Long semesterId) {
+        return new ResourceNotFoundException(
+            "SEMESTER_NOT_FOUND",
+            String.format("Semester with ID %d not found", semesterId)
         );
     }
 }

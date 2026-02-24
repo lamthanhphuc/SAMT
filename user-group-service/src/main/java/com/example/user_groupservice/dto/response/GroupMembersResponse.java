@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Response DTO for group members list.
@@ -17,7 +16,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class GroupMembersResponse {
     
-    private UUID groupId;
+    private Long groupId;
     private String groupName;
     private List<MemberInfo> members;
     private int totalMembers;

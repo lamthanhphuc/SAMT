@@ -2,8 +2,6 @@ package com.example.user_groupservice.exception;
 
 import org.springframework.http.HttpStatus;
 
-import java.util.UUID;
-
 /**
  * Exception for conflict errors (HTTP 409).
  * Used for business rule violations.
@@ -17,20 +15,20 @@ public class ConflictException extends BaseException {
     /**
      * User is already in the specified group.
      */
-    public static ConflictException userAlreadyInGroup(Long userId, UUID groupId) {
+    public static ConflictException userAlreadyInGroup(Long userId, Long groupId) {
         return new ConflictException(
             "USER_ALREADY_IN_GROUP",
-            String.format("User %s is already in group %s", userId, groupId)
+            String.format("User %d is already in group %d", userId, groupId)
         );
     }
     
     /**
      * User is already in a group for the specified semester.
      */
-    public static ConflictException userAlreadyInGroupSameSemester(Long userId, String semester) {
+    public static ConflictException userAlreadyInGroupSameSemester(Long userId, Long semesterId) {
         return new ConflictException(
             "USER_ALREADY_IN_GROUP_SAME_SEMESTER",
-            String.format("User %s is already in a group for semester %s", userId, semester)
+            String.format("User %d is already in a group for semester %d", userId, semesterId)
         );
     }
     
@@ -40,17 +38,17 @@ public class ConflictException extends BaseException {
     public static ConflictException userInactive(Long userId) {
         return new ConflictException(
             "USER_INACTIVE",
-            String.format("User %s is inactive", userId)
+            String.format("User %d is inactive", userId)
         );
     }
     
     /**
      * Group already has a leader.
      */
-    public static ConflictException leaderAlreadyExists(UUID groupId) {
+    public static ConflictException leaderAlreadyExists(Long groupId) {
         return new ConflictException(
             "LEADER_ALREADY_EXISTS",
-            String.format("Group %s already has a leader", groupId)
+            String.format("Group %d already has a leader", groupId)
         );
     }
     
@@ -67,10 +65,10 @@ public class ConflictException extends BaseException {
     /**
      * Group name already exists in semester.
      */
-    public static ConflictException groupNameDuplicate(String groupName, String semester) {
+    public static ConflictException groupNameDuplicate(String groupName, String semesterCode) {
         return new ConflictException(
             "GROUP_NAME_DUPLICATE",
-            String.format("Group name %s already exists in semester %s", groupName, semester)
+            String.format("Group name %s already exists in semester %s", groupName, semesterCode)
         );
     }
 }

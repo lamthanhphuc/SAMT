@@ -50,7 +50,6 @@
 | 404 | `USER_NOT_FOUND` | User ID doesn't exist |
 | 409 | `EMAIL_ALREADY_EXISTS` | Email uniqueness violation |
 | 409 | `CONFLICT` | Generic conflict (duplicate, etc.) |
-| 429 | `RATE_LIMIT_EXCEEDED` | Too many requests |
 | 500 | `INTERNAL_SERVER_ERROR` | Unexpected server error |
 
 ---
@@ -83,7 +82,7 @@ Content-Type: application/json
 ```json
 {
   "user": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",  // UUID string
+    "id": 123,  // BIGINT (Long)
     "email": "student@university.edu",
     "fullName": "Nguyen Van A",
     "role": "STUDENT",
@@ -208,7 +207,6 @@ Content-Type: application/json
 - **BR-LOGIN-03 (MUST):** Return generic "Invalid credentials" for email not found OR password incorrect
 - **BR-LOGIN-04 (MUST):** Return "Account locked" ONLY if password is correct (user verified identity)
 - **BR-LOGIN-05 (MUST):** Refresh token stored in DB with 7-day expiration
-- **BR-LOGIN-06 (SHOULD):** Rate limit: 5 login attempts per 5 minutes per IP
 
 ---
 
@@ -277,8 +275,7 @@ Content-Type: application/json
 - **BR-REFRESH-03 (MUST):** Revoke old token (set `revoked = true`) BEFORE creating new token
 - **BR-REFRESH-04 (MUST):** **Token reuse detection**: If revoked token is reused → Revoke ALL tokens, force re-login
 - **BR-REFRESH-05 (MUST):** New refresh token has new UUID + new 7-day expiration
-- **BR-REFRESH-06 (SHOULD):** Rate limit: 20 refreshes per 15 minutes per user
-- **BR-REFRESH-07 (MUST):** Atomic transaction: revoke old + create new MUST be in same transaction
+- **BR-REFRESH-06 (MUST):** Atomic transaction: revoke old + create new MUST be in same transaction
 
 ---
 
@@ -333,7 +330,9 @@ Content-Type: application/json
 
 **Description:** Create user account with any role (admin only)
 
-**Authorization:** Bearer Token (ROLE_ADMIN)
+**Authorization:** Bearer Token (ADMIN role required)
+
+> **Note:** ROLE_ prefix is Spring Security internal. APIs document plain role names: ADMIN, LECTURER, STUDENT.
 
 **Request Headers:**
 ```
@@ -433,7 +432,7 @@ Content-Type: application/json
 
 **Description:** Soft delete user (admin only)
 
-**Authorization:** Bearer Token (ROLE_ADMIN)
+**Authorization:** Bearer Token (ADMIN role required)
 
 **Request Headers:**
 ```
@@ -441,13 +440,13 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 **Path Parameters:**
-- `userId`: UUID of target user
+- `userId`: Long (BIGINT) - User ID from database
 
 **Response 200 OK:**
 ```json
 {
   "message": "User deleted successfully",
-  "userId": "550e8400-e29b-41d4-a716-446655440000"
+  "userId": 123  // BIGINT (Long)
 }
 ```
 
@@ -513,7 +512,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 **Description:** Restore soft-deleted user (admin only)
 
-**Authorization:** Bearer Token (ROLE_ADMIN)
+**Authorization:** Bearer Token (ADMIN role required)
 
 **Request Headers:**
 ```
@@ -521,13 +520,13 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 **Path Parameters:**
-- `userId`: UUID of target user
+- `userId`: Long (BIGINT) - User ID from database
 
 **Response 200 OK:**
 ```json
 {
   "message": "User restored successfully",
-  "userId": "550e8400-e29b-41d4-a716-446655440000"
+  "userId": 123  // BIGINT (Long)
 }
 ```
 
@@ -565,7 +564,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 **Description:** Lock user account (admin only)
 
-**Authorization:** Bearer Token (ROLE_ADMIN)
+**Authorization:** Bearer Token (ADMIN role required)
 
 **Request Headers:**
 ```
@@ -573,7 +572,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 **Path Parameters:**
-- `userId`: UUID of target user
+- `userId`: Long (BIGINT) - User ID from database
 
 **Query Parameters:**
 ```
@@ -584,7 +583,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```json
 {
   "message": "User locked successfully",
-  "userId": "550e8400-e29b-41d4-a716-446655440000"
+  "userId": 123  // BIGINT (Long)
 }
 ```
 
@@ -614,7 +613,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 **Description:** Unlock user account (admin only)
 
-**Authorization:** Bearer Token (ROLE_ADMIN)
+**Authorization:** Bearer Token (ADMIN role required)
 
 **Request Headers:**
 ```
@@ -622,13 +621,13 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 **Path Parameters:**
-- `userId`: UUID of target user
+- `userId`: Long (BIGINT) - User ID from database
 
 **Response 200 OK:**
 ```json
 {
   "message": "User unlocked successfully",
-  "userId": "550e8400-e29b-41d4-a716-446655440000"
+  "userId": 123  // BIGINT (Long)
 }
 ```
 
@@ -656,7 +655,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 **Description:** Map/unmap external accounts (Jira, GitHub)
 
-**Authorization:** Bearer Token (ROLE_ADMIN)
+**Authorization:** Bearer Token (ADMIN role required)
 
 **Request Headers:**
 ```
@@ -665,7 +664,7 @@ Content-Type: application/json
 ```
 
 **Path Parameters:**
-- `userId`: UUID of target user
+- `userId`: Long (BIGINT) - User ID from database
 
 **Request Body:**
 ```json
@@ -680,7 +679,7 @@ Content-Type: application/json
 {
   "message": "External accounts mapped successfully",
   "user": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "id": 123,  // BIGINT (Long)
     "email": "student@university.edu",
     "fullName": "Nguyen Van A",
     "role": "STUDENT",
@@ -734,42 +733,219 @@ Content-Type: application/json
 
 ---
 
-## Rate Limiting (Production Only)
+## Audit Log Query Endpoints
 
-### Rate Limit Headers
+### 15. GET `/api/admin/audit/entity/{entityType}/{entityId}`
 
-All responses **SHOULD** include rate limit headers:
+**Description:** Get audit history for a specific entity
 
+**Authorization:** Bearer Token (ADMIN role required)
+
+**Request Headers:**
 ```
-X-RateLimit-Limit: 5           // Max requests in window
-X-RateLimit-Remaining: 3       // Requests remaining
-X-RateLimit-Reset: 1706612400  // Unix timestamp when limit resets
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-### Rate Limit Error Response
+**Path Parameters:**
+- `entityType`: String - Entity type (e.g., "User", "RefreshToken")
+- `entityId`: Long (BIGINT) - Entity ID
 
-**429 Too Many Requests:**
+**Query Parameters:**
+```
+?page=0&size=20&sort=timestamp,desc
+```
+
+**Response 200 OK:**
 ```json
 {
-  "error": {
-    "code": "RATE_LIMIT_EXCEEDED",
-    "message": "Rate limit exceeded. Try again in 300 seconds.",
-    "retryAfter": 300  // seconds
-  },
-  "timestamp": "2026-01-30T10:30:00Z"
+  "content": [
+    {
+      "id": 1,
+      "entityType": "User",
+      "entityId": 123,
+      "action": "ACCOUNT_LOCKED",
+      "actorId": 1,
+      "actorEmail": "admin@university.edu",
+      "outcome": "SUCCESS",
+      "metadata": {
+        "target_user_id": 123,
+        "admin_id": 1,
+        "reason": "Suspicious activity"
+      },
+      "timestamp": "2026-01-30T10:30:00Z"
+    }
+  ],
+  "pageable": { ... },
+  "totalElements": 50,
+  "totalPages": 3,
+  "size": 20,
+  "number": 0
 }
 ```
 
-### Recommended Limits
+---
 
-| Endpoint | Limit | Window | Key |
-|----------|-------|--------|-----|
-| `POST /api/auth/register` | 5 requests | 1 hour | IP address |
-| `POST /api/auth/login` | 5 requests | 5 minutes | IP address |
-| `POST /api/auth/refresh` | 20 requests | 15 minutes | User ID |
-| `POST /api/auth/logout` | 10 requests | 1 minute | User ID |
-| OAuth endpoints | 10 requests | 5 minutes | IP address |
-| Admin endpoints | 100 requests | 1 minute | User ID |
+### 16. GET `/api/admin/audit/actor/{actorId}`
+
+**Description:** Get all actions performed by a specific user
+
+**Authorization:** Bearer Token (ADMIN role required)
+
+**Request Headers:**
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Path Parameters:**
+- `actorId`: Long (BIGINT) - User ID of actor
+
+**Query Parameters:**
+```
+?page=0&size=20&sort=timestamp,desc
+```
+
+**Response 200 OK:**
+```json
+{
+  "content": [
+    {
+      "id": 10,
+      "entityType": "User",
+      "entityId": 456,
+      "action": "SOFT_DELETE",
+      "actorId": 1,
+      "actorEmail": "admin@university.edu",
+      "outcome": "SUCCESS",
+      "metadata": {
+        "target_user_id": 456,
+        "admin_id": 1
+      },
+      "timestamp": "2026-01-30T11:00:00Z"
+    }
+  ],
+  "pageable": { ... },
+  "totalElements": 25,
+  "totalPages": 2,
+  "size": 20,
+  "number": 0
+}
+```
+
+---
+
+### 17. GET `/api/admin/audit/range`
+
+**Description:** Get audit logs within a date range
+
+**Authorization:** Bearer Token (ADMIN role required)
+
+**Request Headers:**
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Query Parameters:**
+```
+?startDate=2026-01-01T00:00:00Z&endDate=2026-01-31T23:59:59Z&page=0&size=20&sort=timestamp,desc
+```
+- `startDate`: ISO 8601 DateTime (e.g., `2026-01-01T00:00:00Z`)
+- `endDate`: ISO 8601 DateTime (e.g., `2026-01-31T23:59:59Z`)
+
+**Response 200 OK:**
+```json
+{
+  "content": [
+    {
+      "id": 100,
+      "entityType": "RefreshToken",
+      "entityId": 789,
+      "action": "TOKEN_REUSE_DETECTED",
+      "actorId": 123,
+      "actorEmail": "student@university.edu",
+      "outcome": "FAILURE",
+      "metadata": {
+        "user_id": 123,
+        "token_id": 789,
+        "ip_address": "192.168.1.1"
+      },
+      "timestamp": "2026-01-15T14:30:00Z"
+    }
+  ],
+  "pageable": { ... },
+  "totalElements": 500,
+  "totalPages": 25,
+  "size": 20,
+  "number": 0
+}
+```
+
+---
+
+### 18. GET `/api/admin/audit/security-events`
+
+**Description:** Get security-related audit events (login failures, token reuse, account locks)
+
+**Authorization:** Bearer Token (ADMIN role required)
+
+**Request Headers:**
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Query Parameters:**
+```
+?page=0&size=20&sort=timestamp,desc
+```
+
+**Response 200 OK:**
+```json
+{
+  "content": [
+    {
+      "id": 200,
+      "entityType": "User",
+      "entityId": 123,
+      "action": "LOGIN_FAILED",
+      "actorId": 123,
+      "actorEmail": "student@university.edu",
+      "outcome": "FAILURE",
+      "metadata": {
+        "email": "student@university.edu",
+        "ip_address": "192.168.1.1",
+        "reason": "Invalid credentials"
+      },
+      "timestamp": "2026-01-20T09:15:00Z"
+    },
+    {
+      "id": 201,
+      "entityType": "RefreshToken",
+      "entityId": 456,
+      "action": "TOKEN_REUSE_DETECTED",
+      "actorId": 789,
+      "actorEmail": "lecturer@university.edu",
+      "outcome": "FAILURE",
+      "metadata": {
+        "user_id": 789,
+        "token_id": 456,
+        "ip_address": "10.0.0.5"
+      },
+      "timestamp": "2026-01-20T10:00:00Z"
+    }
+  ],
+  "pageable": { ... },
+  "totalElements": 150,
+  "totalPages": 8,
+  "size": 20,
+  "number": 0
+}
+```
+
+**Note:** Security events include:
+- `LOGIN_FAILED`
+- `TOKEN_REUSE_DETECTED`
+- `ACCOUNT_LOCKED`
+- `SOFT_DELETE`
+- `RESTORE`
 
 ---
 
@@ -804,11 +980,6 @@ GET, POST, PUT, DELETE, OPTIONS
 Authorization, Content-Type
 ```
 
-**Exposed Headers:**
-```
-X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset
-```
-
 **Credentials:**
 ```
 Access-Control-Allow-Credentials: true
@@ -831,7 +1002,7 @@ Access-Control-Allow-Credentials: true
 **Payload:**
 ```json
 {
-  "sub": "550e8400-e29b-41d4-a716-446655440000",  // User ID
+  "sub": 123,  // User ID (BIGINT/Long)
   "email": "user@example.com",
   "roles": ["STUDENT"],                            // Array of roles (NO ROLE_ prefix)
   "iat": 1706612400,                               // Issued at (Unix timestamp)
@@ -898,15 +1069,78 @@ a1b2c3d4-e5f6-47g8-h9i0-j1k2l3m4n5o6
 | `LOGIN_FAILED` | Failed login | User | email, ip_address, reason |
 | `TOKEN_REFRESHED` | Token refreshed | RefreshToken | user_id, old_token_id, new_token_id |
 | `USER_LOGOUT` | User logs out | RefreshToken | user_id, token_id |
-| `OAUTH_LINK_ACCOUNT` | OAuth linked | User | provider, oauth_email |
-| `OAUTH_UNLINK_ACCOUNT` | OAuth unlinked | User | provider |
 | `SOFT_DELETE` | User soft deleted | User | target_user_id, admin_id |
 | `RESTORE` | User restored | User | target_user_id, admin_id |
 | `ACCOUNT_LOCKED` | User locked | User | target_user_id, admin_id, reason |
 | `ACCOUNT_UNLOCKED` | User unlocked | User | target_user_id, admin_id |
 | `MAP_EXTERNAL_ACCOUNTS` | External accounts mapped | User | target_user_id, admin_id, old_value, new_value |
-| `RATE_LIMIT_EXCEEDED` | Rate limit hit | RateLimit | endpoint, ip_address, user_id |
 | `TOKEN_REUSE_DETECTED` | Revoked token reused | RefreshToken | user_id, token_id, ip_address |
+
+---
+
+## Observability
+
+### Logging
+
+**Framework:** SLF4J + Logback
+
+**Log Levels:**
+- `ERROR` - Exceptions, security events (token reuse, login failures)
+- `WARN` - Business rule violations, account locks
+- `INFO` - Successful operations (login, registration, admin actions)
+- `DEBUG` - Detailed flow for debugging
+
+**Structured Logging:**
+```json
+{
+  "timestamp": "2026-01-30T10:30:00Z",
+  "level": "INFO",
+  "logger": "AuthService",
+  "message": "User registered successfully",
+  "userId": 123,
+  "email": "user@example.com",
+  "action": "USER_REGISTERED"
+}
+```
+
+### Audit Logging
+
+**Storage:** PostgreSQL `audit_logs` table
+
+**Captured Events:**
+- `USER_REGISTERED`, `USER_LOGIN`, `LOGIN_FAILED`
+- `TOKEN_REFRESHED`, `USER_LOGOUT`, `TOKEN_REUSE_DETECTED`
+- `SOFT_DELETE`, `RESTORE`, `ACCOUNT_LOCKED`, `ACCOUNT_UNLOCKED`
+- `MAP_EXTERNAL_ACCOUNTS`
+
+**Query Endpoints:**
+- `GET /api/admin/audit/entity/{entityType}/{entityId}`
+- `GET /api/admin/audit/actor/{actorId}`
+- `GET /api/admin/audit/range?startDate=...&endDate=...`
+- `GET /api/admin/audit/security-events`
+
+### Correlation ID Support
+
+**Status:** ❌ **NOT IMPLEMENTED**
+
+**Recommendation:** Add `CorrelationIdFilter` to propagate `X-Request-ID` header through request lifecycle
+
+### Resilience Patterns
+
+**Circuit Breaker:** ❌ Not implemented  
+**Retry Policy:** ❌ Not implemented  
+**Bulkhead:** ❌ Not implemented  
+**Timeout:** ✅ Database connection timeout (30s), Hikari leak detection (60s)
+
+### Monitoring
+
+**Health Endpoint:** `/actuator/health`
+
+**Metrics (Future):**
+- JWT token generation rate
+- Login success/failure rate
+- Refresh token usage patterns
+- Database connection pool metrics (Hikari)
 
 ---
 
@@ -918,6 +1152,5 @@ a1b2c3d4-e5f6-47g8-h9i0-j1k2l3m4n5o6
 1. Implement controllers with exact endpoints
 2. Implement service layer with business rules
 3. Implement error handling with standard error codes
-4. Implement rate limiting (optional for Phase 1)
-5. Implement audit logging
-6. Add integration tests for all endpoints
+4. Implement audit logging
+5. Add integration tests for all endpoints

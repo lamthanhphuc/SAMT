@@ -11,6 +11,8 @@ server:
 spring:
   application:
     name: identity-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
 
   lifecycle:
     timeout-per-shutdown-phase: 30s
@@ -78,10 +80,10 @@ logging:
 grpc:
   server:
     port: ${GRPC_SERVER_PORT:9091}
-    # Enable keepalive for long-running connections
     keep-alive-time: 30s
     keep-alive-timeout: 10s
     permit-keep-alive-without-calls: true
+    max-inbound-message-size: 4MB
 
 # ==============================================
 # JWT CONFIGURATION
@@ -95,6 +97,16 @@ jwt:
   # Refresh token expiration: 7 days (604800000 ms)
   refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:604800000}
 
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+
 ---
 # ==============================================
 # DOCKER PROFILE
@@ -106,25 +118,23 @@ spring:
 
   datasource:
     url: jdbc:postgresql://postgres-identity:5432/samt_identity?serverTimezone=UTC&ApplicationName=identity-service
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
 
   data:
     redis:
       host: redis
+      port: 6379
 
 server:
-  port: 8080
+  port: 8081  # Keep consistent REST API port
+
+grpc:
+  server:
+    port: 9091  # Keep consistent gRPC port
 
 logging:
   level:
     root: INFO
     com.example: INFO
-
-# Swagger/OpenAPI Configuration
-springdoc:
-  api-docs:
-    path: /api-docs
-  swagger-ui:
-    path: /swagger-ui.html
-    enabled: true
-    operations-sorter: method
-    tags-sorter: alpha

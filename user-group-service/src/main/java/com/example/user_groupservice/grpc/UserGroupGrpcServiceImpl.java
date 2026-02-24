@@ -10,9 +10,11 @@ import com.example.user_groupservice.grpc.GetGroupRequest;
 import com.example.user_groupservice.grpc.GetGroupResponse;
 import com.example.user_groupservice.entity.Group;
 import com.example.user_groupservice.entity.GroupRole;
-import com.example.user_groupservice.entity.UserGroup;
+import com.example.user_groupservice.entity.Semester;
+import com.example.user_groupservice.entity.UserSemesterMembership;
 import com.example.user_groupservice.repository.GroupRepository;
-import com.example.user_groupservice.repository.UserGroupRepository;
+import com.example.user_groupservice.repository.SemesterRepository;
+import com.example.user_groupservice.repository.UserSemesterMembershipRepository;
 import com.example.user_groupservice.grpc.UserGroupGrpcServiceGrpc;
 
 import io.grpc.Status;
@@ -22,10 +24,8 @@ import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.springframework.transaction.annotation.Transactional;
 
-
-
+import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * gRPC Service Implementation for User-Group Service.
@@ -42,28 +42,27 @@ import java.util.UUID;
 public class UserGroupGrpcServiceImpl extends UserGroupGrpcServiceGrpc.UserGroupGrpcServiceImplBase {
 
     private final GroupRepository groupRepository;
-    private final UserGroupRepository userGroupRepository;
+    private final SemesterRepository semesterRepository;
+    private final UserSemesterMembershipRepository membershipRepository;
 
     /**
      * Verify if a group exists and is not soft-deleted.
      * 
-     * @param request Contains group_id (UUID as string)
+     * @param request Contains group_id (Long as string)
      * @param responseObserver Returns exists, deleted flags and message
      */
     @Override
     @Transactional(readOnly = true)
     public void verifyGroupExists(VerifyGroupRequest request, StreamObserver<VerifyGroupResponse> responseObserver) {
         try {
-            UUID groupId = UUID.fromString(request.getGroupId());
+            Long groupId = Long.parseLong(request.getGroupId());
             log.info("gRPC VerifyGroupExists called: groupId={}", groupId);
 
-            Optional<Group> groupOpt = groupRepository.findById(groupId);
+            Optional<Group> groupOpt = groupRepository.findByIdAndNotDeleted(groupId);
             
             boolean exists = groupOpt.isPresent();
-            boolean deleted = exists && groupOpt.get().getDeletedAt() != null;
-            String message = exists ? 
-                    (deleted ? "Group exists but is deleted" : "Group exists and is active") :
-                    "Group not found";
+            boolean deleted = false; // Already filtered by findByIdAndNotDeleted
+            String message = exists ? "Group exists and is active" : "Group not found";
             
             VerifyGroupResponse response = VerifyGroupResponse.newBuilder()
                     .setExists(exists)
@@ -73,13 +72,13 @@ public class UserGroupGrpcServiceImpl extends UserGroupGrpcServiceGrpc.UserGroup
             
             responseObserver.onNext(response);
             responseObserver.onCompleted();
-            log.info("gRPC VerifyGroupExists completed: groupId={}, exists={}, deleted={}", 
-                    groupId, exists, deleted);
+            log.info("gRPC VerifyGroupExists completed: groupId={}, exists={}", 
+                    groupId, exists);
 
-        } catch (IllegalArgumentException e) {
+        } catch (NumberFormatException e) {
             log.error("Invalid group ID format: {}", request.getGroupId());
             responseObserver.onError(Status.INVALID_ARGUMENT
-                    .withDescription("Invalid group ID format - must be valid UUID")
+                    .withDescription("Invalid group ID format - must be valid Long")
                     .asRuntimeException());
         } catch (Exception e) {
             log.error("Error in gRPC VerifyGroupExists: {}", e.getMessage(), e);
@@ -99,15 +98,15 @@ public class UserGroupGrpcServiceImpl extends UserGroupGrpcServiceGrpc.UserGroup
     @Transactional(readOnly = true)
     public void checkGroupLeader(CheckGroupLeaderRequest request, StreamObserver<CheckGroupLeaderResponse> responseObserver) {
         try {
-            UUID groupId = UUID.fromString(request.getGroupId());
+            Long groupId = Long.parseLong(request.getGroupId());
             Long userId = Long.parseLong(request.getUserId());
             log.info("gRPC CheckGroupLeader called: groupId={}, userId={}", groupId, userId);
 
-            // Check if membership exists first
-            Optional<UserGroup> membershipOpt = userGroupRepository.findByUserIdAndGroupId(userId, groupId);
+            // Find membership by userId and groupId
+            Optional<UserSemesterMembership> membershipOpt = membershipRepository.findByUserIdAndGroupId(userId, groupId);
             
             boolean isLeader = membershipOpt.isPresent() && 
-                              membershipOpt.get().getRole() == GroupRole.LEADER;
+                              membershipOpt.get().getGroupRole() == GroupRole.LEADER;
             
             String message = membershipOpt.isEmpty() ? 
                     "User is not a member of this group" :
@@ -123,10 +122,10 @@ public class UserGroupGrpcServiceImpl extends UserGroupGrpcServiceGrpc.UserGroup
             log.info("gRPC CheckGroupLeader completed: groupId={}, userId={}, isLeader={}", 
                     groupId, userId, isLeader);
 
-        } catch (IllegalArgumentException e) {
+        } catch (NumberFormatException e) {
             log.error("Invalid ID format: groupId={}, userId={}", request.getGroupId(), request.getUserId());
             responseObserver.onError(Status.INVALID_ARGUMENT
-                    .withDescription("Invalid ID format - groupId must be UUID, userId must be Long")
+                    .withDescription("Invalid ID format - groupId and userId must be valid Long")
                     .asRuntimeException());
         } catch (Exception e) {
             log.error("Error in gRPC CheckGroupLeader: {}", e.getMessage(), e);
@@ -146,14 +145,15 @@ public class UserGroupGrpcServiceImpl extends UserGroupGrpcServiceGrpc.UserGroup
     @Transactional(readOnly = true)
     public void checkGroupMember(CheckGroupMemberRequest request, StreamObserver<CheckGroupMemberResponse> responseObserver) {
         try {
-            UUID groupId = UUID.fromString(request.getGroupId());
+            Long groupId = Long.parseLong(request.getGroupId());
             Long userId = Long.parseLong(request.getUserId());
             log.info("gRPC CheckGroupMember called: groupId={}, userId={}", groupId, userId);
 
-            Optional<UserGroup> membershipOpt = userGroupRepository.findByUserIdAndGroupId(userId, groupId);
+            // Find membership by userId and groupId
+            Optional<UserSemesterMembership> membershipOpt = membershipRepository.findByUserIdAndGroupId(userId, groupId);
             
             boolean isMember = membershipOpt.isPresent();
-            String role = isMember ? membershipOpt.get().getRole().name() : "";
+            String role = isMember ? membershipOpt.get().getGroupRole().name() : "";
             String message = isMember ? 
                     "User is a member with role: " + role :
                     "User is not a member of this group";
@@ -169,10 +169,10 @@ public class UserGroupGrpcServiceImpl extends UserGroupGrpcServiceGrpc.UserGroup
             log.info("gRPC CheckGroupMember completed: groupId={}, userId={}, isMember={}, role={}", 
                     groupId, userId, isMember, role);
 
-        } catch (IllegalArgumentException e) {
+        } catch (NumberFormatException e) {
             log.error("Invalid ID format: groupId={}, userId={}", request.getGroupId(), request.getUserId());
             responseObserver.onError(Status.INVALID_ARGUMENT
-                    .withDescription("Invalid ID format - groupId must be UUID, userId must be Long")
+                    .withDescription("Invalid ID format - groupId and userId must be valid Long")
                     .asRuntimeException());
         } catch (Exception e) {
             log.error("Error in gRPC CheckGroupMember: {}", e.getMessage(), e);
@@ -185,17 +185,17 @@ public class UserGroupGrpcServiceImpl extends UserGroupGrpcServiceGrpc.UserGroup
     /**
      * Get group details (optional - for future use).
      * 
-     * @param request Contains group_id (UUID)
+     * @param request Contains group_id (Long as string)
      * @param responseObserver Returns group details
      */
     @Override
     @Transactional(readOnly = true)
     public void getGroup(GetGroupRequest request, StreamObserver<GetGroupResponse> responseObserver) {
         try {
-            UUID groupId = UUID.fromString(request.getGroupId());
+            Long groupId = Long.parseLong(request.getGroupId());
             log.info("gRPC GetGroup called: groupId={}", groupId);
 
-            Optional<Group> groupOpt = groupRepository.findById(groupId);
+            Optional<Group> groupOpt = groupRepository.findByIdAndNotDeleted(groupId);
             
             if (groupOpt.isEmpty()) {
                 log.warn("Group not found: groupId={}", groupId);
@@ -206,10 +206,15 @@ public class UserGroupGrpcServiceImpl extends UserGroupGrpcServiceGrpc.UserGroup
             }
 
             Group group = groupOpt.get();
+            
+            // Fetch semester entity for semester code
+            Semester semester = semesterRepository.findById(group.getSemesterId())
+                    .orElseThrow(() -> new IllegalStateException("Semester not found for group"));
+            
             GetGroupResponse response = GetGroupResponse.newBuilder()
                     .setGroupId(group.getId().toString())
                     .setGroupName(group.getGroupName())
-                    .setSemester(group.getSemester())
+                    .setSemester(semester.getSemesterCode())
                     .setLecturerId(group.getLecturerId().toString())
                     .setCreatedAt(group.getCreatedAt().toString())
                     .setUpdatedAt(group.getUpdatedAt().toString())
@@ -219,10 +224,10 @@ public class UserGroupGrpcServiceImpl extends UserGroupGrpcServiceGrpc.UserGroup
             responseObserver.onCompleted();
             log.info("gRPC GetGroup completed: groupId={}", groupId);
 
-        } catch (IllegalArgumentException e) {
+        } catch (NumberFormatException e) {
             log.error("Invalid group ID format: {}", request.getGroupId());
             responseObserver.onError(Status.INVALID_ARGUMENT
-                    .withDescription("Invalid group ID format - must be valid UUID")
+                    .withDescription("Invalid group ID format - must be valid Long")
                     .asRuntimeException());
         } catch (Exception e) {
             log.error("Error in gRPC GetGroup: {}", e.getMessage(), e);

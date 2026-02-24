@@ -3,6 +3,7 @@ package com.example.user_groupservice.controller;
 import com.example.user_groupservice.dto.request.*;
 import com.example.user_groupservice.dto.response.*;
 import com.example.user_groupservice.entity.GroupRole;
+import com.example.user_groupservice.security.CurrentUser;
 import com.example.user_groupservice.service.GroupMemberService;
 import com.example.user_groupservice.service.GroupService;
 import jakarta.validation.Valid;
@@ -11,9 +12,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
+import java.util.List;
 
 /**
  * REST Controller for group operations.
@@ -24,19 +26,15 @@ import java.util.UUID;
  * - GET /groups: AUTHENTICATED
  * - PUT /groups/{groupId}: ADMIN only
  * - DELETE /groups/{groupId}: ADMIN only
- * - POST /groups/{groupId}/members: ADMIN only
- * - PUT /groups/{groupId}/members/{userId}/role: ADMIN only
- * - DELETE /groups/{groupId}/members/{userId}: ADMIN only
- * - GET /groups/{groupId}/members: AUTHENTICATED
+ * - PATCH /groups/{groupId}/lecturer: ADMIN only
  */
 @RestController
-@RequestMapping("/groups")
+@RequestMapping("/api/groups")
 @RequiredArgsConstructor
 @Slf4j
 public class GroupController {
     
     private final GroupService groupService;
-    private final GroupMemberService memberService;
     
     // ==================== Group CRUD ====================
     
@@ -57,7 +55,7 @@ public class GroupController {
      */
     @GetMapping("/{groupId}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<GroupDetailResponse> getGroupById(@PathVariable UUID groupId) {
+    public ResponseEntity<GroupDetailResponse> getGroupById(@PathVariable Long groupId) {
         
         GroupDetailResponse response = groupService.getGroupById(groupId);
         return ResponseEntity.ok(response);
@@ -71,11 +69,11 @@ public class GroupController {
     public ResponseEntity<PageResponse<GroupListResponse>> listGroups(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String semester,
+            @RequestParam(required = false) Long semesterId,
             @RequestParam(required = false) Long lecturerId) {
         
         PageResponse<GroupListResponse> response = groupService.listGroups(
-                page, size, semester, lecturerId);
+                page, size, semesterId, lecturerId);
         return ResponseEntity.ok(response);
     }
     
@@ -85,7 +83,7 @@ public class GroupController {
     @PutMapping("/{groupId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<GroupResponse> updateGroup(
-            @PathVariable UUID groupId,
+            @PathVariable Long groupId,
             @Valid @RequestBody UpdateGroupRequest request) {
         
         GroupResponse response = groupService.updateGroup(groupId, request);
@@ -97,9 +95,12 @@ public class GroupController {
      */
     @DeleteMapping("/{groupId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteGroup(@PathVariable UUID groupId) {
+    public ResponseEntity<Void> deleteGroup(
+            @PathVariable Long groupId,
+            @AuthenticationPrincipal CurrentUser currentUser) {
         
-        groupService.deleteGroup(groupId);
+        Long actorId = currentUser.getUserId();
+        groupService.deleteGroup(groupId, actorId);
         return ResponseEntity.noContent().build();
     }
     
@@ -109,65 +110,10 @@ public class GroupController {
     @PatchMapping("/{groupId}/lecturer")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<GroupResponse> updateGroupLecturer(
-            @PathVariable UUID groupId,
+            @PathVariable Long groupId,
             @Valid @RequestBody UpdateLecturerRequest request) {
         
         GroupResponse response = groupService.updateGroupLecturer(groupId, request);
-        return ResponseEntity.ok(response);
-    }
-    
-    // ==================== Member Management ====================
-    
-    /**
-     * UC24 - Add Member to Group
-     */
-    @PostMapping("/{groupId}/members")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<MemberResponse> addMember(
-            @PathVariable UUID groupId,
-            @Valid @RequestBody AddMemberRequest request) {
-        
-        MemberResponse response = memberService.addMember(groupId, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-    
-    /**
-     * UC25 - Assign Group Role
-     */
-    @PutMapping("/{groupId}/members/{userId}/role")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<MemberResponse> assignRole(
-            @PathVariable UUID groupId,
-            @PathVariable Long userId,
-            @Valid @RequestBody AssignRoleRequest request) {
-        
-        MemberResponse response = memberService.assignRole(groupId, userId, request);
-        return ResponseEntity.ok(response);
-    }
-    
-    /**
-     * UC26 - Remove Member from Group
-     */
-    @DeleteMapping("/{groupId}/members/{userId}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> removeMember(
-            @PathVariable UUID groupId,
-            @PathVariable Long userId) {
-        
-        memberService.removeMember(groupId, userId);
-        return ResponseEntity.noContent().build();
-    }
-    
-    /**
-     * Get Group Members
-     */
-    @GetMapping("/{groupId}/members")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<GroupMembersResponse> getGroupMembers(
-            @PathVariable UUID groupId,
-            @RequestParam(required = false) GroupRole role) {
-        
-        GroupMembersResponse response = memberService.getGroupMembers(groupId, role);
         return ResponseEntity.ok(response);
     }
 }

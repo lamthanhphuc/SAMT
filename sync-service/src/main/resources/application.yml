@@ -3,7 +3,7 @@
 # ==============================================
 
 server:
-  port: ${SERVER_PORT:8082}
+  port: ${SERVER_PORT:8084}
   shutdown: graceful
 
 spring:
@@ -16,7 +16,7 @@ spring:
   datasource:
     # Local dev: default password là 12345 (khớp với Docker PostgreSQL)
     # Docker: sẽ override bởi SPRING_DATASOURCE_PASSWORD từ .env
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/samt_core?serverTimezone=UTC&ApplicationName=sync-service}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5436/sync_db?serverTimezone=UTC&ApplicationName=sync-service}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:12345}
     driver-class-name: org.postgresql.Driver
@@ -26,7 +26,7 @@ spring:
       minimum-idle: ${DB_POOL_MIN_IDLE:2}
       idle-timeout: 600000
       max-lifetime: 1800000
-      leak-detection-threshold: 60000
+      leak-detection-threshold: 120000  # 2min - allows CREATE INDEX CONCURRENTLY in migrations
 
   data:
     redis:
@@ -41,7 +41,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: ${DDL_AUTO:update}
+      ddl-auto: validate
     show-sql: ${SHOW_SQL:false}
     open-in-view: false
     properties:
@@ -54,20 +54,135 @@ spring:
         order_inserts: true
         order_updates: true
 
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+    out-of-order: false
+
+# ==============================================
+#   ASYNC THREAD POOL CONFIGURATION
+# ==============================================
+sync:
+  async:
+    core-pool-size: ${SYNC_ASYNC_CORE_POOL:2}
+    max-pool-size: ${SYNC_ASYNC_MAX_POOL:5}
+    queue-capacity: ${SYNC_ASYNC_QUEUE_CAPACITY:100}
+    thread-name-prefix: sync-
+
+  scheduler:
+    enabled: ${SYNC_SCHEDULER_ENABLED:true}
+    jira-issues-cron: ${SYNC_JIRA_CRON:0 */30 * * * *}
+    github-commits-cron: ${SYNC_GITHUB_CRON:0 */15 * * * *}
+
+# ==============================================
+#   GRPC CLIENT CONFIGURATION
+# ==============================================
+grpc:
+  client:
+    project-config-service:
+      address: static://${PROJECT_CONFIG_GRPC_HOST:localhost}:${PROJECT_CONFIG_GRPC_PORT:9093}
+      negotiation-type: plaintext
+      max-inbound-message-size: 4194304
+      enable-keep-alive: true
+      keep-alive-time: 300s
+      keep-alive-timeout: 60s
+
+# ==============================================
+#   RESILIENCE4J CONFIGURATION
+# ==============================================
+resilience4j:
+  retry:
+    instances:
+      jiraRetry:
+        max-attempts: 3
+        wait-duration: 1s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        randomization-factor: 0.5
+        exponential-max-wait-duration: 10s
+        retry-exceptions:
+          - java.net.ConnectException
+          - java.net.SocketTimeoutException
+          - org.springframework.web.reactive.function.client.WebClientRequestException
+      githubRetry:
+        max-attempts: 3
+        wait-duration: 2s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        randomization-factor: 0.5
+        exponential-max-wait-duration: 10s
+        retry-exceptions:
+          - java.net.ConnectException
+          - java.net.SocketTimeoutException
+          - org.springframework.web.reactive.function.client.WebClientRequestException
+      grpcRetry:
+        max-attempts: 2
+        wait-duration: 500ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        randomization-factor: 0.5
+        retry-exceptions:
+          - io.grpc.StatusRuntimeException
+
+  circuitbreaker:
+    instances:
+      jiraCircuitBreaker:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        slow-call-duration-threshold: 20s
+        slow-call-rate-threshold: 80
+      githubCircuitBreaker:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+      grpcCircuitBreaker:
+        sliding-window-size: 5
+        failure-rate-threshold: 60
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 2
+        automatic-transition-from-open-to-half-open-enabled: true
+
+  ratelimiter:
+    instances:
+      jiraRateLimiter:
+        limit-for-period: 10
+        limit-refresh-period: 1s
+        timeout-duration: 5s
+      githubRateLimiter:
+        limit-for-period: 100
+        limit-refresh-period: 60s
+        timeout-duration: 5s
+
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       show-details: when-authorized
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    distribution:
+      percentiles-histogram:
+        sync.duration.seconds: true
 
 logging:
   level:
     root: ${LOG_LEVEL:INFO}
     com.example: ${LOG_LEVEL:DEBUG}
     org.hibernate.SQL: ${SQL_LOG_LEVEL:WARN}
+    net.javacrumbs.shedlock: DEBUG
+    io.grpc: INFO
 
 ---
 # ==============================================
@@ -79,7 +194,7 @@ spring:
       on-profile: docker
 
   datasource:
-    url: jdbc:postgresql://postgres-core:5432/samt_core?serverTimezone=UTC&ApplicationName=sync-service
+    url: jdbc:postgresql://postgres-sync:5432/sync_db?serverTimezone=UTC&ApplicationName=sync-service
 
   data:
     redis:

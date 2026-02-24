@@ -1,67 +1,55 @@
 package com.example.user_groupservice.service;
 
-import com.example.user_groupservice.dto.request.AddMemberRequest;
-import com.example.user_groupservice.dto.request.AssignRoleRequest;
-import com.example.user_groupservice.dto.response.GroupMembersResponse;
 import com.example.user_groupservice.dto.response.MemberResponse;
-import com.example.user_groupservice.entity.GroupRole;
-
-import java.util.UUID;
+import java.util.List;
 
 /**
  * Service interface for group member operations.
+ * 
+ * Business Rules:
+ * - User can only be in ONE group per semester (enforced by PK: user_id, semester_id)
+ * - Each group can have only ONE LEADER (enforced by DB unique index)
+ * - Only STUDENT role can be added as member
+ * - Lecturer must have LECTURER role (validated via gRPC)
  */
 public interface GroupMemberService {
     
     /**
-     * Add a member to a group.
-     * Authorization: ADMIN only
-     * 
-     * Business rules:
-     * - User must exist and be ACTIVE
-     * - User can only be in ONE group per semester
-     * - If isLeader=true, group must not have existing leader
-     * 
+     * Add a member to a group
      * @param groupId Group ID
-     * @param request Add member request
+     * @param userId User ID to add
      * @return MemberResponse
      */
-    MemberResponse addMember(UUID groupId, AddMemberRequest request);
+    MemberResponse addMember(Long groupId, Long userId);
     
     /**
-     * Assign role to a group member.
-     * Authorization: ADMIN only
-     * 
-     * Business rules:
-     * - If assigning LEADER, old leader is auto-demoted to MEMBER
-     * - Must run in a single transaction
-     * 
+     * Get all members of a group
      * @param groupId Group ID
-     * @param userId User ID
-     * @param request Assign role request
+     * @return List of MemberResponse
+     */
+    List<MemberResponse> getGroupMembers(Long groupId);
+    
+    /**
+     * Promote member to LEADER
+     * @param groupId Group ID
+     * @param userId User ID to promote
      * @return Updated MemberResponse
      */
-    MemberResponse assignRole(UUID groupId, Long userId, AssignRoleRequest request);
+    MemberResponse promoteToLeader(Long groupId, Long userId);
     
     /**
-     * Remove a member from a group (soft delete).
-     * Authorization: ADMIN only
-     * 
-     * Business rules:
-     * - Cannot remove LEADER if group has other members
-     * 
+     * Demote LEADER to MEMBER
      * @param groupId Group ID
-     * @param userId User ID
+     * @param userId User ID to demote
+     * @return Updated MemberResponse
      */
-    void removeMember(UUID groupId, Long userId);
+    MemberResponse demoteToMember(Long groupId, Long userId);
     
     /**
-     * Get all members of a group.
-     * Authorization: AUTHENTICATED
-     * 
+     * Remove a member from group (soft delete)
      * @param groupId Group ID
-     * @param role Optional role filter
-     * @return GroupMembersResponse
+     * @param userId User ID to remove
+     * @param deletedByUserId User ID who performs the deletion
      */
-    GroupMembersResponse getGroupMembers(UUID groupId, GroupRole role);
+    void removeMember(Long groupId, Long userId, Long deletedByUserId);
 }

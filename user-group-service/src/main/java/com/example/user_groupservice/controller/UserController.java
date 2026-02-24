@@ -22,13 +22,13 @@ import java.util.stream.Collectors;
  * REST Controller for user operations.
  * 
  * Authorization:
- * - GET /users/{userId}: AUTHENTICATED (ADMIN: all, LECTURER: students, STUDENT: self)
- * - PUT /users/{userId}: ADMIN or SELF
- * - GET /users: ADMIN only
- * - GET /users/{userId}/groups: AUTHENTICATED (same rules as getUserById)
+ * - GET /api/users/{userId}: AUTHENTICATED (ADMIN: all, LECTURER: students, STUDENT: self)
+ * - PUT /api/users/{userId}: ADMIN or SELF
+ * - GET /api/users: ADMIN only
+ * - GET /api/users/{userId}/groups: AUTHENTICATED (same rules as getUserById)
  */
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/api/users")
 @RequiredArgsConstructor
 @Slf4j
 public class UserController {

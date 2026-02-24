@@ -5,95 +5,107 @@
 server:
   port: ${SERVER_PORT:8082}
   shutdown: graceful
-  # servlet:
-  #   context-path: /api
 
 spring:
   application:
     name: usergroup-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
 
   lifecycle:
     timeout-per-shutdown-phase: 30s
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/samt_usergroup?serverTimezone=UTC&ApplicationName=usergroup-service}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/samt_usergroup}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:12345}
     driver-class-name: org.postgresql.Driver
-    hikari:
-      connection-timeout: 30000
-      maximum-pool-size: ${DB_POOL_SIZE:10}
-      minimum-idle: ${DB_POOL_MIN_IDLE:2}
-      idle-timeout: 600000
-      max-lifetime: 1800000
-      leak-detection-threshold: 60000
 
   jpa:
     hibernate:
-      ddl-auto: ${DDL_AUTO:validate}
-    show-sql: ${SHOW_SQL:false}
+      ddl-auto: update
     open-in-view: false
+    show-sql: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-        jdbc:
-          time_zone: UTC
-          batch_size: 20
-        order_inserts: true
-        order_updates: true
+
 
   flyway:
     enabled: true
-    locations: classpath:db/migration
+    locations: classpath:db/migration/usergroup
 
-# JWT Configuration - MUST match identity-service
+  kafka:
+    enabled: ${KAFKA_ENABLED:true}  # Default disabled for local dev
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      auto-offset-reset: earliest
+      enable-auto-commit: true
+      group-id: usergroup-service
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+# JWT
 jwt:
   secret: ${JWT_SECRET:samt-super-secret-key-for-jwt-hs256-algorithm-minimum-32-chars}
 
-# gRPC Configuration
+# gRPC
 grpc:
-  # gRPC Server - Expose User-Group Service APIs to other services
   server:
-    port: ${GRPC_SERVER_PORT:9092}
-    # Enable keepalive for long-running connections
+    port: ${GRPC_SERVER_PORT:9095}
     keep-alive-time: 30s
     keep-alive-timeout: 10s
     permit-keep-alive-without-calls: true
-
-  # gRPC Client - Identity Service Integration
+    max-inbound-message-size: 4MB
   client:
     identity-service:
       address: static://${IDENTITY_SERVICE_GRPC_HOST:localhost}:${IDENTITY_SERVICE_GRPC_PORT:9091}
       negotiationType: plaintext
-      deadline-seconds: 5
+      enable-keep-alive: true
+      keep-alive-time: 30s
+      keep-alive-timeout: 10s
 
+# Resilience4j
+resilience4j:
+  circuitbreaker:
+    instances:
+      identityService:
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
 
+  retry:
+    instances:
+      identityService:
+        maxAttempts: 3
+        waitDuration: 500ms
+
+# Management
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
-  endpoint:
-    health:
-      show-details: when-authorized
+        include: health,info
 
-# OpenAPI Configuration
+# Swagger
 springdoc:
-  api-docs:
-    path: /v3/api-docs
   swagger-ui:
-    path: /swagger-ui.html
     enabled: true
-    operations-sorter: method
-    tags-sorter: alpha
 
 logging:
   level:
-    root: ${LOG_LEVEL:INFO}
-    com.example.user_groupservice: ${LOG_LEVEL:DEBUG}
-    org.hibernate.SQL: ${SQL_LOG_LEVEL:WARN}
-    org.springframework.security: DEBUG
+    root: INFO
+    com.example.user_groupservice: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql: TRACE
+    io.grpc: WARN
 
 ---
 # ==============================================
@@ -105,14 +117,28 @@ spring:
       on-profile: docker
 
   datasource:
-    url: jdbc:postgresql://postgres-core:5432/samt_usergroup?serverTimezone=UTC&ApplicationName=usergroup-service
+    url: jdbc:postgresql://postgres-usergroup:5432/samt_usergroup?serverTimezone=UTC&ApplicationName=usergroup-service
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+
+  kafka:
+    enabled: ${KAFKA_ENABLED:true}  # Enabled by default in Docker
+    bootstrap-servers: kafka:29092
+
+grpc:
+  server:
+    port: 9095  # Keep consistent gRPC port
+  client:
+    identity-service:
+      address: static://identity-service:9091
+      negotiationType: plaintext
 
 server:
-  port: 8080
+  port: 8082  # Keep consistent REST API port
 
 logging:
   level:
     root: INFO
     com.example.user_groupservice: INFO
-    org.springframework.security: INFO
-
+    io.grpc: WARN

@@ -48,6 +48,15 @@ public class ForbiddenException extends BaseException {
     }
     
     /**
+     * Lecturer can only view students they supervise.
+     * Privacy enhancement: LECTURER can only access students in groups they teach.
+     */
+    public static ForbiddenException lecturerCanOnlyViewSupervisedStudents() {
+        return new ForbiddenException("LECTURER_CANNOT_VIEW_UNSUPERVISED_STUDENT",
+            "Lecturer can only view students in groups they supervise");
+    }
+    
+    /**
      * Role not allowed for this operation.
      */
     public static ForbiddenException roleNotAllowed(String requiredRole) {

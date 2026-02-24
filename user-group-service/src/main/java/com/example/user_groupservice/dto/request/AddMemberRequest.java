@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 
 /**
  * Request DTO for adding a member to a group.
+ * All members are added with MEMBER role by default.
+ * Use the promote endpoint to assign LEADER role.
  */
 @Data
 @Builder
@@ -17,7 +19,4 @@ public class AddMemberRequest {
     
     @NotNull(message = "User ID is required")
     private Long userId;
-    
-    @NotNull(message = "isLeader is required")
-    private Boolean isLeader;
 }

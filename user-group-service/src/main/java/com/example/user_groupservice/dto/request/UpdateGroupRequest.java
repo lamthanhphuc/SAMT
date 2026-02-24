@@ -9,8 +9,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.UUID;
-
 /**
  * Request DTO for updating a group.
  * Note: Semester is immutable and cannot be updated.

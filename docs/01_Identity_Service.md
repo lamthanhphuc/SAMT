@@ -471,7 +471,9 @@ public class User {
 
 ### Admin Endpoints
 
-**Authorization:** All endpoints require `ROLE_ADMIN`
+**Authorization:** All endpoints require ADMIN role
+
+> **Note:** ROLE_ prefix is Spring Security internal. API documentation uses plain role names.
 
 #### 5. Create User (Admin)
 
@@ -1314,7 +1316,7 @@ public LoginResponse refreshToken(String oldToken) {
 - Trusts all incoming calls
 
 **Production Deployment:**
-- gRPC port (9090) MUST NOT be exposed to internet
+- gRPC port (9091) MUST NOT be exposed to internet
 - Use Kubernetes network policies to restrict access
 - Future: Add mTLS for service-to-service auth
 

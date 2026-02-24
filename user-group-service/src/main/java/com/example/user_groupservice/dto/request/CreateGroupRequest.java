@@ -9,12 +9,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.UUID;
-
 /**
  * Request DTO for creating a new group.
  * Group name must follow format: [A-Z]{2,4}[0-9]{2,4}-G[0-9]+
- * Semester must follow format: (Spring|Summer|Fall|Winter)[0-9]{4}
  */
 @Data
 @Builder
@@ -27,9 +24,8 @@ public class CreateGroupRequest {
     @Pattern(regexp = "^[A-Z]{2,4}[0-9]{2,4}-G[0-9]+$", message = "Invalid group name format. Expected: SE1705-G1")
     private String groupName;
     
-    @NotBlank(message = "Semester is required")
-    @Pattern(regexp = "^(Spring|Summer|Fall|Winter)[0-9]{4}$", message = "Invalid semester format. Expected: Spring2026, Fall2025")
-    private String semester;
+    @NotNull(message = "Semester ID is required")
+    private Long semesterId;
     
     @NotNull(message = "Lecturer ID is required")
     private Long lecturerId;

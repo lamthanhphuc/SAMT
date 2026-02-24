@@ -8,14 +8,14 @@ import com.example.user_groupservice.dto.response.GroupListResponse;
 import com.example.user_groupservice.dto.response.GroupResponse;
 import com.example.user_groupservice.dto.response.PageResponse;
 import com.example.user_groupservice.entity.Group;
-import com.example.user_groupservice.entity.UserGroup;
+import com.example.user_groupservice.entity.Semester;
+import com.example.user_groupservice.entity.UserSemesterMembership;
 import com.example.user_groupservice.exception.*;
 import com.example.user_groupservice.grpc.*;
 import com.example.user_groupservice.repository.GroupRepository;
-import com.example.user_groupservice.repository.UserGroupRepository;
+import com.example.user_groupservice.repository.SemesterRepository;
+import com.example.user_groupservice.repository.UserSemesterMembershipRepository;
 import com.example.user_groupservice.service.GroupService;
-import io.grpc.Status;
-import io.grpc.StatusRuntimeException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -25,7 +25,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -39,52 +38,51 @@ import java.util.stream.Collectors;
 public class GroupServiceImpl implements GroupService {
     
     private final GroupRepository groupRepository;
-    private final UserGroupRepository userGroupRepository;
+    private final UserSemesterMembershipRepository membershipRepository;
+    private final SemesterRepository semesterRepository;
     private final IdentityServiceClient identityServiceClient;
+    private final GrpcExceptionHandler grpcExceptionHandler;
     
     @Override
     @Transactional
     public GroupResponse createGroup(CreateGroupRequest request) {
-        log.info("Creating group: groupName={}, semester={}", 
-                request.getGroupName(), request.getSemester());
+        log.info("Creating group: groupName={}, semesterId={}", 
+                request.getGroupName(), request.getSemesterId());
         
         // Check group name uniqueness in semester
-        if (groupRepository.existsByGroupNameAndSemester(
-                request.getGroupName(), request.getSemester())) {
+        if (groupRepository.existsByGroupNameAndSemesterId(
+                request.getGroupName(), request.getSemesterId())) {
             throw ConflictException.groupNameDuplicate(
-                    request.getGroupName(), request.getSemester());
+                    request.getGroupName(), request.getSemesterId().toString());
         }
         
         // Validate lecturer exists and has LECTURER role via gRPC
-        try {
-            VerifyUserResponse verification = identityServiceClient.verifyUserExists(
-                    request.getLecturerId());
-            
-            if (!verification.getExists()) {
-                throw ResourceNotFoundException.lecturerNotFound(request.getLecturerId());
-            }
-            
-            if (!verification.getActive()) {
-                throw new ConflictException("LECTURER_INACTIVE", 
-                        "Lecturer account is not active");
-            }
-            
-            // Verify LECTURER role
-            GetUserRoleResponse roleResponse = identityServiceClient.getUserRole(
-                    request.getLecturerId());
-            
-            if (roleResponse.getRole() != UserRole.LECTURER) {
-                throw new ConflictException("INVALID_ROLE", 
-                        "User is not a lecturer: " + roleResponse.getRole());
-            }
-        } catch (StatusRuntimeException e) {
-            log.error("gRPC call failed when validating lecturer: {}", e.getStatus());
-            throw new RuntimeException("Failed to validate lecturer: " + e.getStatus().getCode());
+        VerifyUserResponse verification = grpcExceptionHandler.handleGrpcCall(
+                () -> identityServiceClient.verifyUserExists(request.getLecturerId()),
+                "verifyLecturerExists[createGroup]");
+        
+        if (!verification.getExists()) {
+            throw ResourceNotFoundException.lecturerNotFound(request.getLecturerId());
+        }
+        
+        if (!verification.getActive()) {
+            throw new ConflictException("LECTURER_INACTIVE", 
+                    "Lecturer account is not active");
+        }
+        
+        // Verify LECTURER role
+        GetUserRoleResponse roleResponse = grpcExceptionHandler.handleGrpcCall(
+                () -> identityServiceClient.getUserRole(request.getLecturerId()),
+                "getUserRole[createGroup]");
+        
+        if (roleResponse.getRole() != UserRole.LECTURER) {
+            throw new ConflictException("INVALID_ROLE", 
+                    "User is not a lecturer: " + roleResponse.getRole());
         }
         
         Group group = Group.builder()
                 .groupName(request.getGroupName())
-                .semester(request.getSemester())
+                .semesterId(request.getSemesterId())
                 .lecturerId(request.getLecturerId())
                 .build();
         
@@ -94,45 +92,49 @@ public class GroupServiceImpl implements GroupService {
         // Fetch lecturer info for response
         GetUserResponse lecturerInfo = identityServiceClient.getUser(request.getLecturerId());
         
+        // Resolve semester code from local database
+        String semesterCode = resolveSemesterCode(savedGroup.getSemesterId());
+        
         return GroupResponse.builder()
                 .id(savedGroup.getId())
                 .groupName(savedGroup.getGroupName())
-                .semester(savedGroup.getSemester())
+                .semesterId(savedGroup.getSemesterId())
+                .semesterCode(semesterCode)
                 .lecturerId(savedGroup.getLecturerId())
                 .lecturerName(lecturerInfo.getFullName())
                 .build();
     }
     
     @Override
-    public GroupDetailResponse getGroupById(UUID groupId) {
+    public GroupDetailResponse getGroupById(Long groupId) {
         log.info("Getting group details: groupId={}", groupId);
         
-        Group group = groupRepository.findById(groupId)
+        Group group = groupRepository.findByIdAndNotDeleted(groupId)
                 .orElseThrow(() -> ResourceNotFoundException.groupNotFound(groupId));
         
         // Fetch members
-        List<UserGroup> memberships = userGroupRepository.findAllByGroupId(groupId);
+        List<UserSemesterMembership> memberships = membershipRepository.findAllByGroupId(groupId);
         
         // Batch fetch user info from Identity Service (avoid N+1 calls)
         List<Long> userIds = memberships.stream()
-                .map(UserGroup::getUserId)
+                .map(m -> m.getId().getUserId())
                 .toList();
         
         GetUsersResponse usersResponse = identityServiceClient.getUsers(userIds);
         
         // Map user info to member list
         List<GroupDetailResponse.MemberInfo> members = memberships.stream()
-                .map(ug -> {
+                .map(m -> {
                     GetUserResponse userInfo = usersResponse.getUsersList().stream()
-                            .filter(u -> Long.parseLong(u.getUserId()) == ug.getUserId())
+                            .filter(u -> Long.parseLong(u.getUserId()) == m.getId().getUserId())
                             .findFirst()
                             .orElse(null);
                     
                     return GroupDetailResponse.MemberInfo.builder()
-                            .userId(ug.getUserId())
+                            .userId(m.getId().getUserId())
                             .fullName(userInfo != null ? userInfo.getFullName() : "<Deleted User>")
                             .email(userInfo != null && !userInfo.getDeleted() ? userInfo.getEmail() : null)
-                            .role(ug.getRole().name())
+                            .role(m.getGroupRole().name())
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -140,10 +142,14 @@ public class GroupServiceImpl implements GroupService {
         // Fetch lecturer info
         GetUserResponse lecturerInfo = identityServiceClient.getUser(group.getLecturerId());
         
+        // Resolve semester code from local database
+        String semesterCode = resolveSemesterCode(group.getSemesterId());
+        
         return GroupDetailResponse.builder()
                 .id(group.getId())
                 .groupName(group.getGroupName())
-                .semester(group.getSemester())
+                .semesterId(group.getSemesterId())
+                .semesterCode(semesterCode)
                 .lecturer(GroupDetailResponse.LecturerInfo.builder()
                         .id(group.getLecturerId())
                         .fullName(lecturerInfo.getDeleted() ? "<Deleted User>" : lecturerInfo.getFullName())
@@ -156,14 +162,14 @@ public class GroupServiceImpl implements GroupService {
     
     @Override
     public PageResponse<GroupListResponse> listGroups(int page, int size,
-                                                      String semester, Long lecturerId) {
-        log.info("Listing groups: page={}, size={}, semester={}, lecturerId={}", 
-                page, size, semester, lecturerId);
+                                                      Long semesterId, Long lecturerId) {
+        log.info("Listing groups: page={}, size={}, semesterId={}, lecturerId={}", 
+                page, size, semesterId, lecturerId);
         
         PageRequest pageRequest = PageRequest.of(page, size, 
-                Sort.by("semester").descending().and(Sort.by("groupName").ascending()));
+                Sort.by("semesterId").descending().and(Sort.by("groupName").ascending()));
         
-        Page<Group> groupPage = groupRepository.findByFilters(semester, lecturerId, pageRequest);
+        Page<Group> groupPage = groupRepository.findByFilters(semesterId, lecturerId, pageRequest);
         
         // Batch fetch all lecturer info
         List<Long> lecturerIds = groupPage.getContent().stream()
@@ -171,18 +177,26 @@ public class GroupServiceImpl implements GroupService {
                 .distinct()
                 .toList();
         
-        GetUsersResponse lecturersResponse;
-        try {
-            lecturersResponse = identityServiceClient.getUsers(lecturerIds);
-        } catch (StatusRuntimeException e) {
-            log.error("gRPC call failed when getting lecturers: {}", e.getStatus());
-            throw new RuntimeException("Failed to get lecturer info: " + e.getStatus().getCode());
-        }
+        GetUsersResponse lecturersResponse = grpcExceptionHandler.handleGrpcCall(
+                () -> identityServiceClient.getUsers(lecturerIds),
+                "getUsers[listGroups]");
+        
+        // Batch fetch member counts for all groups (prevents N+1 query)
+        List<Long> groupIds = groupPage.getContent().stream()
+                .map(Group::getId)
+                .toList();
+        
+        var memberCounts = membershipRepository.countMembersByGroupIds(groupIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        com.example.user_groupservice.repository.UserSemesterMembershipRepository.GroupMemberCount::getGroupId,
+                        com.example.user_groupservice.repository.UserSemesterMembershipRepository.GroupMemberCount::getMemberCount
+                ));
         
         // Build responses with gRPC data
         List<GroupListResponse> groups = groupPage.getContent().stream()
                 .map(group -> {
-                    long memberCount = userGroupRepository.countAllMembersByGroupId(group.getId());
+                    long memberCount = memberCounts.getOrDefault(group.getId(), 0L);
                     
                     GetUserResponse lecturer = lecturersResponse.getUsersList().stream()
                             .filter(u -> Long.parseLong(u.getUserId()) == group.getLecturerId())
@@ -193,10 +207,14 @@ public class GroupServiceImpl implements GroupService {
                             ? lecturer.getFullName() 
                             : "<Deleted User>";
                     
+                    // Resolve semester code from local database
+                    String semesterCode = resolveSemesterCode(group.getSemesterId());
+                    
                     return GroupListResponse.builder()
                             .id(group.getId())
                             .groupName(group.getGroupName())
-                            .semester(group.getSemester())
+                            .semesterId(group.getSemesterId())
+                            .semesterCode(semesterCode)
                             .lecturerName(lecturerName)
                             .memberCount((int) memberCount)
                             .build();
@@ -214,40 +232,37 @@ public class GroupServiceImpl implements GroupService {
     
     @Override
     @Transactional
-    public GroupResponse updateGroup(UUID groupId, UpdateGroupRequest request) {
+    public GroupResponse updateGroup(Long groupId, UpdateGroupRequest request) {
         log.info("Updating group: groupId={}", groupId);
         
-        Group group = groupRepository.findById(groupId)
+        Group group = groupRepository.findByIdAndNotDeleted(groupId)
                 .orElseThrow(() -> ResourceNotFoundException.groupNotFound(groupId));
         
         // Check if new group name conflicts with existing (excluding self)
         if (!group.getGroupName().equals(request.getGroupName())) {
-            if (groupRepository.existsByGroupNameAndSemester(
-                    request.getGroupName(), group.getSemester())) {
+            if (groupRepository.existsByGroupNameAndSemesterId(
+                    request.getGroupName(), group.getSemesterId())) {
                 throw ConflictException.groupNameDuplicate(
-                        request.getGroupName(), group.getSemester());
+                        request.getGroupName(), group.getSemesterId().toString());
             }
         }
         
         // Validate new lecturer exists and has LECTURER role via gRPC
-        try {
-            VerifyUserResponse verification = identityServiceClient.verifyUserExists(
-                    request.getLecturerId());
-            
-            if (!verification.getExists()) {
-                throw ResourceNotFoundException.lecturerNotFound(request.getLecturerId());
-            }
-            
-            GetUserRoleResponse roleResponse = identityServiceClient.getUserRole(
-                    request.getLecturerId());
-            
-            if (roleResponse.getRole() != UserRole.LECTURER) {
-                throw new ConflictException("INVALID_ROLE", 
-                        "User is not a lecturer: " + roleResponse.getRole());
-            }
-        } catch (StatusRuntimeException e) {
-            log.error("gRPC call failed when validating lecturer: {}", e.getStatus());
-            throw new RuntimeException("Failed to validate lecturer: " + e.getStatus().getCode());
+        VerifyUserResponse verification = grpcExceptionHandler.handleGrpcCall(
+                () -> identityServiceClient.verifyUserExists(request.getLecturerId()),
+                "verifyLecturerExists[updateGroup]");
+        
+        if (!verification.getExists()) {
+            throw ResourceNotFoundException.lecturerNotFound(request.getLecturerId());
+        }
+        
+        GetUserRoleResponse roleResponse = grpcExceptionHandler.handleGrpcCall(
+                () -> identityServiceClient.getUserRole(request.getLecturerId()),
+                "getUserRole[updateGroup]");
+        
+        if (roleResponse.getRole() != UserRole.LECTURER) {
+            throw new ConflictException("INVALID_ROLE", 
+                    "User is not a lecturer: " + roleResponse.getRole());
         }
         
         // Update fields (semester is immutable)
@@ -260,10 +275,14 @@ public class GroupServiceImpl implements GroupService {
         // Fetch lecturer info for response
         GetUserResponse lecturerInfo = identityServiceClient.getUser(request.getLecturerId());
         
+        // Resolve semester code from local database
+        String semesterCode = resolveSemesterCode(savedGroup.getSemesterId());
+        
         return GroupResponse.builder()
                 .id(savedGroup.getId())
                 .groupName(savedGroup.getGroupName())
-                .semester(savedGroup.getSemester())
+                .semesterId(savedGroup.getSemesterId())
+                .semesterCode(semesterCode)
                 .lecturerId(savedGroup.getLecturerId())
                 .lecturerName(lecturerInfo.getFullName())
                 .build();
@@ -271,15 +290,15 @@ public class GroupServiceImpl implements GroupService {
     
     @Override
     @Transactional
-    public void deleteGroup(UUID groupId) {
-        log.info("Deleting group (soft): groupId={}", groupId);
+    public void deleteGroup(Long groupId, Long deletedByUserId) {
+        log.info("Deleting group (soft): groupId={}, deletedBy={}", groupId, deletedByUserId);
         
-        Group group = groupRepository.findById(groupId)
+        Group group = groupRepository.findByIdAndNotDeleted(groupId)
                 .orElseThrow(() -> ResourceNotFoundException.groupNotFound(groupId));
         
-        // Business Rule: Prevent deletion if group has members
+        // Business Rule: Prevent deletion if group has members (INCLUDING LEADER)
         // This follows "least surprise" principle and prevents accidental data loss
-        long memberCount = userGroupRepository.countAllMembersByGroupId(groupId);
+        long memberCount = membershipRepository.countAllMembersByGroupId(groupId);
         if (memberCount > 0) {
             log.warn("Cannot delete group {} - has {} members", groupId, memberCount);
             throw new ConflictException("CANNOT_DELETE_GROUP_WITH_MEMBERS",
@@ -287,51 +306,47 @@ public class GroupServiceImpl implements GroupService {
         }
         
         // Soft delete the group (only if empty)
-        group.softDelete();
+        group.softDelete(deletedByUserId);
         groupRepository.save(group);
         
-        log.info("Group deleted successfully: groupId={}", groupId);
+        log.info("Group deleted successfully: groupId={}, deletedBy={}", groupId, deletedByUserId);
     }
     
     @Override
     @Transactional
-    public GroupResponse updateGroupLecturer(UUID groupId, UpdateLecturerRequest request) {
+    public GroupResponse updateGroupLecturer(Long groupId, UpdateLecturerRequest request) {
         log.info("UC27 - Updating group lecturer: groupId={}, newLecturerId={}", 
                 groupId, request.getLecturerId());
         
         // 1. Validate group exists
-        Group group = groupRepository.findById(groupId)
+        Group group = groupRepository.findByIdAndNotDeleted(groupId)
                 .orElseThrow(() -> ResourceNotFoundException.groupNotFound(groupId));
         
         Long oldLecturerId = group.getLecturerId();
         
         // 2. Validate new lecturer via gRPC
-        try {
-            // Check user exists and active
-            VerifyUserResponse verification = identityServiceClient.verifyUserExists(
-                    request.getLecturerId());
-            
-            if (!verification.getExists()) {
-                throw ResourceNotFoundException.lecturerNotFound(request.getLecturerId());
-            }
-            
-            if (!verification.getActive()) {
-                throw new ConflictException("LECTURER_INACTIVE", 
-                        "Lecturer account is not active");
-            }
-            
-            // Verify has LECTURER role (BR-UG-011)
-            GetUserRoleResponse roleResponse = identityServiceClient.getUserRole(
-                    request.getLecturerId());
-            
-            if (roleResponse.getRole() != UserRole.LECTURER) {
-                throw BadRequestException.invalidRole(
-                        roleResponse.getRole().name(), "LECTURER");
-            }
-            
-        } catch (StatusRuntimeException e) {
-            log.error("gRPC call failed when validating lecturer: {}", e.getStatus());
-            return handleGrpcError(e, "validate lecturer");
+        // Check user exists and active
+        VerifyUserResponse verification = grpcExceptionHandler.handleGrpcCall(
+                () -> identityServiceClient.verifyUserExists(request.getLecturerId()),
+                "verifyLecturerExists[updateLecturer]");
+        
+        if (!verification.getExists()) {
+            throw ResourceNotFoundException.lecturerNotFound(request.getLecturerId());
+        }
+        
+        if (!verification.getActive()) {
+            throw new ConflictException("LECTURER_INACTIVE", 
+                    "Lecturer account is not active");
+        }
+        
+        // Verify has LECTURER role (BR-UG-011)
+        GetUserRoleResponse roleResponse = grpcExceptionHandler.handleGrpcCall(
+                () -> identityServiceClient.getUserRole(request.getLecturerId()),
+                "getUserRole[updateLecturer]");
+        
+        if (roleResponse.getRole() != UserRole.LECTURER) {
+            throw BadRequestException.invalidRole(
+                    roleResponse.getRole().name(), "LECTURER");
         }
         
         // 3. Update lecturer (with audit log)
@@ -351,34 +366,30 @@ public class GroupServiceImpl implements GroupService {
         
         log.info("UC27 - Group lecturer updated successfully: groupId={}", groupId);
         
+        // Resolve semester code from local database
+        String semesterCode = resolveSemesterCode(group.getSemesterId());
+        
         return GroupResponse.builder()
                 .id(group.getId())
                 .groupName(group.getGroupName())
-                .semester(group.getSemester())
+                .semesterId(group.getSemesterId())
+                .semesterCode(semesterCode)
                 .lecturerId(group.getLecturerId())
                 .lecturerName(lecturerInfo.getFullName())
                 .build();
     }
     
     /**
-     * Handle gRPC errors with proper HTTP status mapping per API spec.
+     * Resolve semester code from local database.
+     * 
+     * @param semesterId Semester ID
+     * @return Semester code (e.g., "SPRING2025")
+     * @throws ResourceNotFoundException if semester not found
      */
-    private <T> T handleGrpcError(StatusRuntimeException e, String operation) {
-        Status.Code code = e.getStatus().getCode();
-        
-        switch (code) {
-            case UNAVAILABLE:
-                throw ServiceUnavailableException.identityServiceUnavailable();
-            case DEADLINE_EXCEEDED:
-                throw GatewayTimeoutException.identityServiceTimeout();
-            case NOT_FOUND:
-                throw new ResourceNotFoundException("USER_NOT_FOUND", "User not found");
-            case PERMISSION_DENIED:
-                throw new ForbiddenException("FORBIDDEN", "Access denied");
-            case INVALID_ARGUMENT:
-                throw new BadRequestException("BAD_REQUEST", "Invalid request");
-            default:
-                throw new RuntimeException("Failed to " + operation + ": " + code);
-        }
+    private String resolveSemesterCode(Long semesterId) {
+        Semester semester = semesterRepository.findById(semesterId)
+                .orElseThrow(() -> ResourceNotFoundException.semesterNotFound(semesterId));
+        return semester.getSemesterCode();
     }
+    
 }

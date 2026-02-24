@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Response DTO for user's groups.
@@ -25,9 +24,10 @@ public class UserGroupsResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class GroupInfo {
-        private UUID groupId;
+        private Long groupId;
         private String groupName;
-        private String semester;
+        private Long semesterId;
+        private String semesterCode;
         private String role;
         private String lecturerName;
     }

@@ -28,6 +28,13 @@
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
+			<dependency>
+				<groupId>io.grpc</groupId>
+				<artifactId>grpc-bom</artifactId>
+				<version>1.61.0</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 
@@ -41,6 +48,7 @@
 		<module>sync-service</module>
 		<module>user-group-service</module>
 		<module>project-config-service</module>
+		<module>common-events</module>
 
 	</modules>
 
@@ -59,6 +67,24 @@
 							</goals>
 						</execution>
 					</executions>
+				</plugin>
+				<!-- Maven Compiler Plugin to use Java 21 -->
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>3.13.0</version>
+					<configuration>
+						<source>${java.version}</source>
+						<target>${java.version}</target>
+						<release>${java.version}</release>
+						<annotationProcessorPaths>
+							<path>
+								<groupId>org.projectlombok</groupId>
+								<artifactId>lombok</artifactId>
+								<version>1.18.30</version>
+							</path>
+						</annotationProcessorPaths>
+					</configuration>
 				</plugin>
 			</plugins>
 		</pluginManagement>

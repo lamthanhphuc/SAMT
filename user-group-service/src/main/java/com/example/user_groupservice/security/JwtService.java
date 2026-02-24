@@ -36,7 +36,12 @@ public class JwtService {
             // Fallback to subject if userId claim not present
             userId = claims.getSubject();
         }
-        return Long.parseLong(userId);
+        try {
+            return Long.parseLong(userId);
+        } catch (NumberFormatException e) {
+            log.error("Invalid userId format in JWT: {}", userId, e);
+            throw new JwtException("Invalid userId format in JWT token");
+        }
     }
     
     /**

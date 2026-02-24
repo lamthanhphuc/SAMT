@@ -32,7 +32,9 @@ Hệ thống triển khai theo mô hình **Microservices** trên nền tảng **
 
 1. **Identity Service:** Quản lý xác thực, phân quyền, và thông tin người dùng (authentication, users, roles, refresh tokens).
 2. **User/Group Service:** Quản lý nhóm dự án và membership. Lấy thông tin user từ Identity Service qua **gRPC**.
-3. **Project Config Service:** Quản lý cấu hình tích hợp Jira/GitHub cho từng nhóm. Sử dụng **gRPC** để validate groups và check leadership. **No REST API** - gRPC-only communication.
+3. **Project Config Service:** Quản lý cấu hình tích hợp Jira/GitHub cho từng nhóm. Hỗ trợ **cả REST và gRPC**:
+   - **REST API:** CRUD operations cho project configs (routed via API Gateway)
+   - **gRPC:** Validate groups, check leadership, internal service communication
 4. **Sync Service (Planned):** Đảm nhận việc crawl dữ liệu từ Jira/GitHub.
 5. **AI Analysis Service (Planned):** Phân tích ngôn ngữ tự nhiên và chất lượng code.
 6. **Reporting Service (Planned):** Xuất dữ liệu ra các định dạng văn bản học thuật.
@@ -43,8 +45,8 @@ Hệ thống triển khai theo mô hình **Microservices** trên nền tảng **
   - Project Config Service ↔ User-Group Service (group validation, leadership check)
   - Sync Service ↔ Project Config Service (get decrypted tokens)
 - **Client Communication:**
-  - REST: Identity Service, User-Group Service (via API Gateway)
-  - gRPC: Project Config Service (metadata authentication: userId, roles)
+  - **REST (via API Gateway):** Identity Service, User-Group Service, Project Config Service
+  - **Authentication:** JWT validation at Gateway, headers injected to downstream services
 
 ### **2.2 Các tác nhân (User Classes)**
 
@@ -851,7 +853,7 @@ Hệ thống SAMT được thiết kế theo kiến trúc Microservices với c�
 
 **Microservices Layer:**
 - Identity Service (Port 8081, gRPC 9091)
-- User/Group Service (Port 8082, gRPC 9092)
+- User/Group Service (Port 8082, gRPC 9095)
 - Project Config Service (Port 8084)
 - Sync Service (Planned)
 - AI Analysis Service (Planned)

@@ -1,9 +1,11 @@
 package com.example.user_groupservice.exception;
 
 import com.example.user_groupservice.dto.response.ErrorResponse;
+import jakarta.persistence.OptimisticLockException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
@@ -130,6 +132,26 @@ public class GlobalExceptionHandler {
         
         ErrorResponse response = ErrorResponse.of(ex.getCode(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT).body(response);
+    }
+    
+    /**
+     * Handle Optimistic Lock exceptions (409).
+     * Occurs when concurrent updates conflict due to version mismatch.
+     * Client should refresh data and retry the operation.
+     */
+    @ExceptionHandler({
+        OptimisticLockException.class,
+        ObjectOptimisticLockingFailureException.class
+    })
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(Exception ex) {
+        log.warn("Optimistic lock failure: {}", ex.getMessage());
+        
+        ErrorResponse response = ErrorResponse.of(
+            "CONFLICT",
+            "Resource has been modified by another user. Please refresh and retry."
+        );
+        
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
     
     /**

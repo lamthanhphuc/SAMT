@@ -70,11 +70,12 @@ user-group-service/
 ├── src/main/java/com/example/user_groupservice/
 │   ├── config/               # Configuration classes
 │   │   ├── SecurityConfig.java           # JWT filter chain (no auth, only validation)
+│   │   ├── KafkaConsumerConfig.java      # Kafka consumer setup
 │   │   └── OpenApiConfig.java            # Swagger/OpenAPI config
 │   │
 │   ├── controller/           # REST API endpoints
-│   │   ├── GroupController.java          # /groups/** (group CRUD)
-│   │   ├── GroupMemberController.java    # /groups/{id}/members/** (membership ops)
+│   │   ├── GroupController.java          # /groups/** (group CRUD only)
+│   │   ├── GroupMemberController.java     # /groups/{id}/members/** (member operations)
 │   │   └── UserController.java           # /users/** (profile proxy)
 │   │
 │   ├── dto/                  # Data Transfer Objects
@@ -83,9 +84,13 @@ user-group-service/
 │   │
 │   ├── entity/               # JPA Entities
 │   │   ├── Group.java                    # groups table (soft delete)
-│   │   ├── UserGroup.java                # user_groups table (composite PK, soft delete)
-│   │   ├── UserGroupId.java              # Composite key class
+│   │   ├── Semester.java                 # semesters table
+│   │   ├── UserSemesterMembership.java   # user_semester_membership table (soft delete)
+│   │   ├── UserSemesterMembershipId.java # Composite key class
 │   │   └── [enums]                       # GroupRole, SystemRole
+│   │
+│   ├── event/                # Kafka event consumers
+│   │   └── UserDeletedEventConsumer.java # Listens to user.deleted topic
 │   │
 │   ├── exception/            # Custom exceptions + global handler
 │   │   ├── GlobalExceptionHandler.java   # REST error responses
@@ -100,7 +105,8 @@ user-group-service/
 │   │
 │   ├── repository/           # Spring Data JPA repositories
 │   │   ├── GroupRepository.java
-│   │   └── UserGroupRepository.java
+│   │   ├── SemesterRepository.java
+│   │   └── UserSemesterMembershipRepository.java
 │   │
 │   ├── security/             # Security infrastructure
 │   │   ├── JwtAuthenticationFilter.java  # JWT validation only (no user loading)
@@ -115,9 +121,14 @@ user-group-service/
 │   └── user_service.proto    # gRPC contract (copied from Identity Service)
 │
 └── src/main/resources/
-    ├── application.yml       # Configuration (DB, gRPC client)
-    └── [other configs]
+    ├── application.yml       # Configuration (DB, gRPC client, Kafka)
+    └── db/migration/         # Flyway migrations
+        └── V1__initial_schema.sql
 ```
+
+**Controller Separation:**
+- **GroupController**: Group CRUD operations (create, read, update, delete)
+- **GroupMemberController**: Member management (add, remove, promote, demote) - SEPARATE controller at `/groups/{groupId}/members/**`
 
 ### Request Flow Diagram
 
@@ -175,33 +186,72 @@ PostgreSQL (usergroup_db)         Identity Service (gRPC)
 ### Entity Relationship Diagram
 
 ```
-┌─────────────────────────────────┐
-│          groups                 │
-├─────────────────────────────────┤
-│ PK id (UUID)                    │
-│ UK group_name, semester         │ ← Composite unique constraint
-│    lecturer_id (BIGINT)         │ ← No FK, validated via gRPC
-│    semester (VARCHAR 20)        │
-│    deleted_at (TIMESTAMP)       │ ← Soft delete
-│    created_at (TIMESTAMP)       │
-│    updated_at (TIMESTAMP)       │
-└─────────────────────────────────┘
-         ↑ 1
-         │
-         │ N
-┌─────────────────────────────────┐
-│      user_groups                │
-├─────────────────────────────────┤
-│ PK user_id (BIGINT)             │ ← Composite PK
-│ PK group_id (UUID)              │ ← Composite PK
-│    role (ENUM: LEADER, MEMBER)  │
-│    deleted_at (TIMESTAMP)       │ ← Soft delete
-│    created_at (TIMESTAMP)       │
-└─────────────────────────────────┘
-   user_id references Identity Service User (no FK constraint)
+                     ┌─────────────────────────────────┐
+                     │        semesters              │
+                     ├─────────────────────────────────┤
+                     │ PK id (BIGINT)             │
+                     │ UK semester_code (VARCHAR) │
+                     │    semester_name (VARCHAR) │
+                     │    start_date (DATE)       │
+                     │    end_date (DATE)         │
+                     │    is_active (BOOLEAN)     │
+                     │    created_at (TIMESTAMP)  │
+                     │    updated_at (TIMESTAMP)  │
+                     └─────────────────────────────────┘
+                              │
+                              │ 1
+                              │
+                              │ N
+┌─────────────────────────────────┐              ┌─────────────────────────────────┐
+│          groups             │              │ user_semester_membership   │
+├─────────────────────────────────┤              ├─────────────────────────────────┤
+│ PK id (BIGINT)             │              │ PK user_id (BIGINT)       │ ← Composite PK
+│ UK group_name, semester_id │ ← Unique    │ PK semester_id (BIGINT)   │ ← Composite PK
+│ FK semester_id (BIGINT) ────┼──────────────┤ FK semester_id (BIGINT)   │
+│    lecturer_id (BIGINT)    │              │ FK group_id (BIGINT)      │
+│    created_at (TIMESTAMP)  │              │    group_role (VARCHAR)    │
+│    updated_at (TIMESTAMP)  │              │    joined_at (TIMESTAMP)   │
+│    deleted_at (TIMESTAMP)  │ ← Soft Del  │    updated_at (TIMESTAMP)  │
+│    deleted_by (BIGINT)     │              │    deleted_at (TIMESTAMP)  │ ← Soft Delete
+└─────────────────────────────────┘              │    deleted_by (BIGINT)     │
+         │                             └─────────────────────────────────┘
+         │ 1                                    │
+         └───────────────── N ────────────────────┘
+
+⚠️  CRITICAL DESIGN NOTES:
+1. NO users table in this service - user_id & lecturer_id are logical references to Identity Service
+2. NO foreign key constraints to Identity Service (microservices boundary)
+3. User validation via gRPC calls (VerifyUserExists, GetUserRole)
+4. Composite PK (user_id, semester_id) enforces "one group per student per semester" rule
+5. Unique index on (group_id) WHERE group_role='LEADER' enforces "one leader per group"
 ```
 
-**CRITICAL DESIGN:** No foreign key constraints to Identity Service database. User validation via gRPC.
+### Logical Cross-Service References
+
+| Field | Located In | References | Validation Method |
+|-------|------------|------------|-------------------|
+| `lecturer_id` | groups | Identity Service User | gRPC `VerifyUserExists()` |
+| `user_id` | user_semester_membership | Identity Service User | gRPC `VerifyUserExists()` |
+| `deleted_by` | groups, user_semester_membership | Identity Service User | Audit only (no validation) |
+
+### Entity: `Semester`
+
+**File:** [`Semester.java`](../user-group-service/src/main/java/com/example/user_groupservice/entity/Semester.java)
+
+**Key Fields:**
+
+| Field         | Type      | Constraints            | Description                     |
+|---------------|-----------|------------------------|---------------------------------|
+| `id`          | Long      | PK, AUTO_INCREMENT     | Semester ID                     |
+| `semesterCode`| String    | UNIQUE, NOT NULL       | e.g., "SPRING2025", "FALL2024"  |
+| `semesterName`| String    | NOT NULL               | e.g., "Spring Semester 2025"    |
+| `startDate`   | LocalDate | NOT NULL               | Semester start date             |
+| `endDate`     | LocalDate | NOT NULL               | Semester end date               |
+| `isActive`    | Boolean   | DEFAULT TRUE           | Current active semester flag    |
+| `createdAt`   | Instant   | DEFAULT NOW            | Record creation timestamp       |
+| `updatedAt`   | Instant   | DEFAULT NOW            | Record update timestamp         |
+
+**Business Rule:** Only one semester should be marked as `isActive=true` at a time (managed by application logic).
 
 ### Entity: `Group`
 
@@ -211,85 +261,109 @@ PostgreSQL (usergroup_db)         Identity Service (gRPC)
 
 | Field        | Type    | Constraints                  | Description                        |
 |--------------|---------|------------------------------|------------------------------------|
-| `id`         | UUID    | PK, AUTO_GENERATED           | Group ID                           |
-| `groupName`  | String  | NOT NULL, max 50 chars       | Group name (e.g., "Team A")        |
-| `semester`   | String  | NOT NULL, max 20 chars       | Semester (e.g., "2024-FALL")       |
-| `lecturerId` | Long    | NOT NULL                     | References Identity Service User   |
+| `id`         | Long    | PK, AUTO_INCREMENT           | Group ID                           |
+| `groupName`  | String  | NOT NULL, max 100 chars      | Group name (e.g., "SE1705-G1")     |
+| `semesterId` | Long    | FK to semesters(id)          | References semesters table         |
+| `lecturerId` | Long    | NOT NULL                     | Logical ref to Identity Service    |
+| `createdAt`  | Instant | DEFAULT NOW                  | Record creation timestamp          |
+| `updatedAt`  | Instant | DEFAULT NOW                  | Record update timestamp            |
 | `deletedAt`  | Instant | NULLABLE                     | Soft delete timestamp              |
+| `deletedBy`  | Long    | NULLABLE                     | Logical ref to Identity Service    |
 
 **Unique Constraint:**
-```java
-@UniqueConstraint(name = "uq_group_semester", columnNames = {"group_name", "semester"})
+```sql
+CREATE UNIQUE INDEX idx_groups_name_semester_unique 
+    ON groups(group_name, semester_id) 
+    WHERE deleted_at IS NULL;
 ```
 
-**Business Rule:** Group name must be unique within a semester (e.g., "Team A" can exist in both "2024-FALL" and "2025-SPRING").
+**Business Rule:** Group name must be unique within a semester (soft-delete aware).
+
+\u26a0\ufe0f **CRITICAL - Schema Alignment:**
+- Database uses `id BIGSERIAL` (maps to `Long` in Java, NOT `UUID`)
+- Database uses `semester_id BIGINT` FK (maps to `Long semesterId`, NOT `String semester`)
+- Entity MUST use `Long id` and `Long semesterId` to match schema
+- Repository MUST extend `JpaRepository<Group, Long>` (NOT `JpaRepository<Group, UUID>`)
+- **Verification Required**: See ARCHITECTURE_ISSUES.md for manual verification steps
 
 **Soft Delete Behavior:**
 
 ```java
 @Entity
+@Table(name = "groups")
 @SQLRestriction("deleted_at IS NULL")
 public class Group {
-    public void softDelete() {
+    public void softDelete(Long deletedByUserId) {
         this.deletedAt = Instant.now();
+        this.deletedBy = deletedByUserId;
         this.updatedAt = Instant.now();
     }
 }
 ```
 
-**Cascade Soft Delete:** When a group is soft-deleted, all its memberships (`user_groups`) are also soft-deleted (handled at service layer, not database cascade).
+**Cascade Soft Delete:** When a group is soft-deleted, all its memberships are also soft-deleted (handled at service layer).
 
 ---
 
-### Entity: `UserGroup`
+### Entity: `UserSemesterMembership`
 
-**File:** [`UserGroup.java`](../user-group-service/src/main/java/com/example/user_groupservice/entity/UserGroup.java)
+**File:** [`UserSemesterMembership.java`](../user-group-service/src/main/java/com/example/user_groupservice/entity/UserSemesterMembership.java)
 
-**Composite Primary Key:** `(userId, groupId)`
+**Composite Primary Key:** `(userId, semesterId)` 
+
+**This enforces the critical business rule: One student can only belong to ONE group per semester.**
 
 **Key Fields:**
 
-| Field      | Type      | Constraints                | Description                       |
-|------------|-----------|----------------------------|-----------------------------------|
-| `userId`   | Long      | PK, NOT NULL               | References Identity Service User  |
-| `groupId`  | UUID      | PK, NOT NULL               | References local Group entity     |
-| `role`     | GroupRole | NOT NULL (LEADER, MEMBER)  | Member role in this group         |
-| `deletedAt`| Instant   | NULLABLE                   | Soft delete timestamp             |
+| Field        | Type      | Constraints                | Description                       |
+|--------------|-----------|----------------------------|-----------------------------------|
+| `userId`     | Long      | PK, NOT NULL               | Logical ref to Identity Service   |
+| `semesterId` | Long      | PK & FK to semesters(id)   | References semesters table        |
+| `groupId`    | Long      | FK to groups(id)           | References groups table           |
+| `groupRole`  | String    | CHECK (LEADER, MEMBER)     | Member role in group              |
+| `joinedAt`   | Instant   | DEFAULT NOW                | When user joined group            |
+| `updatedAt`  | Instant   | DEFAULT NOW                | Record update timestamp           |
+| `deletedAt`  | Instant   | NULLABLE                   | Soft delete timestamp             |
+| `deletedBy`  | Long      | NULLABLE                   | Logical ref to Identity Service   |
+
+**Composite PK:**
+```java
+@Embeddable
+public class UserSemesterMembershipId implements Serializable {
+    private Long userId;
+    private Long semesterId;
+}
+```
 
 **Business Rules:**
 
 1. **One LEADER per group:**
-   ```java
-   // Enforced in service layer (no DB constraint)
-   if (role == GroupRole.LEADER) {
-       if (userGroupRepository.existsByGroupIdAndRole(groupId, GroupRole.LEADER)) {
-           throw ConflictException.leaderAlreadyExists(groupId);
-       }
-   }
+   ```sql
+   CREATE UNIQUE INDEX idx_usm_group_leader_unique 
+       ON user_semester_membership(group_id) 
+       WHERE group_role = 'LEADER' AND deleted_at IS NULL;
    ```
 
 2. **One group per student per semester:**
    ```java
-   // Enforced in service layer using GROUP.semester join
-   if (userGroupRepository.existsByUserIdAndSemester(userId, semester)) {
-       throw ConflictException.userAlreadyInGroupSameSemester(userId, semester);
-   }
+   // Enforced by PRIMARY KEY (user_id, semester_id)
+   // Database will reject duplicate inserts automatically
    ```
 
 3. **Only STUDENT can be members:**
    ```java
    // Validated via gRPC before adding member
-   GetUserRoleResponse roleResponse = identityServiceClient.getUserRole(userId);
-   if (roleResponse.getRole() != UserRole.STUDENT) {
-       throw BadRequestException.invalidRole(...);
-   }
+   identityServiceClient.verifyUserRole(userId, SystemRole.STUDENT);
    ```
 
 **Soft Delete Behavior:**
 
 ```java
-public void softDelete() {
+public void softDelete(Long deletedByUserId) {
     this.deletedAt = Instant.now();
+    this.deletedBy = deletedByUserId;
+    this.updatedAt = Instant.now();
+}
 }
 ```
 
@@ -327,7 +401,7 @@ public void softDelete() {
 #### 1. Create Group
 
 **Endpoint:** `POST /groups`  
-**Authorization:** `ROLE_ADMIN` or `ROLE_LECTURER`  
+**Authorization:** ADMIN or LECTURER role required  
 **Use Case:** UC23
 
 **Request Body:**
@@ -335,26 +409,32 @@ public void softDelete() {
 ```json
 {
   "groupName": "Team A",
-  "semester": "2024-FALL",
+  "semesterId": 1,
   "lecturerId": 123
 }
 ```
 
+\u26a0\ufe0f **Field Types:**
+- `semesterId`: Long (BIGINT) - FK reference to semesters.id
+- `lecturerId`: Long (BIGINT) - Logical reference to Identity Service
+
 **Validation Rules:**
 - `groupName`: Max 50 chars, not blank
-- `semester`: Max 20 chars, not blank
+- `semesterId`: Must exist in semesters table, must be active
 - `lecturerId`: Must exist in Identity Service, LECTURER role, ACTIVE status
 
 **Success Response (201 Created):**
 
 ```json
 {
-  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "id": 1,
   "groupName": "Team A",
-  "semester": "2024-FALL",
+  "semesterId": 1,
+  "semesterCode": "FALL2024",
   "lecturerId": 123,
   "lecturerName": "Dr. Jane Smith"
 }
+```
 ```
 
 **Error Responses:**
@@ -384,9 +464,10 @@ public void softDelete() {
 
 ```json
 {
-  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "id": 1,
   "groupName": "Team A",
-  "semester": "2024-FALL",
+  "semesterId": 1,
+  "semesterCode": "FALL2024",
   "lecturer": {
     "id": 123,
     "fullName": "Dr. Jane Smith",
@@ -408,6 +489,7 @@ public void softDelete() {
   ],
   "memberCount": 2
 }
+```
 ```
 
 **Deleted User Handling:**
@@ -574,10 +656,11 @@ public void deleteGroup(UUID groupId) {
 
 ```json
 {
-  "userId": 456,
-  "isLeader": false
+  "userId": 456
 }
 ```
+
+**Note:** All members are added with **MEMBER** role by default. To assign a leader, use the promote endpoint after adding the member.
 
 **Validation Rules:**
 - User must exist (via gRPC)
@@ -585,7 +668,6 @@ public void deleteGroup(UUID groupId) {
 - User must be STUDENT role (BR-UG-009)
 - User not already in this group
 - User not already in another group for same semester
-- If `isLeader=true`, group must not have existing leader
 
 **Success Response (201 Created):**
 
@@ -679,8 +761,8 @@ userGroupRepository.save(membership);
 **Validation:**
 
 ```java
-if (membership.isLeader()) {
-    long memberCount = userGroupRepository.countMembersByGroupId(groupId);
+if (membership.getGroupRole() == GroupRole.LEADER) {
+    long memberCount = membershipRepository.countMembersByGroupId(groupId);
     if (memberCount > 0) {
         throw ConflictException.cannotRemoveLeader();
     }
@@ -1173,7 +1255,7 @@ public MemberResponse assignRole(UUID groupId, Long userId, AssignRoleRequest re
 ```java
 @Lock(LockModeType.PESSIMISTIC_WRITE)
 @Query("SELECT ug FROM UserGroup ug WHERE ug.groupId = :groupId AND ug.role = 'LEADER'")
-Optional<UserGroup> findLeaderByGroupIdWithLock(@Param("groupId") UUID groupId);
+Optional<UserGroup> findLeaderByGroupIdWithLock(@Param("groupId") Long groupId);
 ```
 
 **Why SERIALIZABLE?**

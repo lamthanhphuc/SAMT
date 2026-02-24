@@ -40,7 +40,7 @@ Client (Browser/Mobile)
 └─────────────────────────────────────────┘
     ↓ gRPC
 ┌─────────────────────────────────────────┐
-│ Identity Service (Port 9090 gRPC)       │
+│ Identity Service (Port 9091 gRPC)       │
 │ - Fetch user data from PostgreSQL       │
 │ - Return gRPC response                  │
 └─────────────────────────────────────────┘
@@ -135,6 +135,20 @@ return MemberResponse.of(membership, userInfo);
 ---
 
 ## gRPC Contract Details
+
+**📄 For comprehensive gRPC API documentation, see:**
+- **[Identity Service - GRPC_CONTRACT.md](Identity_Service/GRPC_CONTRACT.md)** - Complete contract for user data provisioning
+- **[User-Group Service - GRPC_CONTRACT.md](UserGroup_Service/GRPC_CONTRACT.md)** - Group validation and membership APIs
+- **[Project Config Service - GRPC_CONTRACT.md](ProjectConfig/GRPC_CONTRACT.md)** - gRPC client integration details
+
+**This section provides an overview. Refer to individual GRPC_CONTRACT.md files for:**
+- Full request/response schemas
+- Detailed error handling strategies
+- Performance optimization guidelines
+- Testing examples
+- Security considerations
+
+---
 
 ### Proto File Structure
 
@@ -429,9 +443,10 @@ message ListUsersResponse {
 1. Client → POST /groups/{groupId}/members
    Authorization: Bearer <JWT>
    {
-     "userId": 456,
-     "isLeader": false
+     "userId": 456
    }
+
+   Note: All members are added with MEMBER role by default.
 
 2. User-Group Service: Validate JWT
    - Extract actorId=999, actorRoles=["ADMIN"] from JWT
@@ -468,13 +483,12 @@ message ListUsersResponse {
    Validation: role == STUDENT → PASS
 
 6. User-Group Service: Check business rules
-   - Query user_groups: userId=456, groupId=... → NOT EXISTS → PASS
-   - Query user_groups JOIN groups: userId=456, semester="2024-FALL" → NOT EXISTS → PASS
-   - If isLeader=true: Query user_groups: groupId=..., role=LEADER → NOT EXISTS → PASS
+   - Query user_semester_membership: userId=456, groupId=... → NOT EXISTS → PASS
+   - Query user_semester_membership: userId=456, semesterId=1 → NOT EXISTS → PASS
 
 7. User-Group Service: Save membership
-   INSERT INTO user_groups (user_id, group_id, role, created_at)
-   VALUES (456, 'uuid...', 'MEMBER', NOW())
+   INSERT INTO user_semester_membership (user_id, semester_id, group_id, group_role, joined_at)
+   VALUES (456, 1, 123, 'MEMBER', NOW())
 
 8. User-Group Service → Identity Service: GetUser(456)
    gRPC Request:
@@ -495,7 +509,7 @@ message ListUsersResponse {
 9. User-Group Service → Client: 201 Created
    {
      "userId": 456,
-     "groupId": "uuid...",
+     "groupId": 1,
      "fullName": "John Doe",
      "email": "john@example.com",
      "role": "MEMBER"
@@ -565,7 +579,7 @@ message ListUsersResponse {
 10. User-Group Service → Client: 200 OK
     {
       "userId": 456,
-      "groupId": "uuid...",
+      "groupId": 1,
       "fullName": "John Doe",
       "email": "john@example.com",
       "role": "LEADER"
@@ -697,6 +711,83 @@ T11                                    ROLLBACK
 **CRITICAL:** LECTURER is explicitly excluded even if updating own profile.
 
 **Rationale:** Business rule per SRS (UC22-AUTH).
+
+---
+
+## JWT Secret Coordination (CRITICAL)
+
+### Overview
+
+Identity Service is the **sole issuer** of JWT access tokens. All backend services validate these tokens but **DO NOT issue** them.
+
+### Critical Requirements
+
+**⚠️ BLOCKING REQUIREMENT:** All services MUST share the same JWT secret or public key.
+
+```yaml
+# Environment variables (MUST be identical across all services)
+JWT_SECRET=your-256-bit-secret-key-here-minimum-32-characters-long
+```
+
+### Service Responsibilities
+
+| Service | JWT Responsibility | Configuration Required |
+|---------|-------------------|------------------------|
+| Identity Service | **Issues** JWT tokens (generator) | `JWT_SECRET` - Signs tokens |
+| User-Group Service | **Validates** JWT tokens (consumer) | `JWT_SECRET` - Verifies signatures |
+| Project Config Service | **Validates** JWT tokens (consumer) | `JWT_SECRET` - Verifies signatures |
+| API Gateway | **Validates** JWT tokens (gateway) | `JWT_SECRET` - Verifies signatures |
+
+### Secret Rotation Policy
+
+**Coordinated Rollout Required:**
+
+1. **Planning Phase:**
+   - Generate new secret
+   - Schedule maintenance window (15 minutes)
+   - Notify all stakeholders
+
+2. **Execution Phase:**
+   - Deploy new secret to all services simultaneously
+   - Restart services in order: Identity → User-Group → Project-Config → Gateway
+   - Monitor for 401 errors
+
+3. **Validation Phase:**
+   - Test login flow end-to-end
+   - Verify all services accept new tokens
+   - Monitor error logs for signature failures
+
+**Failure Scenario:**
+- If services have mismatched secrets → All JWT validations fail with `401 UNAUTHORIZED`
+- Symptom: Users can login (Identity Service) but get 401 on protected endpoints
+
+### Security Best Practices
+
+- ✅ Use 256-bit (32+ character) random secret
+- ✅ Store secret in environment variables (never in code)
+- ✅ Use same secret in Kubernetes secrets / Docker Compose secrets
+- ✅ Rotate secret every 90 days
+- ❌ Never commit secret to Git
+- ❌ Never log JWT secret in application logs
+
+### Troubleshooting
+
+**Problem:** 401 errors after login
+
+```bash
+# Check if all services have same secret
+kubectl get secret jwt-secret -o jsonpath='{.data.JWT_SECRET}' | base64 -d
+```
+
+**Problem:** Token signature verification failed
+
+```
+Solution: Verify JWT_SECRET environment variable is identical across:
+- identity-service deployment
+- user-group-service deployment  
+- project-config-service deployment
+- api-gateway deployment
+```
 
 ---
 
@@ -1060,12 +1151,12 @@ curl http://localhost:8081/actuator/health
 netstat -an | grep 9090
 
 # Check gRPC connectivity
-grpcurl -plaintext localhost:9090 list
+grpcurl -plaintext localhost:9091 list
 ```
 
 **Resolution:**
 1. Start Identity Service
-2. Verify gRPC port 9090 is open
+2. Verify gRPC port 9091 is open
 3. Check firewall rules
 4. Verify `application.yml` has correct gRPC address
 

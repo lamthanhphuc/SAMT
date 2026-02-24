@@ -1,3 +1,21 @@
+# ❌ [DEPRECATED] SAMT System Refactoring Guide
+
+**⚠️ THIS DOCUMENT IS DEPRECATED AS OF FEBRUARY 9, 2026**
+
+**Status:** Historical Reference Only  
+**Replaced By:**
+- [00_SYSTEM_OVERVIEW.md](00_SYSTEM_OVERVIEW.md) - Current architecture
+- [IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md) - Implementation guide
+- [../ARCHITECTURE_ALIGNMENT_REPORT.md](../ARCHITECTURE_ALIGNMENT_REPORT.md) - Final alignment status
+- [ADR-001](ADR-001-project-config-rest-grpc-hybrid.md), [ADR-002](ADR-002-api-gateway-routing-project-config.md), [ADR-003](ADR-003-package-naming-standardization.md) - Architecture decisions
+
+**Deprecation Reason:**  
+Refactoring work completed. All issues addressed. See ARCHITECTURE_ALIGNMENT_REPORT.md for completion status.
+
+---
+
+## Original Content (Historical Reference)
+
 # SAMT System Refactoring Guide
 
 **Document Version:** 2.0  
@@ -273,7 +291,7 @@ public class GroupService {
 ### Problem
 
 Hiện tại:
-- Frontend gọi trực tiếp gRPC (Project Config Service port 9092)
+- Frontend gọi trực tiếp gRPC (Project Config Service port 9093)
 - Không có centralized authentication/authorization
 - Frontend phải implement gRPC-web (complexity)
 
@@ -464,7 +482,7 @@ static_resources:
             address:
               socket_address:
                 address: project-config-service
-                port_value: 9092
+                port_value: 9093
 ```
 
 #### Step 2: Generate Proto Descriptor
@@ -631,7 +649,7 @@ public void createProjectConfig(
 // BAD: Frontend calls gRPC directly
 import { ProjectConfigServiceClient } from './proto/project_config_grpc_web_pb';
 
-const client = new ProjectConfigServiceClient('http://localhost:9092');
+const client = new ProjectConfigServiceClient('http://localhost:9093');
 const request = new CreateProjectConfigRequest();
 request.setJiraHostUrl('https://example.atlassian.net');
 
@@ -902,7 +920,7 @@ spec:
         ports:
         - containerPort: 8081
           name: http
-        - containerPort: 9090
+        - containerPort: 9091
           name: grpc
         env:
         - name: SPRING_PROFILES_ACTIVE
@@ -949,7 +967,7 @@ spec:
         principals: ["cluster.local/ns/samt/sa/user-group-service"]
     to:
     - operation:
-        ports: ["9090"]
+        ports: ["9091"]
         paths: ["/userservice.UserService/*"]
 ---
 apiVersion: security.istio.io/v1beta1
@@ -969,7 +987,7 @@ spec:
         principals: ["cluster.local/ns/samt/sa/sync-service"]
     to:
     - operation:
-        ports: ["9092"]
+        ports: ["9093"]
         paths: ["/projectconfig.ProjectConfigInternalService/InternalGetDecryptedConfig"]
   
   # Only allow API Gateway to call public methods
@@ -978,7 +996,7 @@ spec:
         principals: ["cluster.local/ns/samt/sa/api-gateway"]
     to:
     - operation:
-        ports: ["9092"]
+        ports: ["9093"]
         paths: ["/projectconfig.ProjectConfigService/*"]
 ```
 
