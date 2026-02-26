@@ -31,3 +31,12 @@ build/
 
 ### VS Code ###
 .vscode/
+# Environment files (CRITICAL: Never commit secrets)
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Backup files
+*.backup
+*.bak
