@@ -20,7 +20,6 @@ public class GatewayStartupOrderValidator implements ApplicationRunner {
 
     // The expected filter class simple names in strict order
     private static final List<String> EXPECTED_ORDER = Arrays.asList(
-            "CorsWebFilter",
             "JwtAuthenticationFilter",
             "SignedHeaderFilter"
             // Add more filter class names here if needed, in order

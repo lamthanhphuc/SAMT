@@ -11,6 +11,9 @@ public class SignatureUtil {
     private final String gatewaySecret;
 
     public SignatureUtil(@Value("${gateway.internal.secret}") String gatewaySecret) {
+        if (gatewaySecret == null || gatewaySecret.trim().isEmpty()) {
+            throw new IllegalArgumentException("Gateway internal secret cannot be null or empty. Please set GATEWAY_INTERNAL_SECRET environment variable.");
+        }
         this.gatewaySecret = gatewaySecret;
     }
 

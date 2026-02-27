@@ -1,8 +1,11 @@
 package com.example.gateway.filter;
 
+import com.example.gateway.util.JwtUtil;
 import com.example.gateway.util.SignatureUtil;
+import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.annotation.Order;
+import org.springframework.core.Ordered;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -16,6 +19,7 @@ import reactor.core.publisher.Mono;
 public class SignedHeaderFilter implements WebFilter, Ordered {
 
     private final SignatureUtil signatureUtil;
+    private final JwtUtil jwtUtil;
 
     @Override
     public int getOrder() {
@@ -39,11 +43,25 @@ public class SignedHeaderFilter implements WebFilter, Ordered {
                             .map(a -> a.getAuthority())
                             .orElse(null);
 
+                    // Extract JWT token to get email
+                    String token = resolveToken(exchange);
+                    if (token == null) {
+                        return chain.filter(exchange);
+                    }
+
+                    Claims claims = jwtUtil.validateAndParseClaims(token);
+                    if (claims == null) {
+                        return chain.filter(exchange);
+                    }
+
+                    String email = claims.get("email", String.class);
                     long timestamp = System.currentTimeMillis();
 
+                    // Fix method signature - pass all 4 required parameters
                     String signature =
                             signatureUtil.generateSignature(
                                     userId,
+                                    email,
                                     role,
                                     timestamp
                             );
@@ -52,6 +70,7 @@ public class SignedHeaderFilter implements WebFilter, Ordered {
                             .request(
                                     exchange.getRequest().mutate()
                                             .header("X-User-Id", String.valueOf(userId))
+                                            .header("X-User-Email", email)
                                             .header("X-User-Role", role)
                                             .header("X-Timestamp", String.valueOf(timestamp))
                                             .header("X-Internal-Signature", signature)
@@ -62,5 +81,13 @@ public class SignedHeaderFilter implements WebFilter, Ordered {
                     return chain.filter(mutatedExchange);
                 })
                 .switchIfEmpty(chain.filter(exchange));
+    }
+
+    private String resolveToken(ServerWebExchange exchange) {
+        String bearer = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+        if (bearer != null && bearer.startsWith("Bearer ")) {
+            return bearer.substring(7);
+        }
+        return null;
     }
 }

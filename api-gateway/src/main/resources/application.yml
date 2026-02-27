@@ -29,7 +29,10 @@ spring:
         connect-timeout: 3000
         response-timeout: 30s
 
-      default-filters: []   # Strict filter order control
+      default-filters: 
+        - name: RateLimitHeaders
+          args:
+            limit: 100  # Default rate limit for header calculation
 
       redis-rate-limiter:
         replenishRate: 100
@@ -51,6 +54,9 @@ spring:
                 key-resolver: '#{@ipKeyResolver}'
                 redis-rate-limiter.replenishRate: 10
                 redis-rate-limiter.burstCapacity: 20
+            - name: RateLimitHeaders
+              args:
+                limit: 20  # Match burst capacity for accurate headers
 
         # ==========================================
         # USER-GROUP SERVICE
@@ -74,6 +80,12 @@ spring:
             - Path=/api/project-configs/**
           filters:
             - StripPrefix=2
+            - name: RequestSize
+              args:
+                maxSize: 1MB  # Config files are typically small
+            - name: RequestRateLimiter
+              args:
+                key-resolver: '#{@ipKeyResolver}'
 
         # ==========================================
         # SYNC SERVICE
@@ -84,6 +96,12 @@ spring:
             - Path=/api/sync/**
           filters:
             - StripPrefix=2
+            - name: RequestSize
+              args:
+                maxSize: 3MB  # Sync data can be moderate size
+            - name: RequestRateLimiter
+              args:
+                key-resolver: '#{@ipKeyResolver}'
 
         # ==========================================
         # ANALYSIS SERVICE
@@ -94,6 +112,12 @@ spring:
             - Path=/api/analysis/**
           filters:
             - StripPrefix=2
+            - name: RequestSize
+              args:
+                maxSize: 2MB  # Analysis data files
+            - name: RequestRateLimiter
+              args:
+                key-resolver: '#{@ipKeyResolver}'
 
         # ==========================================
         # REPORT SERVICE
@@ -104,7 +128,20 @@ spring:
             - Path=/api/reports/**
           filters:
             - StripPrefix=2
+            - name: RequestSize
+              args:
+                maxSize: 5MB  # Reports may include larger datasets
+            - name: RequestRateLimiter
+              args:
+                key-resolver: '#{@ipKeyResolver}'
 
+
+# ==============================================
+# GATEWAY CONFIGURATION
+# ==============================================
+gateway:
+  internal:
+    secret: ${GATEWAY_INTERNAL_SECRET}
 
 # ==============================================
 # JWT CONFIGURATION
@@ -119,17 +156,17 @@ jwt:
 # ==============================================
 springdoc:
   swagger-ui:
-    enabled: true
+    enabled: ${SWAGGER_ENABLED:false}  # Disabled by default for security - set SWAGGER_ENABLED=true for development
     path: /swagger-ui.html
     urls:
       - name: Identity Service
-        url: http://identity-service:8081/v3/api-docs
-      - name: User-Group Service
-        url: http://user-group-service:8082/v3/api-docs
+        url: /api/identity/v3/api-docs
+      - name: User-Group Service  
+        url: /api/users/v3/api-docs
       - name: Project Config Service
-        url: http://project-config-service:8083/v3/api-docs
+        url: /api/project-configs/v3/api-docs
   api-docs:
-    enabled: true
+    enabled: ${SWAGGER_ENABLED:false}  # Disabled by default for security
 
 
 # ==============================================
@@ -139,7 +176,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,gateway
+        include: health  # Only health endpoint exposed, others require authentication
   endpoint:
     health:
       show-details: when-authorized
@@ -153,3 +190,6 @@ logging:
     root: ${LOG_LEVEL:INFO}
     com.example.gateway: ${LOG_LEVEL:DEBUG}
     org.springframework.cloud.gateway: ${GATEWAY_LOG_LEVEL:INFO}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{requestId:-}] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{requestId:-}] %logger{36} - %msg%n"

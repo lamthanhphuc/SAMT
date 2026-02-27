@@ -31,3 +31,49 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# ==============================================
+# SECURITY: Environment Files
+# ==============================================
+# CRITICAL: Never commit environment variables with secrets
+.env
+.env.local
+.env.development
+.env.test  
+.env.production
+.env.staging
+.env.*
+
+# Exception: Allow example/template files (these should contain no real secrets)
+!.env.example
+!.env.*.example
+!.env.template
+
+# ==============================================
+# SECURITY: Secrets and Keys 
+# ==============================================
+# Private keys, certificates, keystores
+*.key
+*.pem
+*.p12
+*.jks
+*.keystore
+*.truststore
+secrets/
+keys/
+
+# ==============================================
+# SECURITY: Logs and Temporary Files
+# ==============================================
+# Application logs may contain sensitive data
+*.log
+logs/
+*.tmp
+*.temp
+
+# ==============================================
+# DOCKER: Runtime Files
+# ==============================================
+# Docker compose override files (may contain dev secrets)
+docker-compose.override.yml
+.dockerignore

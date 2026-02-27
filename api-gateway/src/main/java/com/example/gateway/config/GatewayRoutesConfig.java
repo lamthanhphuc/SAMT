@@ -27,7 +27,6 @@ public class GatewayRoutesConfig {
 
     @Bean
     public RouteLocator strictRouteLocator(RouteLocatorBuilder builder,
-                                          com.example.gateway.filter.CorsWebFilter corsWebFilter,
                                           com.example.gateway.filter.JwtAuthenticationFilter jwtAuthenticationFilter,
                                           com.example.gateway.filter.SignedHeaderFilter signedHeaderFilter
                                           // Add other filters as beans if implemented: RateLimiterFilter, CircuitBreakerFilter, RetryFilter, TimeoutFilter, ForwardFilter
@@ -39,7 +38,6 @@ public class GatewayRoutesConfig {
                 .route("identity-service", r -> r
                         .path("/api/identity/**")
                         .filters(f -> f
-                                .filter(corsWebFilter, com.example.gateway.filter.CorsWebFilter.ORDER)
                                 .filter(jwtAuthenticationFilter, com.example.gateway.filter.JwtAuthenticationFilter.ORDER)
                                 .filter(signedHeaderFilter, com.example.gateway.filter.SignedHeaderFilter.ORDER)
                                 .requestRateLimiter(c -> c.setKeyResolverName("ipKeyResolver").setRateLimiterName("redisRateLimiter"))
@@ -55,7 +53,6 @@ public class GatewayRoutesConfig {
                 .route("login-endpoint", r -> r
                         .path("/login")
                         .filters(f -> f
-                                .filter(corsWebFilter, com.example.gateway.filter.CorsWebFilter.ORDER)
                                 .filter(jwtAuthenticationFilter, com.example.gateway.filter.JwtAuthenticationFilter.ORDER)
                                 .filter(signedHeaderFilter, com.example.gateway.filter.SignedHeaderFilter.ORDER)
                                 .requestRateLimiter(c -> c.setKeyResolverName("ipKeyResolver").setRateLimiterName("redisRateLimiter"))
@@ -70,7 +67,6 @@ public class GatewayRoutesConfig {
                 .route("register-endpoint", r -> r
                         .path("/register")
                         .filters(f -> f
-                                .filter(corsWebFilter, com.example.gateway.filter.CorsWebFilter.ORDER)
                                 .filter(jwtAuthenticationFilter, com.example.gateway.filter.JwtAuthenticationFilter.ORDER)
                                 .filter(signedHeaderFilter, com.example.gateway.filter.SignedHeaderFilter.ORDER)
                                 .requestRateLimiter(c -> c.setKeyResolverName("ipKeyResolver").setRateLimiterName("redisRateLimiter"))
@@ -85,7 +81,6 @@ public class GatewayRoutesConfig {
                 .route("user-group-service", r -> r
                         .path("/api/groups/**", "/api/users/**")
                         .filters(f -> f
-                                .filter(corsWebFilter, com.example.gateway.filter.CorsWebFilter.ORDER)
                                 .filter(jwtAuthenticationFilter, com.example.gateway.filter.JwtAuthenticationFilter.ORDER)
                                 .filter(signedHeaderFilter, com.example.gateway.filter.SignedHeaderFilter.ORDER)
                                 .requestRateLimiter(c -> c.setKeyResolverName("ipKeyResolver").setRateLimiterName("redisRateLimiter"))
@@ -105,7 +100,6 @@ public class GatewayRoutesConfig {
                 .route("project-config-service", r -> r
                         .path("/api/project-configs/**")
                         .filters(f -> f
-                                .filter(corsWebFilter, com.example.gateway.filter.CorsWebFilter.ORDER)
                                 .filter(jwtAuthenticationFilter, com.example.gateway.filter.JwtAuthenticationFilter.ORDER)
                                 .filter(signedHeaderFilter, com.example.gateway.filter.SignedHeaderFilter.ORDER)
                                 .requestRateLimiter(c -> c.setKeyResolverName("ipKeyResolver").setRateLimiterName("redisRateLimiter"))
@@ -125,7 +119,6 @@ public class GatewayRoutesConfig {
                 .route("sync-service", r -> r
                         .path("/api/sync/**")
                         .filters(f -> f
-                                .filter(corsWebFilter, com.example.gateway.filter.CorsWebFilter.ORDER)
                                 .filter(jwtAuthenticationFilter, com.example.gateway.filter.JwtAuthenticationFilter.ORDER)
                                 .filter(signedHeaderFilter, com.example.gateway.filter.SignedHeaderFilter.ORDER)
                                 .requestRateLimiter(c -> c.setKeyResolverName("ipKeyResolver").setRateLimiterName("redisRateLimiter"))
@@ -145,7 +138,6 @@ public class GatewayRoutesConfig {
                 .route("analysis-service", r -> r
                         .path("/api/analysis/**")
                         .filters(f -> f
-                                .filter(corsWebFilter, com.example.gateway.filter.CorsWebFilter.ORDER)
                                 .filter(jwtAuthenticationFilter, com.example.gateway.filter.JwtAuthenticationFilter.ORDER)
                                 .filter(signedHeaderFilter, com.example.gateway.filter.SignedHeaderFilter.ORDER)
                                 .requestRateLimiter(c -> c.setKeyResolverName("ipKeyResolver").setRateLimiterName("redisRateLimiter"))
@@ -165,7 +157,6 @@ public class GatewayRoutesConfig {
                 .route("report-service", r -> r
                         .path("/api/reports/**")
                         .filters(f -> f
-                                .filter(corsWebFilter, com.example.gateway.filter.CorsWebFilter.ORDER)
                                 .filter(jwtAuthenticationFilter, com.example.gateway.filter.JwtAuthenticationFilter.ORDER)
                                 .filter(signedHeaderFilter, com.example.gateway.filter.SignedHeaderFilter.ORDER)
                                 .requestRateLimiter(c -> c.setKeyResolverName("ipKeyResolver").setRateLimiterName("redisRateLimiter"))

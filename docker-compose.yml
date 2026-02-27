@@ -212,9 +212,16 @@ services:
     image: redis:7-alpine
     container_name: redis
     env_file: .env
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
+    command: >
+      redis-server 
+      --appendonly yes 
+      --maxmemory 256mb 
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - set in .env file}
+    # SECURITY: No external port exposure in production
+    # Uncomment only for development debugging:
+    # ports:
+    #   - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -228,7 +235,7 @@ services:
           cpus: "0.25"
           memory: 128M
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -347,6 +354,7 @@ services:
 #      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
 #      SPRING_DATA_REDIS_HOST: redis
 #      SPRING_DATA_REDIS_PORT: 6379
+#      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
 #      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
 #    ports:
 #      - "${API_GATEWAY_PORT:-9080}:8080"
