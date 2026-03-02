@@ -85,7 +85,7 @@ public class RetryEventConfig {
      * @param event RetryOnRetryEvent containing retry attempt details
      */
     private void logRetryAttempt(RetryOnRetryEvent event) {
-        int maxAttempts = event.getRetry().getRetryConfig().getMaxAttempts();
+        int maxAttempts = resolveMaxAttempts(event.getName());
         
         log.warn("RETRY_ATTEMPT name={} attempt={}/{} error={}", 
             event.getName(),
@@ -117,14 +117,24 @@ public class RetryEventConfig {
      * @param event RetryOnErrorEvent containing error details
      */
     private void logRetryError(RetryOnErrorEvent event) {
-        int maxAttempts = event.getRetry().getRetryConfig().getMaxAttempts();
+        int maxAttempts = resolveMaxAttempts(event.getName());
         
         // Only log when retry is truly exhausted (all attempts consumed)
-        if (event.getNumberOfRetryAttempts() >= maxAttempts) {
+        if (maxAttempts > 0 && event.getNumberOfRetryAttempts() >= maxAttempts) {
             log.warn("RETRY_EXHAUSTED name={} attempts={} error={}", 
                 event.getName(),
                 event.getNumberOfRetryAttempts(),
                 event.getLastThrowable().getClass().getSimpleName());
         }
+    }
+
+    private int resolveMaxAttempts(String retryName) {
+        return retryRegistry.getAllRetries()
+            .stream()
+            .filter(retry -> retry.getName().equals(retryName))
+            .findFirst()
+            .map(Retry::getRetryConfig)
+            .map(config -> config.getMaxAttempts())
+            .orElse(0);
     }
 }

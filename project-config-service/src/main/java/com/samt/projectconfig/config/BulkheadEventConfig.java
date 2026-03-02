@@ -78,12 +78,18 @@ public class BulkheadEventConfig {
      * @param event BulkheadOnCallRejectedEvent containing rejection details
      */
     private void logSaturation(BulkheadOnCallRejectedEvent event) {
-        int available = event.getBulkhead().getMetrics().getAvailableConcurrentCalls();
-        int max = event.getBulkhead().getBulkheadConfig().getMaxConcurrentCalls();
-        int used = max - available;
-        float saturation = (1 - (float)available / max) * 100;
-        
-        log.warn("BULKHEAD_SATURATED name={} used={}/{} saturation={}%", 
-            event.getBulkheadName(), used, max, String.format("%.1f", saturation));
+        bulkheadRegistry.getAllBulkheads()
+            .stream()
+            .filter(bulkhead -> bulkhead.getName().equals(event.getBulkheadName()))
+            .findFirst()
+            .ifPresent(bulkhead -> {
+                int available = bulkhead.getMetrics().getAvailableConcurrentCalls();
+                int max = bulkhead.getBulkheadConfig().getMaxConcurrentCalls();
+                int used = max - available;
+                float saturation = (1 - (float) available / max) * 100;
+
+                log.warn("BULKHEAD_SATURATED name={} used={}/{} saturation={}%",
+                    event.getBulkheadName(), used, max, String.format("%.1f", saturation));
+            });
     }
 }
