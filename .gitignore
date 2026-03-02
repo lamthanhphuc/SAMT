@@ -31,49 +31,25 @@ build/
 
 ### VS Code ###
 .vscode/
-
-# ==============================================
-# SECURITY: Environment Files
-# ==============================================
-# CRITICAL: Never commit environment variables with secrets
+# Environment files (CRITICAL: Never commit secrets)
 .env
 .env.local
-.env.development
-.env.test  
 .env.production
-.env.staging
-.env.*
+.env.*.local
 
-# Exception: Allow example/template files (these should contain no real secrets)
-!.env.example
-!.env.*.example
-!.env.template
+# Backup files
+*.backup
+*.bak
 
-# ==============================================
-# SECURITY: Secrets and Keys 
-# ==============================================
-# Private keys, certificates, keystores
-*.key
-*.pem
-*.p12
-*.jks
-*.keystore
-*.truststore
-secrets/
-keys/
+# Local-only / secret-like files (do not commit)
+Makefile.secrets
+k8s-secrets.yml
+docker-compose.kafka-production.yml
+docker-compose.secure.yml
+security-monitoring-config.yml
+docs/JWT_CLAIM_CONTRACT.md
+docs/API_MANUAL_TEST_CASES.md
+.copilot-recovery/
 
-# ==============================================
-# SECURITY: Logs and Temporary Files
-# ==============================================
-# Application logs may contain sensitive data
-*.log
+# Local logs
 logs/
-*.tmp
-*.temp
-
-# ==============================================
-# DOCKER: Runtime Files
-# ==============================================
-# Docker compose override files (may contain dev secrets)
-docker-compose.override.yml
-.dockerignore
