@@ -54,6 +54,16 @@
 
 	<!-- PluginManagement để các module kế thừa -->
 	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.11.0</version>
+				<configuration>
+					<release>21</release>
+				</configuration>
+			</plugin>
+		</plugins>
 		<pluginManagement>
 			<plugins>
 				<plugin>
@@ -72,11 +82,9 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-compiler-plugin</artifactId>
-					<version>3.13.0</version>
+					<version>3.11.0</version>
 					<configuration>
-						<source>${java.version}</source>
-						<target>${java.version}</target>
-						<release>${java.version}</release>
+						<release>21</release>
 						<annotationProcessorPaths>
 							<path>
 								<groupId>org.projectlombok</groupId>
