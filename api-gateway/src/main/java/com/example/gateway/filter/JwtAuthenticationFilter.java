@@ -2,87 +2,136 @@ package com.example.gateway.filter;
 
 import com.example.gateway.util.JwtUtil;
 import io.jsonwebtoken.Claims;
-import lombok.RequiredArgsConstructor;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
-import java.util.Collections;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 
-@Component
-@RequiredArgsConstructor
+@Component  // ENABLED FOR HEADER SPOOFING PREVENTION
 public class JwtAuthenticationFilter implements WebFilter, Ordered {
+
+    public static final String AUTHENTICATED_MARKER_ATTRIBUTE = "gateway.authenticated";
+    public static final String AUTHENTICATED_CLAIMS_ATTRIBUTE = "gateway.authenticatedClaims";
 
     private final JwtUtil jwtUtil;
 
-    private static final List<String> PUBLIC_ENDPOINTS = List.of(
-            "/api/identity/login",
-            "/api/identity/register",
-            "/api/identity/refresh-token"
-    );
+    public JwtAuthenticationFilter(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
 
     @Override
     public int getOrder() {
-        return OrderedFilters.JWT;
+        return Ordered.HIGHEST_PRECEDENCE + 10;
     }
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-
         String path = exchange.getRequest().getURI().getPath();
-
-        if (PUBLIC_ENDPOINTS.contains(path)) {
+        if (isPublicEndpoint(path)) {
             return chain.filter(exchange);
         }
 
-        String token = resolveToken(exchange.getRequest());
-
-        if (token == null) {
-            return chain.filter(exchange);
+        String token = resolveBearerToken(exchange.getRequest());
+        if (!StringUtils.hasText(token)) {
+            return unauthorized(exchange);
         }
 
-        Claims claims = jwtUtil.validateAndParseClaims(token);
-
-        if (claims == null) {
-            return chain.filter(exchange);
+        final Claims claims;
+        try {
+            claims = jwtUtil.validateAndParseClaims(token);
+        } catch (IllegalArgumentException ignored) {
+            return unauthorized(exchange);
         }
 
-        Long userId = claims.get("userId", Long.class);
+        String userId = readUserId(claims);
+        String subject = claims.getSubject();
+        String email = claims.get("email", String.class);
         String role = claims.get("role", String.class);
 
-        List<SimpleGrantedAuthority> authorities =
-                role != null
-                        ? List.of(new SimpleGrantedAuthority(role))
-                        : Collections.emptyList();
+        if (!StringUtils.hasText(email)) {
+            email = subject;
+        }
 
-        Authentication authentication =
-                new UsernamePasswordAuthenticationToken(
-                        userId,
-                        null,
-                        authorities
-                );
+        if (!StringUtils.hasText(userId) || !StringUtils.hasText(subject) || !StringUtils.hasText(role) || !StringUtils.hasText(email)) {
+            return unauthorized(exchange);
+        }
+
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                subject,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_" + role))
+        );
+
+        // Set authentication attributes for SignedHeaderFilter to use
+        exchange.getAttributes().put(AUTHENTICATED_MARKER_ATTRIBUTE, Boolean.TRUE);
+        exchange.getAttributes().put(AUTHENTICATED_CLAIMS_ATTRIBUTE, claims);
 
         return chain.filter(exchange)
-                .contextWrite(
-                        ReactiveSecurityContextHolder.withAuthentication(authentication)
-                );
+                .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
     }
 
-    private String resolveToken(ServerHttpRequest request) {
-        String bearer = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-        if (bearer != null && bearer.startsWith("Bearer ")) {
-            return bearer.substring(7);
+    private String readUserId(Claims claims) {
+        Object raw = claims.get("userId");
+        if (raw == null) {
+            return null;
         }
-        return null;
+        if (raw instanceof Number number) {
+            return String.valueOf(number.longValue());
+        }
+        return String.valueOf(raw);
+    }
+
+    private String resolveBearerToken(ServerHttpRequest request) {
+        String auth = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+        if (!StringUtils.hasText(auth) || !auth.startsWith("Bearer ")) {
+            return null;
+        }
+        return auth.substring(7).trim();
+    }
+
+    private boolean isPublicEndpoint(String path) {
+        return "/api/identity/register".equals(path)
+                || "/api/identity/login".equals(path)
+                || "/api/identity/refresh-token".equals(path)
+                || path.startsWith("/api/public/")
+                || path.startsWith("/actuator/")
+                || "/actuator".equals(path)
+                || path.startsWith("/swagger-ui/")
+                || "/swagger-ui.html".equals(path)
+                || path.startsWith("/v3/api-docs/")
+                || "/v3/api-docs".equals(path);
+    }
+
+    private Mono<Void> unauthorized(ServerWebExchange exchange) {
+        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+        exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
+        String body = JsonErrorBodies.unauthorized();
+        byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+        return exchange.getResponse().writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(bytes)));
+    }
+
+    private static final class JsonErrorBodies {
+        private JsonErrorBodies() {
+        }
+
+        private static String unauthorized() {
+            return "{\"error\":{\"code\":401,\"message\":\"Unauthorized\"},\"timestamp\":\""
+                    + Instant.now().toString()
+                    + "\"}";
+        }
     }
 }

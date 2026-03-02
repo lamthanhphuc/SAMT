@@ -212,8 +212,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
                 <configuration>
-                    <source>21</source>
-                    <target>21</target>
+                    <release>21</release>
                     <!-- Preserve parameter names for Spring -->
                     <parameters>true</parameters>
                     <annotationProcessorPaths>

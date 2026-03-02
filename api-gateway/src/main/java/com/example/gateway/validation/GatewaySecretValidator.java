@@ -4,6 +4,8 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
+
 @Component
 public class GatewaySecretValidator implements InitializingBean {
     @Value("${gateway.internal.secret}")
@@ -11,11 +13,12 @@ public class GatewaySecretValidator implements InitializingBean {
 
     @Override
     public void afterPropertiesSet() {
-        if (gatewaySecret == null || gatewaySecret.isEmpty()) {
+        if (gatewaySecret == null || gatewaySecret.isBlank()) {
             throw new IllegalStateException("Gateway internal secret is not configured");
         }
-        if (gatewaySecret.length() < 32) {
-            throw new IllegalStateException("Gateway internal secret must be at least 256 bits (32 characters)");
+
+        if (gatewaySecret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException("Gateway internal secret must be at least 256 bits");
         }
     }
 }

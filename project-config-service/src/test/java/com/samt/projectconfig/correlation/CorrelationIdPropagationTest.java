@@ -13,6 +13,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -196,7 +197,7 @@ class CorrelationIdPropagationTest {
      * - Thread-safe MDC propagation under concurrency
      */
     @Test
-    void shouldMaintainIsolatedCorrelationIdsForConcurrentTasks() throws InterruptedException {
+    void shouldMaintainIsolatedCorrelationIdsForConcurrentTasks() throws InterruptedException, ExecutionException, TimeoutException {
         // ARRANGE: Create 5 tasks with different correlation IDs
         int taskCount = 5;
         CompletableFuture<Void>[] futures = new CompletableFuture[taskCount];
