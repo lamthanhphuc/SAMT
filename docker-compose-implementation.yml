@@ -25,11 +25,24 @@ services:
       timeout: 5s
       retries: 5
 
+  # ========================================== 
+  # ⚠️  REDIS CONFIGURATION - DEVELOPMENT ONLY
+  # ==========================================  
+  # WARNING: This implementation file is for DEVELOPMENT only!
+  # For PRODUCTION, use the main docker-compose.yml which has:
+  # - Authentication enabled (requirepass)
+  # - Protected mode enabled  
+  # - NO external port exposure
+  # Never run Redis without authentication in production!
+  
   redis:
     image: redis:7-alpine
     container_name: samt-redis
-    environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --protected-mode yes
+    # Port 6379 is NOT exposed for security - services connect via internal network
     volumes:
       - redis-data:/data
     networks:

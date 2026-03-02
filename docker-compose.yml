@@ -212,14 +212,8 @@ services:
     image: redis:7-alpine
     container_name: redis
     env_file: .env
-    command: >
-      redis-server 
-      --appendonly yes 
-      --maxmemory 256mb 
-      --maxmemory-policy allkeys-lru
-      --requirepass ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - set in .env file}
-    # SECURITY: No external port exposure in production
-    # Uncomment only for development debugging:
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD} --protected-mode yes --bind 0.0.0.0
+    # ❌ REMOVED: Port mapping for security (no external access)
     # ports:
     #   - "${REDIS_PORT:-6379}:6379"
     volumes:
@@ -354,7 +348,6 @@ services:
 #      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
 #      SPRING_DATA_REDIS_HOST: redis
 #      SPRING_DATA_REDIS_PORT: 6379
-#      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
 #      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
 #    ports:
 #      - "${API_GATEWAY_PORT:-9080}:8080"

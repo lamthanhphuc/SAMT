@@ -11,6 +11,13 @@
 - [ ] Review exposed ports
 - [ ] Kiểm tra firewall rules
 
+⚠️ **CRITICAL REDIS SECURITY WARNING:**
+**Never run Redis without authentication in production!**
+- Always set `REDIS_PASSWORD` in `.env` file
+- Never expose Redis port 6379 to external networks
+- Use only the main `docker-compose.yml` for production deployments
+- The `docker-compose-implementation.yml` is for DEVELOPMENT only
+
 ### 2. Infrastructure
 - [ ] Docker 20.10+ installed
 - [ ] Docker Compose 2.0+ installed
@@ -125,8 +132,8 @@ docker exec -it postgres-identity psql -U postgres -d samt_identity -c "SELECT v
 # PostgreSQL Core
 docker exec -it postgres-core psql -U postgres -d samt_core -c "SELECT version();"
 
-# Redis
-docker exec -it redis redis-cli PING
+# Redis (with authentication - never run Redis without auth in production)
+docker exec -it redis redis-cli -a ${REDIS_PASSWORD} PING
 ```
 
 ---
@@ -247,7 +254,7 @@ docker exec postgres-identity pg_dump -U postgres samt_identity > backup_identit
 docker exec postgres-core pg_dump -U postgres samt_core > backup_core_$(Get-Date -Format 'yyyyMMdd').sql
 
 # Backup Redis
-docker exec redis redis-cli SAVE
+docker exec redis redis-cli -a ${REDIS_PASSWORD} SAVE
 docker cp redis:/data/dump.rdb ./backup_redis_$(Get-Date -Format 'yyyyMMdd').rdb
 ```
 
