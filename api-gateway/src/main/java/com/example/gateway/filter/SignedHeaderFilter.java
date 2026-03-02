@@ -1,93 +1,90 @@
 package com.example.gateway.filter;
 
-import com.example.gateway.util.JwtUtil;
-import com.example.gateway.util.SignatureUtil;
+import com.example.gateway.util.SignedHeaderUtil;
 import io.jsonwebtoken.Claims;
-import lombok.RequiredArgsConstructor;
 import org.springframework.core.Ordered;
-import org.springframework.http.HttpHeaders;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.core.annotation.Order;
+import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
 @Component
-@RequiredArgsConstructor
+@Order(-50)
 public class SignedHeaderFilter implements WebFilter, Ordered {
 
-    private final SignatureUtil signatureUtil;
-    private final JwtUtil jwtUtil;
+    private final SignedHeaderUtil signedHeaderUtil;
+
+    public SignedHeaderFilter(SignedHeaderUtil signedHeaderUtil) {
+        this.signedHeaderUtil = signedHeaderUtil;
+    }
 
     @Override
     public int getOrder() {
-        return OrderedFilters.SIGNED_HEADER;
+        return -50;
     }
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        return ReactiveSecurityContextHolder.getContext()
-                .map(ctx -> ctx.getAuthentication())
-                .filter(Authentication::isAuthenticated)
-                .flatMap(authentication -> {
-                    Object principal = authentication.getPrincipal();
-                    if (!(principal instanceof Long userId)) {
-                        return chain.filter(exchange);
-                    }
+        Object authenticatedMarker = exchange.getAttribute(JwtAuthenticationFilter.AUTHENTICATED_MARKER_ATTRIBUTE);
+        Object claimsAttribute = exchange.getAttribute(JwtAuthenticationFilter.AUTHENTICATED_CLAIMS_ATTRIBUTE);
 
-                    String role = authentication.getAuthorities()
-                            .stream()
-                            .findFirst()
-                            .map(a -> a.getAuthority())
-                            .orElse(null);
+        if (!(authenticatedMarker instanceof Boolean isAuthenticated)
+                || !isAuthenticated
+                || !(claimsAttribute instanceof Claims claims)) {
+            return chain.filter(exchange);
+        }
 
-                    // Extract JWT token to get email
-                    String token = resolveToken(exchange);
-                    if (token == null) {
-                        return chain.filter(exchange);
-                    }
+        String userId = readUserId(claims);
+        String email = claims.get("email", String.class);
+        String role = claims.get("role", String.class);
 
-                    Claims claims = jwtUtil.validateAndParseClaims(token);
-                    if (claims == null) {
-                        return chain.filter(exchange);
-                    }
+        if (!StringUtils.hasText(email)) {
+            email = claims.getSubject();
+        }
 
-                    String email = claims.get("email", String.class);
-                    long timestamp = System.currentTimeMillis();
+        if (!StringUtils.hasText(userId) || !StringUtils.hasText(email) || !StringUtils.hasText(role)) {
+            return chain.filter(exchange);
+        }
 
-                    // Fix method signature - pass all 4 required parameters
-                    String signature =
-                            signatureUtil.generateSignature(
-                                    userId,
-                                    email,
-                                    role,
-                                    timestamp
-                            );
+        // Generate deterministic signed headers
+        ServerHttpRequest request = exchange.getRequest();
+        long timestampSeconds = signedHeaderUtil.currentTimestampSeconds();
+        String httpMethod = request.getMethod().toString();
+        String path = request.getURI().getPath();
+        String bodyHash = signedHeaderUtil.generateEmptyBodyHash(); // For simplicity, using empty body hash
+        
+        String signature = signedHeaderUtil.generateSignature(timestampSeconds, httpMethod, path, bodyHash);
+        String keyId = signedHeaderUtil.getKeyId();
 
-                    ServerWebExchange mutatedExchange = exchange.mutate()
-                            .request(
-                                    exchange.getRequest().mutate()
-                                            .header("X-User-Id", String.valueOf(userId))
-                                            .header("X-User-Email", email)
-                                            .header("X-User-Role", role)
-                                            .header("X-Timestamp", String.valueOf(timestamp))
-                                            .header("X-Internal-Signature", signature)
-                                            .build()
-                            )
-                            .build();
+        ServerHttpRequest.Builder requestBuilder = exchange.getRequest().mutate();
 
-                    return chain.filter(mutatedExchange);
-                })
-                .switchIfEmpty(chain.filter(exchange));
+        // Inject ALL required internal headers (sanitization handled by HeaderTrustBoundaryFilter)
+        requestBuilder
+                .header("X-User-Id", userId)
+                .header("X-User-Role", role)
+                .header("X-Internal-Timestamp", String.valueOf(timestampSeconds))
+                .header("X-Internal-Signature", signature)
+                .header("X-Internal-Key-Id", keyId);
+
+        return chain.filter(exchange.mutate().request(requestBuilder.build()).build());
     }
 
-    private String resolveToken(ServerWebExchange exchange) {
-        String bearer = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-        if (bearer != null && bearer.startsWith("Bearer ")) {
-            return bearer.substring(7);
+    private String readUserId(Claims claims) {
+        Object raw = claims.get("userId");
+        if (raw == null) {
+            return null;
         }
-        return null;
+        if (raw instanceof Number number) {
+            return String.valueOf(number.longValue());
+        }
+        return String.valueOf(raw);
     }
 }

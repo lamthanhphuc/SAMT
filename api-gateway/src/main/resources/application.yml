@@ -1,10 +1,13 @@
-# ==============================================
-# API GATEWAY - PRODUCTION CONFIG
-# ==============================================
-
 server:
   port: ${SERVER_PORT:8080}
   shutdown: graceful
+  error:
+    whitelabel:
+      enabled: false
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
+    include-exception: false
 
 spring:
   application:
@@ -20,176 +23,98 @@ spring:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:redis}
       port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required for security - set in .env file}
       timeout: 3000ms
 
   cloud:
     gateway:
-
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
       httpclient:
         connect-timeout: 3000
         response-timeout: 30s
+        pool:
+          max-connections: 500
+          max-idle-time: 20s
+          acquire-timeout: 45000
 
-      default-filters: 
-        - name: RateLimitHeaders
-          args:
-            limit: 100  # Default rate limit for header calculation
-
-      redis-rate-limiter:
-        replenishRate: 100
-        burstCapacity: 200
-
-      routes:
-
-        # ==========================================
-        # IDENTITY SERVICE
-        # ==========================================
-        - id: identity-service
-          uri: http://identity-service:8081
-          predicates:
-            - Path=/api/identity/**
-          filters:
-            - StripPrefix=2
-            - name: RequestRateLimiter
-              args:
-                key-resolver: '#{@ipKeyResolver}'
-                redis-rate-limiter.replenishRate: 10
-                redis-rate-limiter.burstCapacity: 20
-            - name: RateLimitHeaders
-              args:
-                limit: 20  # Match burst capacity for accurate headers
-
-        # ==========================================
-        # USER-GROUP SERVICE
-        # ==========================================
-        - id: user-group-service
-          uri: http://user-group-service:8082
-          predicates:
-            - Path=/api/groups/**,/api/users/**
-          filters:
-            - StripPrefix=1
-            - name: RequestRateLimiter
-              args:
-                key-resolver: '#{@ipKeyResolver}'
-
-        # ==========================================
-        # PROJECT CONFIG SERVICE
-        # ==========================================
-        - id: project-config-service
-          uri: http://project-config-service:8083
-          predicates:
-            - Path=/api/project-configs/**
-          filters:
-            - StripPrefix=2
-            - name: RequestSize
-              args:
-                maxSize: 1MB  # Config files are typically small
-            - name: RequestRateLimiter
-              args:
-                key-resolver: '#{@ipKeyResolver}'
-
-        # ==========================================
-        # SYNC SERVICE
-        # ==========================================
-        - id: sync-service
-          uri: http://sync-service:8084
-          predicates:
-            - Path=/api/sync/**
-          filters:
-            - StripPrefix=2
-            - name: RequestSize
-              args:
-                maxSize: 3MB  # Sync data can be moderate size
-            - name: RequestRateLimiter
-              args:
-                key-resolver: '#{@ipKeyResolver}'
-
-        # ==========================================
-        # ANALYSIS SERVICE
-        # ==========================================
-        - id: analysis-service
-          uri: http://analysis-service:8085
-          predicates:
-            - Path=/api/analysis/**
-          filters:
-            - StripPrefix=2
-            - name: RequestSize
-              args:
-                maxSize: 2MB  # Analysis data files
-            - name: RequestRateLimiter
-              args:
-                key-resolver: '#{@ipKeyResolver}'
-
-        # ==========================================
-        # REPORT SERVICE
-        # ==========================================
-        - id: report-service
-          uri: http://report-service:8086
-          predicates:
-            - Path=/api/reports/**
-          filters:
-            - StripPrefix=2
-            - name: RequestSize
-              args:
-                maxSize: 5MB  # Reports may include larger datasets
-            - name: RequestRateLimiter
-              args:
-                key-resolver: '#{@ipKeyResolver}'
-
-
-# ==============================================
-# GATEWAY CONFIGURATION
-# ==============================================
-gateway:
-  internal:
-    secret: ${GATEWAY_INTERNAL_SECRET}
-
-# ==============================================
-# JWT CONFIGURATION
-# ==============================================
-# MUST be provided via environment variable
 jwt:
   secret: ${JWT_SECRET}
 
+gateway:
+  cors:
+    allowed-origins:
+      - https://app.example.com
+    allowed-methods:
+      - GET
+      - POST
+    allowed-headers:
+      - Authorization
+      - Content-Type
+  internal:
+    secret: ${INTERNAL_SIGNING_SECRET}
 
-# ==============================================
-# SPRINGDOC (Aggregated Swagger)
-# ==============================================
+internal:
+  signing:
+    secret: ${INTERNAL_SIGNING_SECRET}
+    key-id: gateway-1
+
+rate:
+  limit:
+    global:
+      requests-per-second: ${RATE_LIMIT_GLOBAL_RPS:100}
+      burst-capacity: ${RATE_LIMIT_GLOBAL_BURST:200}
+    login:
+      requests-per-minute: ${RATE_LIMIT_LOGIN_RPM:5}
+      burst-capacity: ${RATE_LIMIT_LOGIN_BURST:10}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      gatewayDefaultCircuitBreaker:
+        failure-rate-threshold: 50
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        wait-duration-in-open-state: 30s
+        automatic-transition-from-open-to-half-open-enabled: true
+  timelimiter:
+    instances:
+      gatewayDefaultCircuitBreaker:
+        timeout-duration: 30s
+
 springdoc:
   swagger-ui:
-    enabled: ${SWAGGER_ENABLED:false}  # Disabled by default for security - set SWAGGER_ENABLED=true for development
+    enabled: true
     path: /swagger-ui.html
     urls:
       - name: Identity Service
-        url: /api/identity/v3/api-docs
-      - name: User-Group Service  
-        url: /api/users/v3/api-docs
+        url: http://identity-service:8081/v3/api-docs
+      - name: User-Group Service
+        url: http://user-group-service:8082/v3/api-docs
       - name: Project Config Service
-        url: /api/project-configs/v3/api-docs
+        url: http://project-config-service:8083/v3/api-docs
+      - name: Sync Service
+        url: http://sync-service:8084/v3/api-docs
   api-docs:
-    enabled: ${SWAGGER_ENABLED:false}  # Disabled by default for security
+    enabled: true
 
-
-# ==============================================
-# MANAGEMENT
-# ==============================================
 management:
   endpoints:
     web:
       exposure:
-        include: health  # Only health endpoint exposed, others require authentication
+        include: health,info,metrics,gateway
   endpoint:
     health:
-      show-details: when-authorized
+      show-details: never
 
-
-# ==============================================
-# LOGGING
-# ==============================================
 logging:
   level:
     root: ${LOG_LEVEL:INFO}
-    com.example.gateway: ${LOG_LEVEL:DEBUG}
-    org.springframework.cloud.gateway: ${GATEWAY_LOG_LEVEL:INFO}
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{requestId:-}] %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{requestId:-}] %logger{36} - %msg%n"
+    com.example.gateway: ${GATEWAY_LOG_LEVEL:INFO}
+    org.springframework.cloud.gateway: ${SPRING_GATEWAY_LOG_LEVEL:INFO}
+
+# surface route-not-found as 404 for error handler
+spring.webflux:
+  problemdetails:
+    enabled: false

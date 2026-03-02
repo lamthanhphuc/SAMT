@@ -1,27 +1,16 @@
 package com.example.gateway;
 
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.cloud.gateway.route.RouteLocator;
-import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
+import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
+import org.springframework.web.server.handler.ExceptionHandlingWebHandler;
+import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
+import lombok.extern.slf4j.Slf4j;
 
-/**
- * API Gateway Application - Entry Point
- * 
- * Responsibilities:
- * - Route HTTP requests to backend microservices
- * - JWT authentication and authorization
- * - Rate limiting and security
- * - Centralized logging and monitoring
- * - Swagger API documentation aggregation
- * 
- * Technology Stack:
- * - Spring Cloud Gateway (Reactive)
- * - Spring Security (JWT validation)
- * - Redis (Rate limiting, session)
- * - Actuator (Health checks)
- */
+@Slf4j
 @SpringBootApplication
 public class ApiGatewayApplication {
 
@@ -29,53 +18,15 @@ public class ApiGatewayApplication {
         SpringApplication.run(ApiGatewayApplication.class, args);
     }
 
-    /**
-     * Fallback route configuration
-     * Provides default routing behavior if routes config file is missing
-     */
     @Bean
-    public RouteLocator fallbackRoutes(RouteLocatorBuilder builder) {
-        return builder.routes()
-                // Identity Service
-                .route("identity-service", r -> r
-                        .path("/api/auth/**", "/api/users/**")
-                        .uri("lb://identity-service"))
-                
-                // User-Group Service
-                .route("user-group-service", r -> r
-                        .path("/api/groups/**", "/api/semesters/**")
-                        .uri("lb://user-group-service"))
-                
-                // Project Config Service
-                .route("project-config-service", r -> r
-                        .path("/api/project-configs/**")
-                        .uri("lb://project-config-service"))
-                
-                // Sync Service
-                .route("sync-service", r -> r
-                        .path("/api/sync/**")
-                        .uri("lb://sync-service"))
-                
-                // Analysis Service
-                .route("analysis-service", r -> r
-                        .path("/api/analysis/**")
-                        .uri("lb://analysis-service"))
-                
-                // Report Service
-                .route("report-service", r -> r
-                        .path("/api/reports/**")
-                        .uri("lb://report-service"))
-                
-                // Notification Service
-                .route("notification-service", r -> r
-                        .path("/api/notifications/**")
-                        .uri("lb://notification-service"))
-                
-                // Actuator endpoints (public)
-                .route("actuator", r -> r
-                        .path("/actuator/**")
-                        .uri("forward:/actuator"))
-                
-                .build();
+    public CommandLineRunner beanRegistryChecker(ApplicationContext applicationContext) {
+        return args -> {
+            String[] beanNames = applicationContext.getBeanNamesForType(ErrorWebExceptionHandler.class);
+            log.info("🔍 ERROR HANDLER BEANS FOUND: {}", java.util.Arrays.toString(beanNames));
+            for (String beanName : beanNames) {
+                Object bean = applicationContext.getBean(beanName);
+                log.info("  - Bean: {} -> Class: {}", beanName, bean.getClass().getSimpleName());
+            }
+        };
     }
 }

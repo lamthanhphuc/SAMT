@@ -1,94 +1,78 @@
 package com.example.gateway.util;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
-@Slf4j
 @Component
 public class JwtUtil {
 
     private final SecretKey secretKey;
+    private final ObjectMapper objectMapper;
 
     public JwtUtil(@Value("${jwt.secret}") String secret) {
-        validateJwtSecretStrength(secret);
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-    }
-    
-    /**
-     * Validates JWT secret meets minimum security requirements
-     */
-    private void validateJwtSecretStrength(String secret) {
-        if (secret == null || secret.trim().isEmpty()) {
-            throw new IllegalArgumentException("JWT secret cannot be null or empty. Please set JWT_SECRET environment variable.");
-        }
-        
-        byte[] secretBytes = secret.getBytes(StandardCharsets.UTF_8);
-        final int MINIMUM_KEY_LENGTH = 32; // 256 bits
-        final int RECOMMENDED_KEY_LENGTH = 64; // 512 bits
-        
-        if (secretBytes.length < MINIMUM_KEY_LENGTH) {
-            throw new IllegalArgumentException(
-                String.format("JWT secret must be at least %d bytes (256 bits) for security. " +
-                             "Current secret is %d bytes. Please use a stronger JWT_SECRET.", 
-                             MINIMUM_KEY_LENGTH, secretBytes.length)
-            );
-        }
-        
-        if (secretBytes.length < RECOMMENDED_KEY_LENGTH) {
-            log.warn("JWT secret length is {} bytes. Consider using at least {} bytes (512 bits) for enhanced security.", 
-                     secretBytes.length, RECOMMENDED_KEY_LENGTH);
-        }
+        this.objectMapper = new ObjectMapper();
     }
 
-    /**
-     * Validate + parse JWT
-     * Return null nếu invalid
-     */
     public Claims validateAndParseClaims(String token) {
         try {
-            return Jwts.parser()
+            validateHs256Header(token);
+            Claims claims = Jwts.parser()
                     .verifyWith(secretKey)
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
+
+            // Validate required claims
+            if (claims.get("userId") == null
+                    || !StringUtils.hasText(claims.getSubject())
+                    || !StringUtils.hasText(claims.get("role", String.class))) {
+                throw new IllegalArgumentException("Unauthorized");
+            }
+
+            // CRITICAL: Validate token_type == ACCESS
+            String tokenType = claims.get("token_type", String.class);
+            if (!"ACCESS".equals(tokenType)) {
+                throw new IllegalArgumentException("Invalid token type");
+            }
+
+            return claims;
+        } catch (ExpiredJwtException e) {
+            throw new IllegalArgumentException("Unauthorized");
+        } catch (IllegalArgumentException e) {
+            // Re-throw IllegalArgumentException as is (preserves specific messages)
+            throw e;
         } catch (Exception e) {
-            // Sanitize logging to prevent token exposure
-            logJwtValidationFailure(e);
-            return null; // không throw
+            throw new IllegalArgumentException("Unauthorized");
         }
     }
-    
-    /**
-     * Safely log JWT validation failures without exposing sensitive token data
-     */
-    private void logJwtValidationFailure(Exception e) {
-        String safeName = e.getClass().getSimpleName();
-        
-        // Map exception types to safe error messages
-        String safeReason;
-        if (e instanceof io.jsonwebtoken.ExpiredJwtException) {
-            safeReason = "Token expired";
-        } else if (e instanceof io.jsonwebtoken.MalformedJwtException) {
-            safeReason = "Token malformed";
-        } else if (e instanceof io.jsonwebtoken.SignatureException) {
-            safeReason = "Invalid signature";
-        } else if (e instanceof io.jsonwebtoken.UnsupportedJwtException) {
-            safeReason = "Unsupported token format";
-        } else if (e instanceof io.jsonwebtoken.security.SecurityException) {
-            safeReason = "Security validation failed";
-        } else if (e instanceof IllegalArgumentException) {
-            safeReason = "Invalid token argument";
-        } else {
-            safeReason = "Token validation error";
+
+    private void validateHs256Header(String token) {
+        String[] parts = token.split("\\.");
+        if (parts.length != 3) {
+            throw new IllegalArgumentException("Invalid or expired JWT token");
         }
-        
-        log.debug("JWT validation failed: {} ({})", safeReason, safeName);
+
+        try {
+            String headerJson = new String(Base64.getUrlDecoder().decode(parts[0]), StandardCharsets.UTF_8);
+            JsonNode header = objectMapper.readTree(headerJson);
+            String alg = header.path("alg").asText(null);
+            if (!"HS256".equals(alg)) {
+                throw new IllegalArgumentException("Invalid or expired JWT token");
+            }
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("Invalid or expired JWT token");
+        }
     }
 }

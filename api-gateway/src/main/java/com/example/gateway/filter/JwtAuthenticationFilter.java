@@ -1,205 +1,137 @@
 package com.example.gateway.filter;
 
 import com.example.gateway.util.JwtUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
-import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
-import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.HashMap;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 
-@Slf4j
-@Component
-@RequiredArgsConstructor
+@Component  // ENABLED FOR HEADER SPOOFING PREVENTION
 public class JwtAuthenticationFilter implements WebFilter, Ordered {
 
-    private final JwtUtil jwtUtil;
-    private final ObjectMapper objectMapper = new ObjectMapper();
-    
-    // Separate audit logger for security events
-    private static final Logger AUDIT_LOGGER = LoggerFactory.getLogger("AUDIT.AUTH");
+    public static final String AUTHENTICATED_MARKER_ATTRIBUTE = "gateway.authenticated";
+    public static final String AUTHENTICATED_CLAIMS_ATTRIBUTE = "gateway.authenticatedClaims";
 
-    private static final List<String> PUBLIC_ENDPOINTS = List.of(
-            "/api/identity/login",
-            "/api/identity/register",
-            "/api/identity/refresh-token"
-    );
+    private final JwtUtil jwtUtil;
+
+    public JwtAuthenticationFilter(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
 
     @Override
     public int getOrder() {
-        return OrderedFilters.JWT;
+        return Ordered.HIGHEST_PRECEDENCE + 10;
     }
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-
         String path = exchange.getRequest().getURI().getPath();
-
-        // Allow public endpoints without authentication
-        if (PUBLIC_ENDPOINTS.contains(path)) {
+        if (isPublicEndpoint(path)) {
             return chain.filter(exchange);
         }
 
-        String token = resolveToken(exchange.getRequest());
-
-        // FAIL-CLOSED: Return 401 if no token provided
-        if (token == null) {
-            auditAuthenticationFailure(exchange, null, "MISSING_TOKEN", "No JWT token provided");
-            return createUnauthorizedResponse(exchange, "Missing JWT token");
+        String token = resolveBearerToken(exchange.getRequest());
+        if (!StringUtils.hasText(token)) {
+            return unauthorized(exchange);
         }
 
-        Claims claims = jwtUtil.validateAndParseClaims(token);
-
-        // FAIL-CLOSED: Return 401 if token is invalid
-        if (claims == null) {
-            auditAuthenticationFailure(exchange, null, "INVALID_TOKEN", "JWT token validation failed");
-            return createUnauthorizedResponse(exchange, "Invalid JWT token");
+        final Claims claims;
+        try {
+            claims = jwtUtil.validateAndParseClaims(token);
+        } catch (IllegalArgumentException ignored) {
+            return unauthorized(exchange);
         }
 
-        Long userId = claims.get("userId", Long.class);
+        String userId = readUserId(claims);
+        String subject = claims.getSubject();
+        String email = claims.get("email", String.class);
         String role = claims.get("role", String.class);
 
-        // Audit successful authentication
-        auditAuthenticationSuccess(exchange, userId, role);
+        if (!StringUtils.hasText(email)) {
+            email = subject;
+        }
 
-        List<SimpleGrantedAuthority> authorities =
-                role != null
-                        ? List.of(new SimpleGrantedAuthority(role))
-                        : Collections.emptyList();
+        if (!StringUtils.hasText(userId) || !StringUtils.hasText(subject) || !StringUtils.hasText(role) || !StringUtils.hasText(email)) {
+            return unauthorized(exchange);
+        }
 
-        Authentication authentication =
-                new UsernamePasswordAuthenticationToken(
-                        userId,
-                        null,
-                        authorities
-                );
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                subject,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_" + role))
+        );
+
+        // Set authentication attributes for SignedHeaderFilter to use
+        exchange.getAttributes().put(AUTHENTICATED_MARKER_ATTRIBUTE, Boolean.TRUE);
+        exchange.getAttributes().put(AUTHENTICATED_CLAIMS_ATTRIBUTE, claims);
 
         return chain.filter(exchange)
-                .contextWrite(
-                        ReactiveSecurityContextHolder.withAuthentication(authentication)
-                );
+                .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
     }
 
-    private String resolveToken(ServerHttpRequest request) {
-        String bearer = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-        if (bearer != null && bearer.startsWith("Bearer ")) {
-            return bearer.substring(7);
+    private String readUserId(Claims claims) {
+        Object raw = claims.get("userId");
+        if (raw == null) {
+            return null;
         }
-        return null;
+        if (raw instanceof Number number) {
+            return String.valueOf(number.longValue());
+        }
+        return String.valueOf(raw);
     }
 
-    private Mono<Void> createUnauthorizedResponse(ServerWebExchange exchange, String message) {
-        ServerHttpResponse response = exchange.getResponse();
-        
-        response.setStatusCode(HttpStatus.UNAUTHORIZED);
-        response.getHeaders().add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+    private String resolveBearerToken(ServerHttpRequest request) {
+        String auth = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+        if (!StringUtils.hasText(auth) || !auth.startsWith("Bearer ")) {
+            return null;
+        }
+        return auth.substring(7).trim();
+    }
 
-        Map<String, Object> errorBody = new HashMap<>();
-        errorBody.put("timestamp", LocalDateTime.now().toString());
-        errorBody.put("status", 401);
-        errorBody.put("error", "Unauthorized");
-        errorBody.put("message", message);
-        errorBody.put("path", exchange.getRequest().getURI().getPath());
+    private boolean isPublicEndpoint(String path) {
+        return "/api/identity/register".equals(path)
+                || "/api/identity/login".equals(path)
+                || "/api/identity/refresh-token".equals(path)
+                || path.startsWith("/api/public/")
+                || path.startsWith("/actuator/")
+                || "/actuator".equals(path)
+                || path.startsWith("/swagger-ui/")
+                || "/swagger-ui.html".equals(path)
+                || path.startsWith("/v3/api-docs/")
+                || "/v3/api-docs".equals(path);
+    }
 
-        try {
-            byte[] bytes = objectMapper.writeValueAsBytes(errorBody);
-            DataBuffer buffer = response.bufferFactory().wrap(bytes);
-            return response.writeWith(Mono.just(buffer));
-        } catch (Exception e) {
-            // Fallback to simple response if JSON serialization fails
-            byte[] fallbackBytes = "{\"error\":\"Unauthorized\"}".getBytes();
-            DataBuffer buffer = response.bufferFactory().wrap(fallbackBytes);
-            return response.writeWith(Mono.just(buffer));
-        }
+    private Mono<Void> unauthorized(ServerWebExchange exchange) {
+        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+        exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
+        String body = JsonErrorBodies.unauthorized();
+        byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+        return exchange.getResponse().writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(bytes)));
     }
-    
-    /**
-     * Audit successful authentication event
-     */
-    private void auditAuthenticationSuccess(ServerWebExchange exchange, Long userId, String role) {
-        Map<String, Object> auditEvent = new HashMap<>();
-        auditEvent.put("timestamp", LocalDateTime.now().toString());
-        auditEvent.put("event", "AUTHENTICATION_SUCCESS");
-        auditEvent.put("userId", userId);
-        auditEvent.put("role", role);
-        auditEvent.put("clientIp", getClientIp(exchange.getRequest()));
-        auditEvent.put("path", exchange.getRequest().getURI().getPath());
-        auditEvent.put("method", exchange.getRequest().getMethod().toString());
-        auditEvent.put("userAgent", exchange.getRequest().getHeaders().getFirst("User-Agent"));
-        
-        try {
-            String auditJson = objectMapper.writeValueAsString(auditEvent);
-            AUDIT_LOGGER.info(auditJson);
-        } catch (Exception e) {
-            AUDIT_LOGGER.info("AUTHENTICATION_SUCCESS userId={} role={} ip={} path={}", 
-                            userId, role, getClientIp(exchange.getRequest()), 
-                            exchange.getRequest().getURI().getPath());
+
+    private static final class JsonErrorBodies {
+        private JsonErrorBodies() {
         }
-    }
-    
-    /**
-     * Audit failed authentication event
-     */
-    private void auditAuthenticationFailure(ServerWebExchange exchange, Long userId, String reason, String details) {
-        Map<String, Object> auditEvent = new HashMap<>();
-        auditEvent.put("timestamp", LocalDateTime.now().toString());
-        auditEvent.put("event", "AUTHENTICATION_FAILURE");
-        auditEvent.put("userId", userId);
-        auditEvent.put("reason", reason);
-        auditEvent.put("details", details);
-        auditEvent.put("clientIp", getClientIp(exchange.getRequest()));
-        auditEvent.put("path", exchange.getRequest().getURI().getPath());
-        auditEvent.put("method", exchange.getRequest().getMethod().toString());
-        auditEvent.put("userAgent", exchange.getRequest().getHeaders().getFirst("User-Agent"));
-        
-        try {
-            String auditJson = objectMapper.writeValueAsString(auditEvent);
-            AUDIT_LOGGER.warn(auditJson);
-        } catch (Exception e) {
-            AUDIT_LOGGER.warn("AUTHENTICATION_FAILURE userId={} reason={} ip={} path={}", 
-                            userId, reason, getClientIp(exchange.getRequest()), 
-                            exchange.getRequest().getURI().getPath());
+
+        private static String unauthorized() {
+            return "{\"error\":{\"code\":401,\"message\":\"Unauthorized\"},\"timestamp\":\""
+                    + Instant.now().toString()
+                    + "\"}";
         }
-    }
-    
-    /**
-     * Get client IP address from request headers or remote address
-     */
-    private String getClientIp(ServerHttpRequest request) {
-        String xForwardedFor = request.getHeaders().getFirst("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            return xForwardedFor.split(",")[0].trim();
-        }
-        
-        String xRealIp = request.getHeaders().getFirst("X-Real-IP");
-        if (xRealIp != null && !xRealIp.isEmpty()) {
-            return xRealIp;
-        }
-        
-        return request.getRemoteAddress() != null 
-            ? request.getRemoteAddress().getAddress().getHostAddress() 
-            : "unknown";
     }
 }
