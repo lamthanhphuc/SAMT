@@ -1,387 +1,179 @@
-# User-Group Service
+# User-Group Service (code-accurate)
 
-**Version:** 1.0  
-**Port:** 8082 (REST), 9095 (gRPC)  
-**Database:** PostgreSQL (usergroup_db)  
-**Last Updated:** February 23, 2026
+**Ports:** REST `${SERVER_PORT:8082}`, gRPC `${GRPC_SERVER_PORT:9095}`
+**Database:** PostgreSQL (schema owned by this service; see Flyway migrations in `user-group-service/src/main/resources/db/migration/`)
 
----
-
-## Quick Links
-
-- **[API Contract](API_CONTRACT.md)** - REST endpoints & error handling
-- **[Database Design](DATABASE.md)** - Schema & constraints
-- **[Security Design](SECURITY.md)** - JWT validation & authorization
-- **[Implementation Guide](IMPLEMENTATION.md)** - Setup & gRPC client config
-- **[Test Cases](TEST_CASES.md)** - Test specifications
+Quick links:
+- [API Contract](API_CONTRACT.md)
+- [Security](SECURITY.md)
+- [Database](DATABASE.md)
+- [gRPC Contract](GRPC_CONTRACT.md)
+- [Implementation Notes](IMPLEMENTATION.md)
 
 ---
 
-## Overview
+## 1. Service Responsibility
 
-User-Group Service manages student groups and group memberships for academic project assignments in the SAMT system.
+This service owns and enforces the **group + membership model scoped by semester**.
 
-### Core Responsibilities
+Implemented responsibilities (from code):
+- **Semester CRUD & activation** in the local database (`SemesterController`, `SemesterService`).
+- **Group CRUD** (create/update/soft-delete) in the local database (`GroupController`, `GroupService`).
+- **Membership management** for students joining groups, plus leader promotion/demotion/removal rules (`GroupMemberController`, `GroupMemberService`).
+- **User profile proxy** endpoints that *delegate user data operations to Identity Service via gRPC* (`UserController`, `UserService`).
+- **Expose gRPC** for other services to verify group existence and membership/leader role (`UserGroupGrpcServiceImpl`).
+- **Consume `user.deleted` Kafka events** (when Kafka is enabled) to clean up memberships (`event/*`).
 
-✅ **Group Management:**
-- Group CRUD operations (create, read, update, soft delete)
-- Semester-based group isolation
-- Role-based access control (ADMIN, LECTURER, STUDENT)
-
-✅ **Membership Management:**
-- Add/remove members
-- Promote/demote leaders
-- One student per group per semester
-- One leader per group
-
-✅ **User Profile Proxy:**
-- Get user profile (UC21) - delegates to Identity Service
-- Update user profile (UC22) - delegates to Identity Service
-
-✅ **Business Rules Enforcement:**
-- Lecturer validation (must be LECTURER role and ACTIVE)
-- Only STUDENT can be added to groups
-- Automatic cleanup on user deletion (via Kafka events)
-
-✅ **gRPC Server:**
-- Group validation for other services
-- Membership checking
-- Leader verification
-
-### What It Does NOT Do
-
-❌ User authentication/registration → Identity Service  
-❌ JWT generation → Identity Service  
-❌ Password management → Identity Service  
-❌ Project configuration → Project Config Service  
-❌ Data synchronization → Sync Service
+Non-responsibilities (by absence in code):
+- No login/registration/JWT issuance.
+- No permission/ACL system beyond **system roles** (JWT `roles`) and **group roles** (LEADER/MEMBER).
+- No Redis caching.
 
 ---
 
-## Architecture
+## 2. Implemented APIs
 
-### Service Communication
+### REST (JSON)
+Base paths are exactly as defined by controllers (no global context-path in `application.yml`). All endpoints require JWT authentication **except** actuator + swagger routes configured in security.
 
-```
-Client (REST/JSON)
-      ↓
-API Gateway (JWT Auth, port 8080)
-      ↓
-/api/groups/**, /api/users/** → User-Group Service (REST, port 8082)
-      ↓
-gRPC Client → Identity Service (gRPC, port 9091)
-      ↑
-Kafka Consumer ← Identity Service (user.deleted events)
-```
+**Groups** ([user-group-service/src/main/java/.../controller/GroupController.java](../../user-group-service/src/main/java/com/example/user_groupservice/controller/GroupController.java))
+- `POST /api/groups` — **ADMIN**
+- `GET /api/groups/{groupId}` — authenticated
+- `GET /api/groups?page&size&semesterId&lecturerId` — authenticated
+- `PUT /api/groups/{groupId}` — **ADMIN**
+- `DELETE /api/groups/{groupId}` (soft delete) — **ADMIN**
+- `PATCH /api/groups/{groupId}/lecturer` — **ADMIN**
 
-**Exposed gRPC Server (port 9095):**
-- `VerifyGroupExists` - Check if group exists
-- `CheckGroupLeader` - Verify if user is group leader
-- `CheckGroupMember` - Check if user is group member
-- `GetGroup` - Retrieve full group details
+**Group members** ([user-group-service/src/main/java/.../controller/GroupMemberController.java](../../user-group-service/src/main/java/com/example/user_groupservice/controller/GroupMemberController.java))
+- `POST /api/groups/{groupId}/members` — **ADMIN or LECTURER**
+- `GET /api/groups/{groupId}/members` — authenticated
+- `PUT /api/groups/{groupId}/members/{userId}/promote` — **ADMIN or LECTURER**
+- `PUT /api/groups/{groupId}/members/{userId}/demote` — **ADMIN or LECTURER**
+- `DELETE /api/groups/{groupId}/members/{userId}` (soft delete membership) — **ADMIN**
 
-**Consumed by:**
-- Project Config Service (group validation)
-- Report Service (membership filtering)
+**Users (proxy to Identity via gRPC)** ([user-group-service/src/main/java/.../controller/UserController.java](../../user-group-service/src/main/java/com/example/user_groupservice/controller/UserController.java))
+- `GET /api/users/{userId}` — authenticated (service-level authorization applies)
+- `PUT /api/users/{userId}` — authenticated (service-level authorization applies)
+- `GET /api/users` — **ADMIN** (delegates to Identity `ListUsers`)
+- `GET /api/users/{userId}/groups` — authenticated (service-level authorization applies)
 
-### Package Structure
+**Semesters** ([user-group-service/src/main/java/.../controller/SemesterController.java](../../user-group-service/src/main/java/com/example/user_groupservice/controller/SemesterController.java))
+- `POST /api/semesters` — **ADMIN**
+- `GET /api/semesters/{id}` — authenticated
+- `GET /api/semesters/code/{code}` — authenticated
+- `GET /api/semesters/active` — authenticated
+- `GET /api/semesters` — authenticated
+- `PUT /api/semesters/{id}` — **ADMIN**
+- `PATCH /api/semesters/{id}/activate` — **ADMIN**
 
-```
-user-group-service/
-├── src/main/java/com/example/user_groupservice/
-│   ├── config/               # Security, Resilience, Kafka
-│   ├── controller/           # REST endpoints
-│   │   ├── GroupController.java          # /groups/** (group CRUD)
-│   │   ├── GroupMemberController.java    # /groups/{id}/members/** (members)
-│   │   └── UserController.java           # /users/** (profile proxy)
-│   ├── dto/                  # Request/Response DTOs
-│   ├── entity/               # JPA Entities (Group, Semester, UserSemesterMembership)
-│   ├── event/                # Kafka consumer (user.deleted)
-│   ├── grpc/                 # Identity Service client + server
-│   ├── repository/           # JPA repositories
-│   ├── security/             # JWT filter, CurrentUser
-│   └── service/              # Business logic
-│
-├── src/main/proto/           # gRPC contracts
-└── src/main/resources/
-    ├── application.yml       # Configuration
-    └── db/migration/         # Flyway migrations
-```
+### gRPC (server)
+Defined in `user-group-service/src/main/proto/usergroup_service.proto` and implemented by `UserGroupGrpcServiceImpl`.
+
+- `VerifyGroupExists(group_id)`
+- `CheckGroupLeader(group_id, user_id)`
+- `CheckGroupMember(group_id, user_id)`
+- `GetGroup(group_id)`
+
+See [GRPC_CONTRACT.md](GRPC_CONTRACT.md).
 
 ---
 
-## Data Model
+## 3. Authorization Model
 
-### Core Tables
+### 3.1 Authentication & internal JWT validation
+- The service expects `Authorization: Bearer <jwt>`.
+- It **validates HS256 signature and expiration** using `jwt.secret` (see `JwtService`).
+- It extracts:
+  - `userId` from claim `userId` (string) **or** falls back to JWT `sub`.
+  - `roles` from claim `roles` as a JSON array of strings.
 
-**semesters**
-- Stores academic terms (e.g., "SPRING2025", "FALL2024")
-- User-Group Service is the source of truth for semester data
-- No external service dependencies
+Token validation failure behavior (as implemented):
+- `JwtAuthenticationFilter` logs a warning and continues the filter chain **without** setting authentication.
+- Spring Security then returns `401` for protected endpoints via `JwtAuthenticationEntryPoint`.
 
-**groups**
-- Primary key: `id` (BIGINT auto-increment)
-- Unique constraint: `(group_name, semester_id)` per semester
-- References: `semester_id` (FK), `lecturer_id` (logical reference to Identity Service)
-- Soft delete: `deleted_at`, `deleted_by`
+### 3.2 System roles vs group roles
+- **System roles** are taken from JWT `roles`: `ADMIN`, `LECTURER`, `STUDENT`.
+- **Group roles** are stored in DB per membership: `LEADER`, `MEMBER`.
 
-**user_semester_membership**
-- Composite primary key: `(user_id, semester_id)` - enforces one group per student per semester
-- Unique constraint: One LEADER per group
-- References: `semester_id` (FK), `group_id` (FK), `user_id` (logical reference to Identity Service)
-- Soft delete: `deleted_at`, `deleted_by`
+### 3.3 Enforcement points
+- **Controller-level RBAC**: enforced by `@PreAuthorize` on endpoints (see Section 2).
+- **Service-level authorization**: implemented for user-profile access rules in `UserServiceImpl`:
+  - `ADMIN`: can view anyone.
+  - Self: can view self.
+  - `LECTURER`: can view only `STUDENT` users and only supervised students via `GroupRepository.existsByLecturerAndStudent(actorId, targetUserId)`.
+  - If the gRPC role check fails unexpectedly, the code falls back to **allow** and logs a warning.
 
-### Cross-Service References
-
-| Field | Service | Validation Method |
-|-------|---------|-------------------|
-| `lecturer_id` | Identity Service | gRPC `VerifyUserExists()` |
-| `user_id` | Identity Service | gRPC `VerifyUserExists()` |
-| `deleted_by` | Identity Service | Audit only (no validation) |
-
-**No Foreign Key Constraints:** User references are logical only (microservices pattern). Validation performed via gRPC calls.
-
-**See:** [DATABASE.md](DATABASE.md) for complete schema specification.
+Role/permission handling implemented in this codebase is limited to the above; there is no separate permission matrix or resource-scoped ACL system.
 
 ---
 
-## Execution Flow
+## 4. Data Model
 
-### Group Creation (UC23)
+### 4.1 Tables (PostgreSQL)
+Owned tables (created/changed via Flyway):
+- `semesters`
+- `groups`
+- `user_semester_membership`
 
-1. Validate JWT token (API Gateway)
-2. Check actor role (ADMIN or LECTURER only)
-3. Validate lecturer via gRPC: `IdentityService.VerifyUserExists(lecturerId)`
-4. Check lecturer has LECTURER role and ACTIVE status
-5. Validate semester exists and is active
-6. Check group name uniqueness in semester
-7. Create group in database
-8. Return group details with HTTP 201 CREATED
+### 4.2 Relationship model (what is enforced)
+- A **group** belongs to exactly one **semester** (`groups.semester_id` FK).
+- A **membership** is keyed by `(user_id, semester_id)` and points to a `group_id`.
 
-**Circuit Breaker:** If Identity Service is unavailable, request fails fast with 503 Service Unavailable.
+This yields the enforced constraints:
+- **One group per user per semester**: `PRIMARY KEY (user_id, semester_id)` + trigger guard.
+- **One leader per group**: partial unique index on `user_semester_membership(group_id)` where `group_role='LEADER' AND deleted_at IS NULL`.
+- **Soft delete**:
+  - `groups.deleted_at/deleted_by`
+  - `user_semester_membership.deleted_at/deleted_by`
+  - JPA entities use `@SQLRestriction("deleted_at IS NULL")` to filter soft-deleted rows in most ORM queries.
+- **Optimistic locking**:
+  - `groups.version`
+  - `user_semester_membership.version`
 
-### Add Member (UC24)
+### 4.3 Cross-service references
+Fields `groups.lecturer_id`, `user_semester_membership.user_id`, and `deleted_by` are **logical references** to Identity Service users (no DB FK to Identity DB). Lecturer/student validity is enforced via gRPC calls to Identity in service logic.
 
-1. Validate JWT token (API Gateway)
-2. Check actor authorization (ADMIN, LECTURER, or group LEADER)
-3. Validate user via gRPC: `IdentityService.VerifyUserExists(userId)`
-4. Check user has STUDENT role and ACTIVE status
-5. Check user not already in a group for this semester (PK constraint)
-6. Check group exists and is not soft-deleted
-7. Add membership with MEMBER role
-8. Return membership details with HTTP 201 CREATED
-
-**Constraint Enforcement:** Database composite PK `(user_id, semester_id)` prevents duplicate group membership.
-
-### User Deletion Cleanup
-
-1. Identity Service publishes `user.deleted` event to Kafka topic
-2. User-Group Service consumes event via `UserDeletedEventConsumer`
-3. Find all memberships for deleted user
-4. Soft delete all memberships (set `deleted_at`, `deleted_by`)
-5. Groups remain intact (lecturer reference preserved for audit)
-
-**Idempotency:** Duplicate events are safe (already soft-deleted memberships ignored).
-
-**Known Gap:** Leader auto-promotion not implemented. Admin must manually promote new leader if deleted user was a leader.
+See [DATABASE.md](DATABASE.md) for the exact constraints/triggers.
 
 ---
 
-## Dependencies
+## 5. Inter-service Communication
 
-### Identity Service (gRPC)
+### 5.1 Identity Service (gRPC client)
+This service calls Identity Service via gRPC for:
+- verifying a user exists (`verifyUserExists`)
+- retrieving a user’s system role (`getUserRole`)
+- fetching user details (`getUser`, `getUsers`)
+- updating a user profile (`updateUser`)
+- listing users (`listUsers`)
 
-**Connection:** `grpc://localhost:9091`
+Error mapping for many calls is centralized through `GrpcExceptionHandler`, translating gRPC statuses into HTTP-facing business exceptions.
 
-**Purpose:** User validation and profile operations
+Resilience:
+- `ResilientIdentityServiceClient` wraps **some** identity calls (not all) with Resilience4j circuit breaker + retry.
 
-**RPCs Used:**
-- `VerifyUserExists(userId)` - Validate user and get role/status
-- `GetUsers(userIds)` - Batch fetch user details for member lists
-- `UpdateUser(userId, request)` - Proxy for UC22 (Update User Profile)
+### 5.2 gRPC server (this service)
+The exposed gRPC API is used for **group existence + membership/leader checks**.
 
-**Resilience:**
-- Circuit breaker (50% failure threshold, 10s wait)
-- Retry pattern (3 attempts, exponential backoff)
+### 5.3 Kafka (user deletion)
+When `spring.kafka.enabled=true` (see `KafkaConsumerConfig`):
+- `UserGroupEventConsumer` listens to `user.deleted` and **hard-deletes** all memberships for the user.
+- `UserDeletedEventConsumer` also listens to `user.deleted` but uses a different container factory name and performs **soft delete** and **auto-promotes a new leader** when a leader is deleted.
 
-**Failure Handling:** If gRPC call fails, return 503 Service Unavailable.
+Docs reflect the code as-is; choose/standardize one consumer in code if you want a single, deterministic behavior.
 
-**See:** [IMPLEMENTATION.md](IMPLEMENTATION.md) for circuit breaker configuration.
-
-### Kafka Event Bus
-
-**Connection:** `kafka://localhost:9092`
-
-**Purpose:** User deletion synchronization
-
-**Consumed Topics:**
-- `user.deleted` - Cleanup memberships when user is deleted
-
-**Event Processing:**
-- Idempotent (duplicate events safe)
-- Automatic soft delete of all user memberships
-- Groups preserved for audit purposes
+### 5.4 Redis
+No Redis client/config/dependency exists in this service module.
 
 ---
 
-## Configuration
+## 6. Removed Content
 
-### Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SERVER_PORT` | `8082` | HTTP port |
-| `GRPC_SERVER_PORT` | `9095` | gRPC server port |
-| `DB_HOST` | `localhost` | PostgreSQL host |
-| `DB_PORT` | `5432` | PostgreSQL port |
-| `DB_NAME` | `usergroup_db` | Database name |
-| `JWT_SECRET` | (required) | Shared JWT secret (must match Identity Service) |
-| `IDENTITY_SERVICE_HOST` | `localhost` | Identity Service gRPC host |
-| `IDENTITY_SERVICE_PORT` | `9091` | Identity Service gRPC port |
-| `KAFKA_BROKERS` | `localhost:9092` | Kafka bootstrap servers |
-
-### Application Properties
-
-```yaml
-spring:
-  datasource:
-    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
-  
-  jpa:
-    hibernate:
-      ddl-auto: validate  # Flyway handles migrations
-  
-  kafka:
-    bootstrap-servers: ${KAFKA_BROKERS}
-    consumer:
-      group-id: user-group-service
-
-jwt:
-  secret: ${JWT_SECRET}
-
-grpc:
-  client:
-    identity-service:
-      address: static://${IDENTITY_SERVICE_HOST}:${IDENTITY_SERVICE_PORT}
-  server:
-    port: ${GRPC_SERVER_PORT:9095}
-```
-
-**See:** [IMPLEMENTATION.md](IMPLEMENTATION.md) for complete configuration reference.
-
----
-
-## Deployment Notes
-
-### Database Setup
-
-1. Create PostgreSQL database: `usergroup_db`
-2. Flyway migrations run automatically on startup
-3. Sample semester data created in V1 migration
-
-### Dependencies
-
-**Required Services:**
-- Identity Service (gRPC port 9091) - CRITICAL
-- Kafka (port 9092) - for user deletion events
-- PostgreSQL (port 5432) - database
-- API Gateway (port 8080) - external access
-
-**Optional Services:**
-- Project Config Service (gRPC client of this service)
-- Report Service (gRPC client of this service)
-
-### Health Check
-
-```bash
-GET /actuator/health
-
-# Expected response
-{
-  "status": "UP",
-  "components": {
-    "db": { "status": "UP" },
-    "diskSpace": { "status": "UP" },
-    "ping": { "status": "UP" }
-  }
-}
-```
-
----
-
-## Known Limitations
-
-### 1. No Leader Auto-Promotion
-
-**Issue:** When leader leaves or is deleted, group has no leader
-
-**Impact:** Admin must manually promote new leader
-
-**Workaround:** Frontend/admin must detect and handle leaderless groups
-
-### 2. No Cascade Soft Delete
-
-**Issue:** Deleting a group does NOT soft delete its memberships
-
-**Behavior:** Group deletion requires empty group (0 active members)
-
-**Rationale:** 
-- Data safety (prevents accidental bulk deletion)
-- Explicit admin actions required
-- Clear audit trail (each member removal logged separately)
-
-**Workaround:** Remove all members before deleting group
-
-### 3. No User Foreign Key Constraints
-
-**Issue:** `user_id`, `lecturer_id` have NO database foreign key
-
-**Consequences:**
-- Orphaned references possible if user deleted in Identity Service
-- No automatic cascade delete at database level
-- Must rely on Kafka events for cleanup
-
-**Mitigation:**
-- Kafka consumer handles user deletion events
-- gRPC validation before operations
-
-### 4. No Semester Archiving
-
-**Issue:** Old semesters cannot be archived or hidden
-
-**Impact:** All semesters visible in API responses
-
-**Workaround:** Use `is_active` flag to filter current semester
-
-### 5. No Retry for Kafka Events
-
-**Issue:** If event processing fails, event is lost
-
-**Impact:** Membership cleanup may fail on transient errors
-
-**Mitigation:** Kafka retention policy (7 days), manual admin cleanup if needed
-
-### 6. No Group Transfer
-
-**Issue:** Cannot change group's lecturer after creation
-
-**Impact:** If lecturer leaves, group cannot be reassigned
-
-**Workaround:** Create new group, migrate members manually
-
----
-
-## References
-
-- **[API Contract](API_CONTRACT.md)** - REST & gRPC endpoint specifications
-- **[Database Design](DATABASE.md)** - Complete schema documentation
-- **[Security Design](SECURITY.md)** - JWT validation & authorization
-- **[Implementation Guide](IMPLEMENTATION.md)** - Setup & configuration
-- **[Test Cases](TEST_CASES.md)** - Test specifications
-- **[gRPC Contract](GRPC_CONTRACT.md)** - gRPC API documentation
-- **[System Architecture](../SYSTEM_ARCHITECTURE.md)** - Overall system design
-
----
-
-**Questions?** See [IMPLEMENTATION.md](IMPLEMENTATION.md) or contact Backend Team Lead
-
+The following claims were removed from previous docs because they are not implemented (or contradict code):
+- LECTURER being allowed to create/update/delete groups via REST (`GroupController` is ADMIN-only for those).
+- Group LEADER being allowed to add/remove members via REST (REST endpoints do not check group-role; only system role via `@PreAuthorize`).
+- “User-Group service does not validate JWT signatures” (it does validate signature using `jwt.secret`).
+- “Leader auto-promotion not implemented on user deletion” (there is an implementation in `UserDeletedEventConsumer`, though there is also a competing hard-delete consumer).
+- “Planned/future consumers” such as `user.updated` handling and generic event-driven caching.
+- Any Redis caching references.
+- Any “future use” architecture theory that is not present in code paths.
