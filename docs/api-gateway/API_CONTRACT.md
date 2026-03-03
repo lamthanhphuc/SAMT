@@ -88,8 +88,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 | `POST /api/identity/register` | Strip `/api/identity` | `POST /register` | Public |
 | `POST /api/identity/login` | Strip `/api/identity` | `POST /login` | Public |
 | `POST /api/identity/refresh-token` | Strip `/api/identity` | `POST /refresh-token` | Public |
-| `POST /api/identity/logout` | Strip `/api/identity` + Inject headers | `POST /logout` + `X-User-Id`, `X-User-Role`, `X-Internal-*` | Protected |
-| `GET /api/identity/profile` | Strip `/api/identity` + Inject headers | `GET /profile` + headers | Protected |
+| `POST /api/identity/logout` | Strip `/api/identity` + Mint internal JWT | `POST /logout` + `Authorization: Bearer <internal-jwt>` | Protected |
+| `GET /api/identity/profile` | Strip `/api/identity` + Mint internal JWT | `GET /profile` + `Authorization: Bearer <internal-jwt>` | Protected |
 
 **Example:**
 
@@ -112,12 +112,7 @@ Authorization: Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImlkZW50aXR5LTEiLCJ0eXAiOiJKV1
 ```http
 GET /profile HTTP/1.1
 Host: identity-service:8081
-X-User-Id: 123
-X-User-Role: ADMIN
-X-Internal-Original-Path: /api/identity/profile
-X-Internal-Timestamp: 1708704600
-X-Internal-Signature: a7f3b8c2d9e1f4a3b8c2d9e1f4a3b8c2
-X-Internal-Key-Id: gateway-1
+Authorization: Bearer <internal-jwt>
 X-Forwarded-Host: gateway
 ```
 
@@ -137,10 +132,10 @@ X-Forwarded-Host: gateway
 
 | Client Request | Gateway Action | Forwarded Request |
 |---------------|---------------|-------------------|
-| `GET /api/groups` | Strip `/api` + Inject headers | `GET /groups` + headers |
-| `POST /api/groups` | Strip `/api` + Inject headers | `POST /groups` + headers |
-| `GET /api/groups/1/members` | Strip `/api` + Inject headers | `GET /groups/1/members` + headers |
-| `GET /api/users/1/groups` | Strip `/api` + Inject headers | `GET /users/1/groups` + headers |
+| `GET /api/groups` | Strip `/api` + Mint internal JWT | `GET /groups` + `Authorization: Bearer <internal-jwt>` |
+| `POST /api/groups` | Strip `/api` + Mint internal JWT | `POST /groups` + `Authorization: Bearer <internal-jwt>` |
+| `GET /api/groups/1/members` | Strip `/api` + Mint internal JWT | `GET /groups/1/members` + `Authorization: Bearer <internal-jwt>` |
+| `GET /api/users/1/groups` | Strip `/api` + Mint internal JWT | `GET /users/1/groups` + `Authorization: Bearer <internal-jwt>` |
 
 **Example:**
 
@@ -158,12 +153,7 @@ Content-Type: application/json
 ```http
 POST /groups HTTP/1.1
 Host: user-group-service:8082
-X-User-Id: 123
-X-User-Role: ADMIN
-X-Internal-Original-Path: /groups
-X-Internal-Timestamp: 1708704600
-X-Internal-Signature: a7f3b8c2d9e1f4a3b8c2d9e1f4a3b8c2
-X-Internal-Key-Id: gateway-1
+Authorization: Bearer <internal-jwt>
 X-Forwarded-Host: gateway
 Content-Type: application/json
 
@@ -184,10 +174,10 @@ Content-Type: application/json
 
 | Client Request | Gateway Action | Forwarded Request |
 |---------------|---------------|-------------------|
-| `POST /api/project-configs` | Strip `/api` + Inject headers | `POST /project-configs` + headers |
-| `GET /api/project-configs/1` | Strip `/api` + Inject headers | `GET /project-configs/1` + headers |
-| `PUT /api/project-configs/1` | Strip `/api` + Inject headers | `PUT /project-configs/1` + headers |
-| `DELETE /api/project-configs/1` | Strip `/api` + Inject headers | `DELETE /project-configs/1` + headers |
+| `POST /api/project-configs` | Strip `/api` + Mint internal JWT | `POST /project-configs` + `Authorization: Bearer <internal-jwt>` |
+| `GET /api/project-configs/1` | Strip `/api` + Mint internal JWT | `GET /project-configs/1` + `Authorization: Bearer <internal-jwt>` |
+| `PUT /api/project-configs/1` | Strip `/api` + Mint internal JWT | `PUT /project-configs/1` + `Authorization: Bearer <internal-jwt>` |
+| `DELETE /api/project-configs/1` | Strip `/api` + Mint internal JWT | `DELETE /project-configs/1` + `Authorization: Bearer <internal-jwt>` |
 
 ---
 
@@ -203,10 +193,10 @@ Content-Type: application/json
 
 | Client Request | Gateway Action | Forwarded Request |
 |---------------|---------------|-------------------|
-| `GET /api/sync/status` | Strip `/api/sync` + Inject headers | `GET /status` + headers |
-| `POST /api/sync/trigger` | Strip `/api/sync` + Inject headers | `POST /trigger` + headers |
+| `GET /api/sync/status` | Strip `/api/sync` + Mint internal JWT | `GET /status` + `Authorization: Bearer <internal-jwt>` |
+| `POST /api/sync/trigger` | Strip `/api/sync` + Mint internal JWT | `POST /trigger` + `Authorization: Bearer <internal-jwt>` |
 
-**Note:** Gateway validates JWT but does NOT enforce role-based authorization. Sync Service verifies `X-User-Role: ADMIN` before executing admin operations.
+**Note:** Gateway validates the external JWT but does NOT enforce role-based authorization. Sync Service enforces admin-only behavior based on internal JWT roles/authorities.
 
 ---
 
@@ -222,8 +212,8 @@ Content-Type: application/json
 
 | Client Request | Gateway Action | Forwarded Request |
 |---------------|---------------|-------------------|
-| `GET /api/analysis/groups/1/summary` | Strip `/api/analysis` + Inject headers | `GET /groups/1/summary` + headers |
-| `GET /api/analysis/reports/1` | Strip `/api/analysis` + Inject headers | `GET /reports/1` + headers |
+| `GET /api/analysis/groups/1/summary` | Strip `/api/analysis` + Mint internal JWT | `GET /groups/1/summary` + `Authorization: Bearer <internal-jwt>` |
+| `GET /api/analysis/reports/1` | Strip `/api/analysis` + Mint internal JWT | `GET /reports/1` + `Authorization: Bearer <internal-jwt>` |
 
 ---
 
@@ -239,8 +229,8 @@ Content-Type: application/json
 
 | Client Request | Gateway Action | Forwarded Request |
 |---------------|---------------|-------------------|
-| `GET /api/reports/groups/1` | Strip `/api/reports` + Inject headers | `GET /groups/1` + headers |
-| `POST /api/reports/generate` | Strip `/api/reports` + Inject headers | `POST /generate` + headers |
+| `GET /api/reports/groups/1` | Strip `/api/reports` + Mint internal JWT | `GET /groups/1` + `Authorization: Bearer <internal-jwt>` |
+| `POST /api/reports/generate` | Strip `/api/reports` + Mint internal JWT | `POST /generate` + `Authorization: Bearer <internal-jwt>` |
 
 ---
 
@@ -248,7 +238,7 @@ Content-Type: application/json
 
 Gateway applies the following filters to all requests:
 
-### 1. JWT Authentication + Signed Header Injection Filter
+### 1. External JWT Validation + Internal JWT Minting Filter
 
 **Applied to:** All requests except public endpoints
 
@@ -256,28 +246,9 @@ Gateway applies the following filters to all requests:
 1. Extract JWT from `Authorization: Bearer <token>` header
 2. Validate signature and expiration
 3. Extract claims: `sub` (userId) and `roles` (array)
-4. Generate timestamp (seconds since epoch)
-5. Generate HMAC-SHA256 signature over canonical payload: `timestampSeconds|METHOD|/path|bodyHash`
-6. Inject signed headers:
-  - `X-User-Id`: JWT `sub`
-  - `X-User-Role`: First entry of JWT `roles` array
-  - `X-Internal-Original-Path`: Original downstream path
-  - `X-Internal-Timestamp`: Timestamp seconds
-  - `X-Internal-Signature`: HMAC-SHA256 signature
-  - `X-Internal-Key-Id`: Signing key id
-7. Set Spring Security context
-
-**Signature Generation:**
-```java
-String payload = timestampSeconds + "|" + method + "|" + path + "|" + bodyHash;
-String signature = HmacUtils.hmacSha256Hex(internalSigningSecret, payload);
-```
-
-**Downstream Service Verification Requirements:**
-1. Verify required headers are present (`X-User-Id`, `X-User-Role`, `X-Internal-*`)
-2. Verify timestamp skew is within configured window (default 300 seconds)
-3. Re-compute HMAC signature and compare with `X-Internal-Signature`
-4. Reject request if signature invalid (401 Unauthorized)
+4. Mint a short-lived internal JWT (RS256) with required claims (`sub`, `roles`, `jti`, `iat`, `exp`, `iss`)
+5. Forward downstream request with `Authorization: Bearer <internal-jwt>`
+6. Set Spring Security context
 
 **Failure:** Return `401 Unauthorized` if JWT validation fails
 
@@ -306,7 +277,7 @@ String signature = HmacUtils.hmacSha256Hex(internalSigningSecret, payload);
   - Production: `https://samt.example.com`, `https://admin.samt.example.com`
 - Allow methods: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS`
 - Allow headers: `Authorization`, `Content-Type`
-- Expose headers: `Authorization`, `X-User-Id`, `X-User-Role`
+- Expose headers: `Authorization`
 - Credentials: `false`
 - Max age: `3600` seconds
 
@@ -504,73 +475,24 @@ Gateway does not define response schema. Response format is determined by downst
 
 ---
 
-## Header Injection Reference
+## Internal JWT Forwarding Reference
 
-Gateway injects the following headers for all protected endpoints:
+For all protected endpoints, the gateway forwards requests to downstream services using a **short-lived internal JWT**.
 
 | Header | Source | Example Value | Purpose |
 |--------|--------|---------------|---------|
-| `X-User-Id` | JWT `sub` | `123` | User identification |
-| `X-User-Role` | JWT `roles[0]` | `ADMIN` | Role-based authorization |
-| `X-Internal-Original-Path` | Gateway | `/groups/1` | Signature payload binding |
-| `X-Internal-Timestamp` | Gateway | `1708704600` | Request timestamp (seconds) |
-| `X-Internal-Signature` | HMAC-SHA256 signature | `a7f3b8c2d9e1f4a3...` | Signature for header integrity |
-| `X-Internal-Key-Id` | Gateway | `gateway-1` | Signature key identification |
+| `Authorization` | Gateway | `Bearer <internal-jwt>` | Downstream authentication |
 | `X-Forwarded-Host` | Static value | `gateway` | Request origin identification |
 
-### Signature Generation
+### Internal JWT Contract (Gateway → Service)
 
-**Algorithm:** HMAC-SHA256
+- **Algorithm:** RS256
+- **Key discovery:** Services validate via gateway internal JWKS (e.g., `GATEWAY_INTERNAL_JWKS_URI`)
+- **Required:** `kid` header, `jti` claim, short TTL
 
-**Secret:** Gateway internal secret (`internal.signing.secret`)
+### Downstream Service Usage
 
-**Payload:** `timestampSeconds|METHOD|/path|bodyHash`
-
-**Example:**
-```java
-String payload = "1708704600|GET|/groups/1|<bodyHash>";
-String signature = HmacUtils.hmacSha256Hex(internalSigningSecret, payload);
-// Result: "a7f3b8c2d9e1f4a3b8c2d9e1f4a3b8c2"
-```
-
-**Downstream Service Usage:**
-
-```java
-// Downstream service reads and verifies headers
-String userId = request.getHeader("X-User-Id");
-String role = request.getHeader("X-User-Role");
-String timestamp = request.getHeader("X-Internal-Timestamp");
-String signature = request.getHeader("X-Internal-Signature");
-String keyId = request.getHeader("X-Internal-Key-Id");
-String originalPath = request.getHeader("X-Internal-Original-Path");
-
-// Verify headers exist
-if (userId == null || signature == null) {
-    throw new UnauthorizedException("Missing internal headers");
-}
-
-// Verify timestamp skew (seconds)
-long requestTime = Long.parseLong(timestamp);
-long currentTime = Instant.now().getEpochSecond();
-if (Math.abs(currentTime - requestTime) > 300) {
-    throw new UnauthorizedException("Request timestamp expired");
-}
-
-// Verify signature
-String method = request.getMethod();
-String bodyHash = "<sha256-of-request-body-or-empty>";
-String payload = requestTime + "|" + method + "|" + originalPath + "|" + bodyHash;
-String expectedSignature = HmacUtils.hmacSha256Hex(internalSigningSecret, payload);
-if (!expectedSignature.equals(signature)) {
-    throw new UnauthorizedException("Invalid internal signature");
-}
-
-// Signature valid, use user context
-Long userIdLong = Long.parseLong(userId);
-if (!"ADMIN".equals(role)) {
-    throw new ForbiddenException("Admin access required");
-}
-```
+Downstream services should use Spring Security OAuth2 Resource Server JWT validation (JWKS) and authorize based on token claims/authorities (not on forwarded `X-*` headers).
 
 ---
 

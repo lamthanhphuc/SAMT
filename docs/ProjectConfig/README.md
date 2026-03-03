@@ -218,8 +218,9 @@ project-config-service/
 ### Service-to-Service Auth
 
 **Internal API** (for Sync Service):
-- Headers: `X-Service-Name`, `X-Service-Key`
-- Shared secret: `INTERNAL_SERVICE_KEY`
+- Auth: Gateway-issued internal JWT forwarded as `Authorization: Bearer <internal-jwt>`
+- Validation: RS256 via gateway JWKS (`GATEWAY_INTERNAL_JWKS_URI`)
+- Transport: enable profile `mtls` to require mTLS
 - Returns decrypted tokens
 
 ---

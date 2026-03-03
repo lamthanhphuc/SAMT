@@ -403,12 +403,11 @@ All API operations are **naturally idempotent** based on project ID:
 
 **Description:** Get decrypted tokens (for Sync Service)
 
-**Authorization:** Service-to-Service
+**Authorization:** Internal JWT (Gateway → Service)
 
 **Request Headers:**
 ```
-X-Service-Name: sync-service
-X-Service-Key: <INTERNAL_SERVICE_KEY>
+Authorization: Bearer <internal-jwt>
 ```
 
 **Response 200 OK:**
@@ -427,26 +426,22 @@ X-Service-Key: <INTERNAL_SERVICE_KEY>
 ```
 
 **Security:**
-- Validate `X-Service-Name` header (must be whitelisted)
-- Validate `X-Service-Key` header matches service-specific key
+- Validate the internal JWT via gateway JWKS (RS256)
+- Enforce issuer/service/timestamp validators (short TTL, bounded clock skew)
 - Return decrypted tokens (NO masking)
 - Only if state = `VERIFIED` (403 otherwise)
 
-**Service Whitelist (v1.0):**
-- `sync-service` - Primary consumer for data synchronization
-- Future services require configuration update
+**Access Control:**
+- Only the Sync workflow should call this endpoint
+- Prefer restricting access via gateway routing + network policy and enabling mTLS (`mtls` profile)
 
 **Rate Limiting:**
 - 100 requests per minute per service
 - 429 Too Many Requests if exceeded
 
 **Configuration:**
-```bash
-# Environment variables
-INTERNAL_SERVICE_KEY_SYNC=<unique-key-for-sync-service>
-# Add new services as needed:
-# INTERNAL_SERVICE_KEY_REPORT=<unique-key-for-report-service>
-```
+- `GATEWAY_INTERNAL_JWKS_URI` (internal JWKS endpoint)
+- `GATEWAY_INTERNAL_JWT_ISSUER` / expected service
 
 **Error Responses:**
 

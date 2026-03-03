@@ -17,7 +17,7 @@
 
 ## Overview
 
-API Gateway is the **single entry point** for all client requests to SAMT system microservices. It handles JWT validation, request routing, and header injection for downstream services.
+API Gateway is the **single entry point** for all client requests to SAMT system microservices. It handles external JWT validation, request routing, and forwarding a short-lived internal JWT to downstream services.
 
 ### Core Responsibilities
 
@@ -31,17 +31,17 @@ API Gateway is the **single entry point** for all client requests to SAMT system
 - Public endpoint bypass (login, register, refresh token)
 - Extract user info from JWT claims
 
-✅ **Authorization Context Injection:**
-- Signed internal headers with HMAC-SHA256
-- Inject `X-User-Id`, `X-User-Role`, `X-Internal-Original-Path`, `X-Internal-Timestamp`, `X-Internal-Signature`, `X-Internal-Key-Id`
-- Downstream services verify signature (prevent header spoofing)
-- Replay attack prevention with timestamp validation
+✅ **Internal JWT Minting & Forwarding:**
+- Mint short-lived internal JWT (RS256) after validating the external JWT
+- Forward internal JWT via `Authorization: Bearer <internal-jwt>`
+- Downstream services validate internal JWT via the gateway internal JWKS
+- Replay risk reduction via short TTL + `jti`
 
 ✅ **Security:**
 - CORS whitelist configuration
 - Redis-based rate limiting (per-IP and per-endpoint)
 - Request size limiting (10MB max)
-- Signed internal communication (HMAC-based)
+- Internal JWT-based communication (RS256/JWKS)
 - Global request/response filtering
 - Swagger UI aggregation
 
@@ -70,11 +70,11 @@ Client (REST/JSON)
 API Gateway (port 8080)
       ↓ Rate Limiting (Redis-based)
       ↓ JWT Validation
-      ↓ Signed Header Injection (X-User-Id, X-User-Role, X-Internal-*)
+  ↓ Internal JWT Minting & Forwarding (Authorization: Bearer <internal-jwt>)
       ↓ Circuit Breaker + Timeout
       ↓
 Downstream Services
-      ↓ Signature Verification
+  ↓ Internal JWT Validation
   - /api/identity/** → Identity Service (8081)
   - /api/groups/** → User-Group Service (8082)
   - /api/project-configs/** → Project Config Service (8083)
@@ -138,26 +138,21 @@ Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImlkZW50aXR5LT
 3. Validate signature using JWKS (`JWT_JWKS_URI`)
 4. Check token expiration
 5. Extract claims: `sub` (userId) + `roles` (array)
-6. Generate signed internal headers (HMAC-SHA256)
+6. Mint short-lived internal JWT (RS256)
 7. Forward to `http://user-group-service:8082/groups/1` with circuit breaker
 
 **Forwarded Request:**
 ```http
 GET /groups/1 HTTP/1.1
 Host: user-group-service:8082
-X-User-Id: 123
-X-User-Role: ADMIN
-X-Internal-Original-Path: /groups/1
-X-Internal-Timestamp: 1708704600
-X-Internal-Signature: a7f3b8c2...
-X-Internal-Key-Id: gateway-1
+Authorization: Bearer <internal-jwt>
 X-Forwarded-Host: gateway
 ```
 
 **Downstream Service:**
-1. Verify `X-Internal-Signature` using `INTERNAL_SIGNING_SECRET`
-2. Check `X-Internal-Timestamp` skew (default max 300 seconds)
-3. Read `X-User-Id`, `X-User-Role` from headers
+1. Validate internal JWT via gateway internal JWKS (`GATEWAY_INTERNAL_JWKS_URI`)
+2. Enforce issuer/service/clock-skew validators
+3. Derive identity/roles from JWT claims
 4. Perform business authorization (group membership, resource ownership)
 5. Return response
 
@@ -190,8 +185,12 @@ SERVER_PORT=8080
 # JWT validation (RS256 via JWKS)
 JWT_JWKS_URI=http://identity-service:8081/.well-known/jwks.json
 
-# Internal Gateway Secret (for signed headers)
-GATEWAY_INTERNAL_SECRET=gateway-to-service-hmac-secret-256-bit-minimum
+# Internal JWT signing (Gateway → Service)
+GATEWAY_INTERNAL_JWT_PRIVATE_KEY_PEM_PATH=/certs/gateway-private.pkcs8.pem
+GATEWAY_INTERNAL_JWT_KID=gateway-internal-2026-01
+GATEWAY_INTERNAL_JWT_TTL_SECONDS=20
+GATEWAY_INTERNAL_JWT_CLOCK_SKEW_SECONDS=30
+GATEWAY_INTERNAL_JWT_ISSUER=samt-gateway
 
 # Redis (required for rate limiting)
 SPRING_DATA_REDIS_HOST=redis
@@ -240,7 +239,8 @@ docker build -t api-gateway:1.0 .
 # Run
 docker run -p 8080:8080 \
   -e JWT_JWKS_URI=http://identity-service:8081/.well-known/jwks.json \
-  -e GATEWAY_INTERNAL_SECRET=gateway-to-service-hmac-secret-256-bit-minimum \
+  -e GATEWAY_INTERNAL_JWT_PRIVATE_KEY_PEM_PATH=/certs/gateway-private.pkcs8.pem \
+  -e GATEWAY_INTERNAL_JWT_KID=gateway-internal-2026-01 \
   api-gateway:1.0
 ```
 

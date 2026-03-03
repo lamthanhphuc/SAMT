@@ -15,3 +15,19 @@ spring:
 samt:
   secrets:
     datasource-password: ${SPRING_DATASOURCE_PASSWORD}
+
+# Production hardening: expose only health; disable API docs.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

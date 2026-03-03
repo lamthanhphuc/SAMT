@@ -1052,9 +1052,9 @@ SELECT * FROM users WHERE email = 'john@example.com' AND deleted_at IS NULL;
 
 - [ ] **Authentication:**
   - [ ] Do NOT validate external JWTs in downstream services
-  - [ ] Verify API Gateway internal signature (`X-Internal-*`) on every request
-  - [ ] Consume gateway-injected identity headers: `X-User-Id` + `X-User-Role`
-  - [ ] Configure `INTERNAL_SIGNING_SECRET` (shared between gateway and services)
+  - [ ] Validate the gateway-issued **internal JWT** (`Authorization: Bearer <internal-jwt>`) in every downstream service
+  - [ ] Configure internal JWT trust via `GATEWAY_INTERNAL_JWKS_URI` (+ expected issuer/service)
+  - [ ] Do NOT consume `X-User-*` / `X-Internal-*` headers for identity or authorization
 
 - [ ] **Authorization:**
   - [ ] Implement role-based checks in service layer

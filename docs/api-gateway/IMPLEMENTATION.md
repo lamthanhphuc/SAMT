@@ -45,7 +45,8 @@ mvn spring-boot:run
 docker build -t api-gateway:1.0 .
 docker run -p 8080:8080 \
   -e JWT_JWKS_URI=http://identity-service:8081/.well-known/jwks.json \
-  -e GATEWAY_INTERNAL_SECRET=gateway-service-hmac-secret-256-bit \
+  -e GATEWAY_INTERNAL_JWT_PRIVATE_KEY_PEM_PATH=/certs/gateway-private.pkcs8.pem \
+  -e GATEWAY_INTERNAL_JWT_KID=gw-2026-01 \
   api-gateway:1.0
 ```
 
@@ -66,7 +67,8 @@ curl http://localhost:8080/actuator/health
 | Variable | Description | Default | Example |
 |----------|-------------|---------|---------|
 | `JWT_JWKS_URI` | Identity Service JWKS endpoint for JWT validation (RS256) | - | `http://identity-service:8081/.well-known/jwks.json` |
-| `GATEWAY_INTERNAL_SECRET` | HMAC secret for signed headers | - | `gateway-service-hmac-secret-256-bit` |
+| `GATEWAY_INTERNAL_JWT_PRIVATE_KEY_PEM_PATH` | Path to RSA private key (PKCS#8 PEM) for internal JWT signing | `/certs/gateway-private.pkcs8.pem` | `/certs/gateway-private.pkcs8.pem` |
+| `GATEWAY_INTERNAL_JWT_KID` | `kid` value for internal JWT key rotation | `gw-2026-01` | `gw-2026-01` |
 
 **Optional:**
 
@@ -136,8 +138,6 @@ spring:
               - Content-Type
             exposedHeaders:
               - Authorization
-              - X-User-Id
-              - X-User-Role
             allowCredentials: false
             maxAge: 3600
 
@@ -148,10 +148,15 @@ spring:
 jwt:
   jwks-uri: ${JWT_JWKS_URI:http://identity-service:8081/.well-known/jwks.json}
 
-# Internal Gateway Secret
+# Internal JWT (Gateway → Service)
 gateway:
-  internal:
-    secret: ${GATEWAY_INTERNAL_SECRET:gateway-service-hmac-secret-change-in-production}
+  internal-jwt:
+    private-key-pem-path: ${GATEWAY_INTERNAL_JWT_PRIVATE_KEY_PEM_PATH:/certs/gateway-private.pkcs8.pem}
+    key-id: ${GATEWAY_INTERNAL_JWT_KID:gw-2026-01}
+    ttl-seconds: ${GATEWAY_INTERNAL_JWT_TTL_SECONDS:20}
+    clock-skew-seconds: ${GATEWAY_INTERNAL_JWT_CLOCK_SKEW_SECONDS:30}
+    issuer: ${GATEWAY_INTERNAL_JWT_ISSUER:samt-gateway}
+    service-name: api-gateway
 
 # Rate Limiting
 rate:
@@ -231,18 +236,21 @@ api-gateway/
 │   │
 │   ├── filter/
 │   │   ├── JwtAuthenticationFilter.java # JWT validation filter
-│   │   └── SignedHeaderFilter.java      # HMAC signature injection
+│   │   ├── HeaderSanitizationFilter.java # Remove legacy/unsafe inbound headers
+│   │   └── RedisRateLimitGatewayFilter.java # Rate limiting filter
 │   │
-│   ├── util/
-│   │   ├── JwtUtil.java                 # JWT parsing and validation
-│   │   └── SignatureUtil.java           # HMAC signature generation
+│   ├── security/
+│   │   ├── InternalJwtWebFilter.java     # Mint & forward internal JWT
+│   │   ├── InternalJwksController.java   # Publish internal JWKS
+│   │   ├── InternalJwtIssuer.java        # Internal JWT creation
+│   │   └── PemKeyLoader.java             # RSA key loading
 │   │
 │   ├── resolver/
 │   │   └── IpKeyResolver.java           # Rate limiting key resolver
 │   │
 │   └── validation/
 │       ├── JwtSecretValidator.java      # JWT secret validation on startup
-│       └── GatewaySecretValidator.java  # Gateway internal secret validation
+│       └── ProdSecretsValidationConfiguration.java  # Production secret checks
 │
 └── src/main/resources/
     └── application.yml                   # Configuration
@@ -256,11 +264,10 @@ api-gateway/
 |------------|---------|---------|
 | `spring-cloud-starter-gateway` | Reactive gateway framework | 2023.0.0 |
 | `spring-boot-starter-security` | Security & authentication | 3.2+ |
-| `jjwt-api` | JWT parsing and validation | 0.12.3 |
+| `spring-boot-starter-oauth2-resource-server` | JWT validation via Nimbus (JWKS/RS256) | 3.2+ |
 | `spring-boot-starter-data-redis-reactive` | Redis integration (rate limiting) | 3.2+ |
 | `resilience4j-spring-boot3` | Circuit breaker, retry, rate limiter | 2.1.0 |
 | `resilience4j-reactor` | Reactive resilience patterns | 2.1.0 |
-| `commons-codec` | HMAC signature generation | 1.16.0 |
 | `springdoc-openapi-starter-webflux-ui` | Swagger UI | 2.3.0 |
 | `spring-boot-starter-actuator` | Health checks & metrics | 3.2+ |
 
@@ -433,33 +440,24 @@ public Claims validateAndParseClaims(String token) {
 
 **Failure:** Return `401 Unauthorized`
 
-### 4. Header Injection (Signed)
+### 4. Internal JWT Minting & Forwarding
 
-**File:** `SignedHeaderFilter.java`
+**File:** `InternalJwtWebFilter.java`
 
 **Process:**
 ```java
-// Generate signed headers (simplified)
+// Mint internal JWT (simplified)
 String userId = jwt.getSubject();
-String role = jwt.getClaimAsStringList("roles").get(0);
-long timestampSeconds = Instant.now().getEpochSecond();
-String method = request.getMethod().toString();
-String path = request.getURI().getPath();
-String bodyHash = "<sha256-of-body-or-empty>";
+List<String> roles = jwt.getClaimAsStringList("roles");
+String internalJwt = internalJwtIssuer.issue(userId, roles);
 
-String payload = timestampSeconds + "|" + method + "|" + path + "|" + bodyHash;
-String signature = HmacUtils.hmacSha256Hex(internalSigningSecret, payload);
-
-// Inject headers (and strip Authorization)
+// Replace inbound Authorization with internal JWT
 ServerWebExchange mutatedExchange = exchange.mutate()
   .request(builder -> builder
-    .headers(headers -> headers.remove(HttpHeaders.AUTHORIZATION))
-    .header("X-User-Id", userId)
-    .header("X-User-Role", role)
-    .header("X-Internal-Original-Path", path)
-    .header("X-Internal-Timestamp", String.valueOf(timestampSeconds))
-    .header("X-Internal-Signature", signature)
-    .header("X-Internal-Key-Id", "gateway-1")
+    .headers(headers -> {
+        headers.remove(HttpHeaders.AUTHORIZATION);
+        headers.setBearerAuth(internalJwt);
+    })
   )
   .build();
 ```
@@ -485,7 +483,7 @@ return chain.filter(mutatedExchange)
 ### 6. Request Forwarding with Resilience
 
 Gateway forwards request to downstream service with:
-- Signed headers
+- Internal JWT (`Authorization: Bearer <internal-jwt>`)
 - Circuit breaker protection
 - Timeout enforcement (30 seconds)
 - Retry logic (transient failures only)
@@ -494,12 +492,7 @@ Gateway forwards request to downstream service with:
 ```http
 GET /groups/1 HTTP/1.1
 Host: user-group-service:8082
-X-User-Id: 123
-X-User-Role: ADMIN
-X-Internal-Original-Path: /groups/1
-X-Internal-Timestamp: 1708704600
-X-Internal-Signature: a7f3b8c2d9e1f4a3b8c2d9e1f4a3b8c2
-X-Internal-Key-Id: gateway-1
+Authorization: Bearer <internal-jwt>
 X-Forwarded-Host: gateway
 ```
 
@@ -548,9 +541,10 @@ X-Forwarded-Host: gateway
 > Non-negotiable guarantees:
 >
 > - CORS executes FIRST (before authentication).
-> - JWT Authentication executes at @Order(-100).
-> - Signed Header Injection executes at @Order(-50).
-> - Public endpoints bypass JWT validation and signed header injection,
+> - Header sanitization executes first among our custom WebFilters.
+> - JWT Authentication executes before internal JWT minting.
+> - Internal JWT minting executes before routing.
+> - Public endpoints bypass JWT validation and internal JWT minting,
 >   but STILL pass through CORS.
 > - Rate Limiting executes at GatewayFilter stage AFTER routing decision.
 > - Circuit Breaker wraps the entire downstream call.
@@ -563,27 +557,29 @@ X-Forwarded-Host: gateway
 **Execution Flow (in strict order):**
 
 ```
-1. CORS Handling (WebFilter, implicit order)
+1. CORS Handling (framework)
+  ↓
+2. Header Sanitization (WebFilter, `Ordered.HIGHEST_PRECEDENCE`)
+  ↓
+3. JWT Authentication (WebFilter, `Ordered.HIGHEST_PRECEDENCE + 10`)
+  ↓
+4. Internal JWT Minting & Forwarding (WebFilter, `Ordered.HIGHEST_PRECEDENCE + 50`)
+  ↓
+5. Gateway Routing Decision
    ↓
-2. JWT Authentication (WebFilter, @Order(-100))
+6. Rate Limiting (GatewayFilter, per-route if configured)
    ↓
-3. Signed Header Injection (WebFilter, @Order(-50))
+7. StripPrefix (GatewayFilter, per-route)
    ↓
-4. Gateway Routing Decision
+8. AddRequestHeader (GatewayFilter, per-route)
    ↓
-5. Rate Limiting (GatewayFilter, per-route if configured)
+9. Circuit Breaker (GatewayFilter, per-route if configured)
    ↓
-6. StripPrefix (GatewayFilter, per-route)
+10. Retry Logic (GatewayFilter, per-route if configured)
    ↓
-7. AddRequestHeader (GatewayFilter, per-route)
-   ↓
-8. Circuit Breaker (GatewayFilter, per-route if configured)
-   ↓
-9. Retry Logic (GatewayFilter, per-route if configured)
-   ↓
-10. HTTP Client Execution (connect-timeout: 3s, response-timeout: 30s)
+11. HTTP Client Execution (connect-timeout: 3s, response-timeout: 30s)
     ↓
-11. Forward to Downstream Service
+12. Forward to Downstream Service
 ```
 
 **Filter Classification:**
@@ -591,8 +587,9 @@ X-Forwarded-Host: gateway
 | Filter | Type | Scope | Order | Implementation |
 |--------|------|-------|-------|----------------|
 | CORS | WebFilter | Global | Implicit (first) | Spring Cloud Gateway built-in |
-| JWT Authentication | WebFilter | Global | @Order(-100) | `JwtAuthenticationFilter.java` |
-| Signed Header Injection | WebFilter | Global | @Order(-50) | `SignedHeaderFilter.java` |
+| Header Sanitization | WebFilter | Global | `Ordered.HIGHEST_PRECEDENCE` | `HeaderSanitizationFilter.java` |
+| JWT Authentication | WebFilter | Global | `Ordered.HIGHEST_PRECEDENCE + 10` | `JwtAuthenticationFilter.java` |
+| Internal JWT Minting & Forwarding | WebFilter | Global | `Ordered.HIGHEST_PRECEDENCE + 50` | `InternalJwtWebFilter.java` |
 | Rate Limiting | GatewayFilter | Per-route | Route definition order | `RequestRateLimiter` (conditionally applied) |
 | StripPrefix | GatewayFilter | Per-route | Route definition order | Built-in |
 | AddRequestHeader | GatewayFilter | Per-route | Route definition order | Built-in |
@@ -606,8 +603,9 @@ X-Forwarded-Host: gateway
    - GatewayFilters execute AFTER routing for matched routes only
 
 2. **@Order Values:**
-   - JWT Authentication: @Order(-100) to execute before signed header injection
-   - Signed Header Injection: @Order(-50) to execute after JWT validation
+  - Header Sanitization: `Ordered.HIGHEST_PRECEDENCE` (strip caller-supplied internal headers)
+  - JWT Authentication: `Ordered.HIGHEST_PRECEDENCE + 10` (validate external JWT)
+  - Internal JWT: `Ordered.HIGHEST_PRECEDENCE + 50` (mint + forward internal JWT)
    - CORS: No explicit @Order, handled by Spring Cloud Gateway framework first
 
 3. **Rate Limiting Scope:**
@@ -628,108 +626,35 @@ X-Forwarded-Host: gateway
 
 6. **Public Endpoint Bypass:**
    - JWT Authentication filter checks path and skips validation for public endpoints
-   - Signed Header Injection does NOT execute for public endpoints
+  - Internal JWT minting does NOT execute for public endpoints
    - All other filters execute normally
 
 ---
 
-## Signature Generation Implementation
+## Internal JWT Issuance Implementation
 
-### SignatureUtil.java
+The gateway no longer generates HMAC signatures or injects `X-User-*` / `X-Internal-*` headers.
 
-```java
-package com.example.gateway.util;
+**Key components:**
+- `JwtAuthenticationFilter.java`: validates the *external* JWT (Identity Service JWKS) and stores it in exchange attributes.
+- `InternalJwtIssuer.java`: mints a short-lived *internal* JWT (RS256) with strict timestamps and a `kid`.
+- `InternalJwtWebFilter.java`: replaces inbound `Authorization` with `Authorization: Bearer <internal-jwt>` before proxying.
+- `InternalJwksController.java`: publishes the internal JWKS at `/.well-known/internal-jwks.json`.
 
-import org.apache.commons.codec.digest.HmacUtils;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+**Downstream verification (Spring Security resource server):**
+```yaml
+spring:
+  security:
+  oauth2:
+    resourceserver:
+    jwt:
+      jwk-set-uri: ${GATEWAY_INTERNAL_JWKS_URI}
 
-@Component
-public class SignatureUtil {
-
-    private final String gatewaySecret;
-
-    public SignatureUtil(@Value("${gateway.internal.secret}") String gatewaySecret) {
-        this.gatewaySecret = gatewaySecret;
-    }
-
-    public String generateSignature(Long userId, String email, String role, long timestamp) {
-        String payload = userId + "|" + email + "|" + role + "|" + timestamp;
-        return HmacUtils.hmacSha256Hex(gatewaySecret, payload);
-    }
-
-    public boolean verifySignature(
-            Long userId,
-            String email,
-            String role,
-            long timestamp,
-            String receivedSignature
-    ) {
-        String expectedSignature = generateSignature(userId, email, role, timestamp);
-        return expectedSignature.equals(receivedSignature);
-    }
-}
-```
-
-### Downstream Service Verification
-
-```java
-@Component
-public class SignatureVerificationFilter implements Filter {
-
-    @Value("${gateway.internal.secret}")
-    private String gatewaySecret;
-
-    @Override
-    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
-            throws IOException, ServletException {
-        
-        HttpServletRequest httpRequest = (HttpServletRequest) request;
-        
-        // Read headers
-        String userId = httpRequest.getHeader("X-User-Id");
-        String role = httpRequest.getHeader("X-User-Role");
-        String timestamp = httpRequest.getHeader("X-Internal-Timestamp");
-        String signature = httpRequest.getHeader("X-Internal-Signature");
-        String originalPath = httpRequest.getHeader("X-Internal-Original-Path");
-        
-        // Validate headers exist
-        if (userId == null || signature == null) {
-            sendError(response, 401, "Missing internal headers");
-            return;
-        }
-        
-        // Validate timestamp skew (seconds; default max 300)
-        long requestTime = Long.parseLong(timestamp);
-        long currentTime = Instant.now().getEpochSecond();
-        if (Math.abs(currentTime - requestTime) > 300) {
-            sendError(response, 401, "Request timestamp expired");
-            return;
-        }
-        
-        // Verify signature
-        String method = httpRequest.getMethod();
-        String bodyHash = "<sha256-of-request-body-or-empty>";
-        String payload = requestTime + "|" + method + "|" + originalPath + "|" + bodyHash;
-        String expectedSignature = HmacUtils.hmacSha256Hex(gatewaySecret, payload);
-        if (!expectedSignature.equals(signature)) {
-            sendError(response, 401, "Invalid internal signature");
-            return;
-        }
-        
-        // Signature valid, proceed
-        chain.doFilter(request, response);
-    }
-    
-    private void sendError(ServletResponse response, int status, String message) throws IOException {
-        HttpServletResponse httpResponse = (HttpServletResponse) response;
-        httpResponse.setStatus(status);
-        httpResponse.setContentType("application/json");
-        httpResponse.getWriter().write(
-            "{\"error\":{\"code\":\"UNAUTHORIZED\",\"message\":\"" + message + "\"}}"
-        );
-    }
-}
+security:
+  internal-jwt:
+  issuer: ${GATEWAY_INTERNAL_ISSUER}
+  expected-service: ${SERVICE_NAME}
+  max-clock-skew: ${INTERNAL_JWT_MAX_CLOCK_SKEW:PT60S}
 ```
 
 ---

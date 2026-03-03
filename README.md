@@ -196,6 +196,9 @@ curl http://localhost:8081/actuator/metrics
 - [ ] Sử dụng Docker secrets cho credentials
 - [ ] Giới hạn resource limits cho containers
 
+**Zero-Trust (Gateway JWT → Internal JWT + mTLS):**
+- Xem hướng dẫn migration chính thức: [docs/ZERO_TRUST_MIGRATION.md](docs/ZERO_TRUST_MIGRATION.md)
+
 ---
 
 ## 📝 Best Practices

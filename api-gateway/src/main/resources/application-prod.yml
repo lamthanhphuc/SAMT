@@ -3,19 +3,19 @@
 jwt:
   jwks-uri: ${JWT_JWKS_URI}
 
-# API Gateway has no datasource, but it has a critical internal signing secret.
-internal:
-  signing:
-    secret: ${INTERNAL_SIGNING_SECRET}
-
 gateway:
-  internal:
-    secret: ${INTERNAL_SIGNING_SECRET}
+  internal-jwt:
+    private-key-pem-path: ${GATEWAY_INTERNAL_JWT_PRIVATE_KEY_PEM_PATH}
+    key-id: ${GATEWAY_INTERNAL_JWT_KID}
+    ttl-seconds: ${GATEWAY_INTERNAL_JWT_TTL_SECONDS:20}
+    clock-skew-seconds: ${GATEWAY_INTERNAL_JWT_CLOCK_SKEW_SECONDS:30}
+    issuer: ${GATEWAY_INTERNAL_JWT_ISSUER:samt-gateway}
 
 samt:
   secrets:
     jwt-jwks-uri: ${JWT_JWKS_URI}
-    internal-signing-secret: ${INTERNAL_SIGNING_SECRET}
+    gateway-internal-jwt-private-key-pem-path: ${GATEWAY_INTERNAL_JWT_PRIVATE_KEY_PEM_PATH}
+    gateway-internal-jwt-kid: ${GATEWAY_INTERNAL_JWT_KID}
 
 # Production hardening: expose only health; disable API docs.
 management:

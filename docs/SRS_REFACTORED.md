@@ -293,10 +293,9 @@ https://app.diagrams.net/\#G1dIYlz7NYFMqShsOqYqw3pEyXYfOpgjYT\#%7B%22pageId%22%3
 #### **4.2.3 Service-to-Service Authentication**
 
 * **Internal API Security:**
-  - Headers required: `X-Service-Name`, `X-Service-Key`
-  - Service Key: 256-bit random hex string
-  - Validation: Constant-time comparison để tránh timing attacks
-  - Audit logging: Mọi internal API call được ghi log (serviceName, action, resourceId, outcome, sourceIp)
+  - Auth: Gateway-issued **internal JWT** (RS256) validated via internal JWKS
+  - Transport: bật profile `mtls` để enforce mutual TLS giữa services
+  - Audit logging: Mọi internal API call được ghi log (service identity, action, resourceId, outcome, sourceIp)
 
 * **Permission Model:**
   - SYNC_SERVICE, AI_SERVICE: READ_DECRYPTED_TOKENS
@@ -684,7 +683,7 @@ COMET (Concurrent Object Modeling and Architectural Design Method) là phương 
 
 **Security:**
 - gRPC metadata authentication thay vì JWT headers
-- Service-to-service auth cho internal methods (x-service-name, x-service-key)
+- Service-to-service auth cho internal methods (internal JWT + mTLS profile)
 - Tokens luôn được mã hóa trong database, mask khi trả về client
 
 #### **7.2.3 UC-SYNC-PROJECT-DATA (Planned)**
@@ -947,8 +946,8 @@ Hệ thống SAMT được thiết kế theo kiến trúc Microservices với c�
 - Sync Service có thể overload khi crawl dữ liệu lớn từ Jira/GitHub
 
 **Security Concerns:**
-- Internal gRPC communication không mã hóa (plaintext)
-- Service-to-service authentication dựa vào static API keys (X-Service-Key)
+- Internal gRPC communication không mã hóa (plaintext) nếu chạy default profile
+- Service-to-service authentication phải dựa trên internal JWT (RS256/JWKS) và nên bật mTLS (profile `mtls`)
 - Decrypted tokens được truyền qua internal network
 
 **Scalability Limitations:**

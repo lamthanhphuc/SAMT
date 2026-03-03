@@ -5,6 +5,17 @@
 **Maturity Level:** Enterprise Production-Ready  
 **Major Changes:** Async architecture + comprehensive resilience patterns introduced (ProjectConfig Service)
 
+## Zero-Trust Update (authoritative)
+
+SAMT has migrated away from legacy HMAC `X-Internal-*` / `X-User-*` header trust.
+
+- Gateway validates the **external JWT**.
+- Gateway forwards a **short-lived internal JWT (RS256)** as `Authorization: Bearer <internal-jwt>`.
+- Downstream services validate internal JWT via the gateway JWKS endpoint.
+- Service-to-service traffic is enforced via **mTLS** under the `mtls` profile.
+
+See: [ZERO_TRUST_MIGRATION.md](ZERO_TRUST_MIGRATION.md)
+
 ---
 
 ## 1. Service Overview
@@ -183,7 +194,7 @@ Identity Service → Kafka → UserGroup Service
 ```
 1. Client → ProjectConfig Service: POST /api/project-configs/{id}/verify
 2. ProjectConfig Service:
-  - Extract userId/role from gateway headers (`X-User-Id`, `X-User-Role`) after verifying internal signature
+  - Validate gateway-issued internal JWT (RS256 via JWKS)
 3. ProjectConfig Service → UserGroup Service (gRPC):
    - Verify user is group leader (checkGroupLeader RPC)
 4. UserGroup Service → ProjectConfig Service: Authorization result
@@ -203,7 +214,7 @@ Identity Service → Kafka → UserGroup Service
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│                     JWT TOKEN (15 min)                        │
+│                   External JWT (15 min)                       │
 ├──────────────────────────────────────────────────────────────┤
 │ Header:                                                       │
 │   { "alg": "RS256", "kid": "identity-1", "typ": "JWT" }             │
@@ -218,11 +229,32 @@ Identity Service → Kafka → UserGroup Service
 │     "token_type": "ACCESS"                                   │
 │   }                                                           │
 │                                                               │
-│ Signature: HMACSHA256(base64(header) + "." + base64(payload),│
-│   RSA-SHA256 signature (Identity Service private key)          │
+│ Signature: RSA-SHA256 signature (Identity Service private key) │
 └──────────────────────────────────────────────────────────────┘
 
 Gateway validates JWT signature using public keys from JWKS: `/.well-known/jwks.json` (configured via `JWT_JWKS_URI`).
+
+┌──────────────────────────────────────────────────────────────┐
+│                 Internal JWT (short-lived)                    │
+├──────────────────────────────────────────────────────────────┤
+│ Header:                                                       │
+│   { "alg": "RS256", "kid": "gateway-<kid>", "typ": "JWT" }          │
+│                                                               │
+│ Payload:                                                      │
+│   {                                                           │
+│     "iss": "samt-gateway",     // Gateway issuer              │
+│     "sub": "123",              // User ID                     │
+│     "roles": ["STUDENT"],      // Authorization roles         │
+│     "service": "api-gateway",  // Caller service marker       │
+│     "iat": 1706612400,                                     │
+│     "exp": 1706612460,        // Short TTL (e.g., 60s)         │
+│     "jti": "..."              // Required unique id            │
+│   }                                                           │
+│                                                               │
+│ Signature: RSA-SHA256 signature (Gateway private key)          │
+└──────────────────────────────────────────────────────────────┘
+
+Gateway publishes internal JWKS for downstream verification at `/.well-known/internal-jwks.json`.
 ```
 
 ### 6.2 Authorization Matrix
@@ -358,7 +390,8 @@ services:
       - "9095:9095"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-usergroup:5432/samt_usergroup
-      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET}
+      - GATEWAY_INTERNAL_JWKS_URI=http://api-gateway:8080/.well-known/internal-jwks.json
+      - GATEWAY_INTERNAL_JWT_ISSUER=samt-gateway
       - IDENTITY_SERVICE_GRPC_HOST=identity-service
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
@@ -371,7 +404,8 @@ services:
       - "8083:8083"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-projectconfig:5432/projectconfig_db
-      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET}
+      - GATEWAY_INTERNAL_JWKS_URI=http://api-gateway:8080/.well-known/internal-jwks.json
+      - GATEWAY_INTERNAL_JWT_ISSUER=samt-gateway
       - USER_GROUP_SERVICE_GRPC_HOST=usergroup-service
       - JIRA_API_TIMEOUT_SECONDS=6
       - GITHUB_API_TIMEOUT_SECONDS=6
@@ -392,8 +426,9 @@ JWT_KEY_ID=identity-1
 # API Gateway (JWT validation)
 JWT_JWKS_URI=http://identity-service:8081/.well-known/jwks.json
 
-# Gateway → Downstream trust (internal signature)
-INTERNAL_SIGNING_SECRET=gateway-to-service-hmac-secret-256-bit-minimum
+# Gateway → Downstream trust (internal JWT)
+GATEWAY_INTERNAL_JWKS_URI=http://api-gateway:8080/.well-known/internal-jwks.json
+GATEWAY_INTERNAL_JWT_ISSUER=samt-gateway
 ```
 
 **Per-Service Variables:**

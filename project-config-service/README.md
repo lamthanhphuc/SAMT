@@ -113,14 +113,18 @@ Copy the output key to environment variables.
 # Windows PowerShell
 $env:ENCRYPTION_SECRET_KEY="a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6..."
 $env:SERVICE_TO_SERVICE_SYNC_KEY="yourServiceToServiceKeyForSyncService"
-$env:INTERNAL_SIGNING_SECRET="gateway-to-service-hmac-secret-256-bit-minimum"
+$env:GATEWAY_INTERNAL_JWKS_URI="http://api-gateway:8080/.well-known/internal-jwks.json"
+$env:GATEWAY_INTERNAL_JWT_ISSUER="samt-gateway"
+$env:INTERNAL_JWT_CLOCK_SKEW_SECONDS="30"
 $env:DATABASE_URL="jdbc:postgresql://localhost:5432/projectconfig_db"
 $env:DATABASE_USERNAME="postgres"
 $env:DATABASE_PASSWORD="yourPassword"
 
 # Linux/Mac
 export ENCRYPTION_SECRET_KEY="..."
-export INTERNAL_SIGNING_SECRET="gateway-to-service-hmac-secret-256-bit-minimum"
+export GATEWAY_INTERNAL_JWKS_URI="http://api-gateway:8080/.well-known/internal-jwks.json"
+export GATEWAY_INTERNAL_JWT_ISSUER="samt-gateway"
+export INTERNAL_JWT_CLOCK_SKEW_SECONDS="30"
 ```
 
 ### 4. Run Application
@@ -236,8 +240,7 @@ Authorization: Bearer <JWT>
 #### Get Decrypted Tokens
 ```http
 GET /internal/project-configs/{id}/tokens
-X-Service-Name: sync-service
-X-Service-Key: <SERVICE_KEY>
+Authorization: Bearer <internal-jwt>
 ```
 
 **Response:**
@@ -255,9 +258,15 @@ X-Service-Key: <SERVICE_KEY>
 
 ### Authentication (Authoritative)
 
-External JWT authentication is performed at the API Gateway (RS256 via JWKS). This service does **not** validate JWTs directly.
+External JWT authentication is performed at the API Gateway (RS256 via JWKS).
 
-This service authenticates requests using gateway-injected headers (`X-User-Id`, `X-User-Role`) and requires the internal gateway signature headers (`X-Internal-*`) to verify.
+This service validates a short-lived **internal JWT** minted by the API Gateway (RS256) and forwarded as `Authorization: Bearer <internal-jwt>`. The internal JWT is validated using the gateway JWKS (`GATEWAY_INTERNAL_JWKS_URI`) and strict validators (issuer/service/jti/kid/timestamps).
+
+Legacy (removed):
+
+- No `INTERNAL_SIGNING_SECRET` (HMAC)
+- No `X-Internal-*` signature headers
+- No `X-User-Id` / `X-User-Role` header trust model
 
 ### Token Encryption
 
@@ -355,6 +364,12 @@ server:
 spring:
   application:
     name: project-config-service
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${GATEWAY_INTERNAL_JWKS_URI:http://localhost:8080/.well-known/internal-jwks.json}
   
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/projectconfig_db}
@@ -370,18 +385,17 @@ spring:
     enabled: true
     baseline-on-migrate: true
 
-internal:
-  signing:
-    secret: ${INTERNAL_SIGNING_SECRET:}
-    key-id: ${INTERNAL_SIGNING_KEY_ID:gateway-1}
-    max-skew-seconds: ${INTERNAL_SIGNING_MAX_SKEW_SECONDS:300}
+security:
+  internal-jwt:
+    issuer: ${SECURITY_INTERNAL_JWT_ISSUER:samt-gateway}
+    expected-service: ${SECURITY_INTERNAL_JWT_EXPECTED_SERVICE:api-gateway}
+    clock-skew-seconds: ${SECURITY_INTERNAL_JWT_CLOCK_SKEW_SECONDS:30}
 
 encryption:
   secret-key: ${ENCRYPTION_SECRET_KEY:a1b2c3d4e5f6g7h8...}
 
-service-to-service:
-  sync-service:
-    key: ${SERVICE_TO_SERVICE_SYNC_KEY:defaultKeyChangeInProduction}
+
+# Service-to-service authorization uses internal JWT + (recommended) mTLS.
 
 verification:
   jira:

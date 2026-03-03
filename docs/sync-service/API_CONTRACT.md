@@ -165,9 +165,9 @@ message InternalGetDecryptedConfigResponse {
 }
 ```
 
-**Authentication:** Service-to-service headers
-- `x-service-name: sync-service`
-- `x-service-key: ${SERVICE_AUTH_KEY}`
+**Authentication:**
+- Default: none (trusted internal network)
+- Profile `mtls`: gRPC TLS/mTLS enabled between services
 
 **Timeout:** 5 seconds
 
@@ -328,10 +328,9 @@ resilience4j:
 ### Service-to-Service Authentication
 
 **With ProjectConfig Service:**
-- Method: Custom gRPC interceptor
-- Headers: `x-service-name`, `x-service-key`
-- Key storage: Environment variable `SERVICE_AUTH_KEY`
-- Validation: ProjectConfig Service validates service name + key pair
+- Default: plaintext gRPC within trusted network
+- Profile `mtls`: enforce gRPC TLS/mTLS
+- Prefer network policies so only Sync Service can reach ProjectConfig internal endpoints
 
 ### External API Security
 

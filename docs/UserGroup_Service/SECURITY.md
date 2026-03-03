@@ -4,13 +4,12 @@ This file documents **the security behavior implemented in `user-group-service`*
 
 ## Authentication (implemented)
 
-- Input: gateway-injected headers (`X-User-Id`, `X-User-Role`) plus internal signature headers (`X-Internal-*`).
-- `GatewayHeaderAuthenticationFilter` reads `X-User-Id` / `X-User-Role`.
-- `GatewayInternalSignatureVerifier` verifies `X-Internal-*` using `internal.signing.secret`.
+- Input: `Authorization: Bearer <internal-jwt>` issued by API Gateway.
+- The service validates the token as an OAuth2 Resource Server (RS256 via JWKS).
+- The authenticated user id is taken from JWT `sub`; roles are taken from JWT claim `roles`.
 
 If authentication fails:
-- The filter continues **without** setting authentication.
-- Protected endpoints are then rejected by Spring Security with `401` using `JwtAuthenticationEntryPoint`.
+- Protected endpoints are rejected by Spring Security with `401` using `JwtAuthenticationEntryPoint`.
 
 ## Authorization (implemented)
 
@@ -35,6 +34,8 @@ As configured in `SecurityConfig`:
 
 All other requests require authentication.
 
+Note: In production, API docs should be disabled via `application-prod.yml`.
+
 ## Service-to-service security
-- Identity gRPC client uses plaintext negotiation by default (config).
-- The gRPC server exposed by this service does not implement authentication/authorization interceptors.
+- gRPC traffic is plaintext by default.
+- Under profile `mtls`, gRPC server/client are configured for TLS/mTLS (see `application-mtls.yml`).

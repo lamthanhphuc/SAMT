@@ -304,9 +304,10 @@ To maintain referential integrity, hard delete must follow this order:
 
 **Headers:**
 ```
-X-Service-Name: IdentityService
-X-Service-Key: {service_key}
+Authorization: Bearer <internal-jwt>
 ```
+
+**Transport:** Enable profile `mtls` to require mTLS for service-to-service cleanup calls.
 
 **Response:**
 ```json

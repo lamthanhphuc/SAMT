@@ -15,7 +15,7 @@ import java.util.UUID;
  * Internal API Controller for service-to-service communication.
  * 
  * Base path: /internal/project-configs
- * Authentication: X-Service-Name + X-Service-Key headers
+ * Authentication: Authorization: Bearer <internal-jwt> (recommended: enforce via mTLS in prod)
  */
 @RestController
 @RequestMapping("/internal/project-configs")

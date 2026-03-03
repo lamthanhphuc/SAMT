@@ -107,6 +107,11 @@ public class JwtAuthenticationFilter implements WebFilter, Ordered {
             return true;
         }
 
+        // Internal JWKS for downstream internal JWT verification.
+        if ("/.well-known/internal-jwks.json".equals(path)) {
+            return true;
+        }
+
         if ("/actuator/health".equals(path) || path.startsWith("/actuator/health/")) {
             return true;
         }

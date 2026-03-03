@@ -1,0 +1,31 @@
+spring:
+  config:
+    activate:
+      on-profile: mtls
+
+  ssl:
+    bundle:
+      pem:
+        mtls-server:
+          keystore:
+            certificate: ${MTLS_SERVER_CERT_PATH}
+            private-key: ${MTLS_SERVER_KEY_PATH}
+          truststore:
+            certificate: ${MTLS_CA_CERT_PATH}
+
+server:
+  ssl:
+    enabled: true
+    bundle: mtls-server
+    client-auth: need
+
+grpc:
+  client:
+    project-config-service:
+      negotiation-type: TLS
+      security:
+        client-auth-enabled: true
+        trust-cert-collection: ${GRPC_CLIENT_TRUST_CERT_COLLECTION_PATH:${MTLS_CA_CERT_PATH}}
+        certificate-chain: ${GRPC_CLIENT_CERT_CHAIN_PATH:${MTLS_SERVER_CERT_PATH}}
+        private-key: ${GRPC_CLIENT_PRIVATE_KEY_PATH:${MTLS_SERVER_KEY_PATH}}
+        authority-override: ${GRPC_PROJECTCONFIG_AUTHORITY_OVERRIDE:project-config-service}

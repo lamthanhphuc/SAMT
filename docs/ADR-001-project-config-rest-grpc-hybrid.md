@@ -68,7 +68,7 @@ This creates confusion for:
 Client (Browser/Mobile)
     ↓ HTTPS/REST
 API Gateway (port 8080)
-    ↓ JWT validation, inject X-User-* headers
+   ↓ JWT validation, mint internal JWT (RS256)
     ↓ Route: /api/project-configs/** → http://project-config-service:8083
 Project Config Service (REST Controller)
 ```
@@ -80,7 +80,7 @@ Project Config Service (REST Controller)
 - `DELETE /api/project-configs/{id}` - Soft delete
 - `POST /api/project-configs/{id}/verify` - Test Jira/GitHub connection
 
-**Authentication:** JWT Bearer token → Gateway validates → Injects user info to headers
+**Authentication:** External JWT → Gateway validates → Gateway forwards a short-lived internal JWT (`Authorization: Bearer <internal-jwt>`)
 
 ---
 

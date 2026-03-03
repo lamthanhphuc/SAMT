@@ -52,13 +52,21 @@ gateway:
     allowed-headers:
       - Authorization
       - Content-Type
-  internal:
-    secret: ${INTERNAL_SIGNING_SECRET}
 
-internal:
-  signing:
-    secret: ${INTERNAL_SIGNING_SECRET}
-    key-id: gateway-1
+  internal-jwt:
+    # RSA private key used to sign internal JWTs (PKCS#8 PEM)
+    private-key-pem-path: ${GATEWAY_INTERNAL_JWT_PRIVATE_KEY_PEM_PATH:/certs/gateway-private.pkcs8.pem}
+    # kid for rotation support
+    key-id: ${GATEWAY_INTERNAL_JWT_KID:gw-2026-01}
+    # token lifetime 15-30s
+    ttl-seconds: ${GATEWAY_INTERNAL_JWT_TTL_SECONDS:20}
+    # downstream should use the same skew
+    clock-skew-seconds: ${GATEWAY_INTERNAL_JWT_CLOCK_SKEW_SECONDS:30}
+    issuer: ${GATEWAY_INTERNAL_JWT_ISSUER:samt-gateway}
+    service-name: api-gateway
+    # Optional: publish additional public keys for rotation overlap.
+    # Format: JWKS JSON file containing "keys": [...] with public RSA keys.
+    additional-public-jwks-json-path: ${GATEWAY_INTERNAL_JWT_ADDITIONAL_PUBLIC_JWKS_JSON_PATH:}
 
 rate:
   limit:

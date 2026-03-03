@@ -1,10 +1,3 @@
-# Production profile: NO fallback secrets. Startup must fail if env vars are missing.
-
-internal:
-  signing:
-    secret: ${INTERNAL_SIGNING_SECRET}
-    key-id: ${INTERNAL_SIGNING_KEY_ID:gateway-1}
-
 spring:
   datasource:
     password: ${SPRING_DATASOURCE_PASSWORD}
@@ -12,4 +5,19 @@ spring:
 samt:
   secrets:
     datasource-password: ${SPRING_DATASOURCE_PASSWORD}
-    internal-signing-secret: ${INTERNAL_SIGNING_SECRET}
+
+# Production hardening: expose only health; disable API docs.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

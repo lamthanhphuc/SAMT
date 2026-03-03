@@ -9,8 +9,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -58,7 +60,7 @@ public class ProjectConfigController {
             @Valid @RequestBody CreateConfigRequest request,
             Authentication authentication) {
         
-        Long userId = (Long) authentication.getPrincipal();
+        Long userId = getUserIdFromAuthentication(authentication);
         List<String> roles = getRolesFromAuthentication(authentication);
         
         log.info("Creating config for group {} by user {} (async)", request.groupId(), userId);
@@ -84,7 +86,7 @@ public class ProjectConfigController {
             @PathVariable UUID id,
             Authentication authentication) {
         
-        Long userId = (Long) authentication.getPrincipal();
+        Long userId = getUserIdFromAuthentication(authentication);
         List<String> roles = getRolesFromAuthentication(authentication);
         
         log.info("Getting config {} for user {} (async)", id, userId);
@@ -110,7 +112,7 @@ public class ProjectConfigController {
             @Valid @RequestBody UpdateConfigRequest request,
             Authentication authentication) {
         
-        Long userId = (Long) authentication.getPrincipal();
+        Long userId = getUserIdFromAuthentication(authentication);
         List<String> roles = getRolesFromAuthentication(authentication);
         
         log.info("Updating config {} by user {} (async)", id, userId);
@@ -135,7 +137,7 @@ public class ProjectConfigController {
             @PathVariable UUID id,
             Authentication authentication) {
         
-        Long userId = (Long) authentication.getPrincipal();
+        Long userId = getUserIdFromAuthentication(authentication);
         List<String> roles = getRolesFromAuthentication(authentication);
         
         log.warn("Deleting config {} by user {} (async)", id, userId);
@@ -164,7 +166,7 @@ public class ProjectConfigController {
             @PathVariable UUID id,
             Authentication authentication) {
         
-        Long userId = (Long) authentication.getPrincipal();
+        Long userId = getUserIdFromAuthentication(authentication);
         List<String> roles = getRolesFromAuthentication(authentication);
         
         log.info("Verifying config {} by user {} (fully async)", id, userId);
@@ -220,5 +222,30 @@ public class ProjectConfigController {
         return authentication.getAuthorities().stream()
             .map(GrantedAuthority::getAuthority)
             .collect(Collectors.toList());
+    }
+
+    private Long getUserIdFromAuthentication(Authentication authentication) {
+        Object principal = authentication.getPrincipal();
+
+        if (principal instanceof Jwt jwt) {
+            return parseUserId(jwt.getSubject());
+        }
+
+        if (principal instanceof String s) {
+            return parseUserId(s);
+        }
+
+        return parseUserId(authentication.getName());
+    }
+
+    private Long parseUserId(String value) {
+        if (value == null || value.isBlank()) {
+            throw new BadCredentialsException("Missing user id (sub)");
+        }
+        try {
+            return Long.valueOf(value);
+        } catch (NumberFormatException ex) {
+            throw new BadCredentialsException("Invalid user id (sub)");
+        }
     }
 }

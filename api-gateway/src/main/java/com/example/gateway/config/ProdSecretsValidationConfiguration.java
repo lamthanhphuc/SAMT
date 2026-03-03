@@ -6,7 +6,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 @Configuration
 @Profile("prod")
@@ -16,8 +17,15 @@ public class ProdSecretsValidationConfiguration {
     @Bean
     ApplicationRunner prodSecretsValidator(ProdSecretsProperties secrets) {
         return args -> {
-            if (secrets.getInternalSigningSecret().getBytes(StandardCharsets.UTF_8).length < 32) {
-                throw new IllegalStateException("INTERNAL_SIGNING_SECRET must be at least 256 bits in production.");
+            Path pemPath = Path.of(secrets.getGatewayInternalJwtPrivateKeyPemPath());
+            if (!Files.exists(pemPath)) {
+                throw new IllegalStateException("GATEWAY_INTERNAL_JWT_PRIVATE_KEY_PEM_PATH does not exist: " + pemPath);
+            }
+            if (Files.isDirectory(pemPath)) {
+                throw new IllegalStateException("GATEWAY_INTERNAL_JWT_PRIVATE_KEY_PEM_PATH must be a file: " + pemPath);
+            }
+            if (secrets.getGatewayInternalJwtKid().isBlank()) {
+                throw new IllegalStateException("GATEWAY_INTERNAL_JWT_KID must be set");
             }
         };
     }

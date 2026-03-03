@@ -31,9 +31,13 @@ DB_USERNAME=postgres
 DB_PASSWORD=postgres123
 
 # Security
-ENCRYPTION_KEY=0123456789abcdef0123456789abcdef  # 32-byte hex (256-bit AES)
-INTERNAL_SERVICE_KEY=shared-secret-for-sync-service
-INTERNAL_SIGNING_SECRET=gateway-to-service-hmac-secret-256-bit-minimum
+ENCRYPTION_SECRET_KEY=0123456789abcdef0123456789abcdef  # 32-byte hex (256-bit AES)
+
+# Internal JWT trust (Gateway → Service)
+GATEWAY_INTERNAL_JWKS_URI=http://api-gateway:8080/.well-known/internal-jwks.json
+GATEWAY_INTERNAL_JWT_ISSUER=samt-gateway
+GATEWAY_INTERNAL_JWT_EXPECTED_SERVICE=api-gateway
+INTERNAL_JWT_CLOCK_SKEW_SECONDS=30
 
 # gRPC Clients
 USER_GROUP_SERVICE_GRPC_HOST=localhost
@@ -66,7 +70,7 @@ docker build -t project-config-service:1.0 .
 # Run
 docker run -p 8083:8083 \
   -e DB_HOST=postgres \
-  -e INTERNAL_SIGNING_SECRET=gateway-to-service-hmac-secret-256-bit-minimum \
+  -e GATEWAY_INTERNAL_JWKS_URI=http://api-gateway:8080/.well-known/internal-jwks.json \
   project-config-service:1.0
 ```
 
@@ -111,21 +115,25 @@ spring:
 server:
   port: ${SERVER_PORT:8083}
 
-# Gateway trust (internal signature)
-internal:
-  signing:
-    secret: ${INTERNAL_SIGNING_SECRET:}
-    key-id: ${INTERNAL_SIGNING_KEY_ID:gateway-1}
-    max-skew-seconds: ${INTERNAL_SIGNING_MAX_SKEW_SECONDS:300}
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${GATEWAY_INTERNAL_JWKS_URI:http://api-gateway:8080/.well-known/internal-jwks.json}
+
+# ============================================
+#   INTERNAL JWT TRUST (GATEWAY → SERVICE)
+# ============================================
+security:
+  internal-jwt:
+    issuer: ${GATEWAY_INTERNAL_JWT_ISSUER:samt-gateway}
+    expected-service: ${GATEWAY_INTERNAL_JWT_EXPECTED_SERVICE:api-gateway}
+    clock-skew-seconds: ${INTERNAL_JWT_CLOCK_SKEW_SECONDS:30}
   
 # Encryption
 encryption:
-  key: ${ENCRYPTION_KEY}
-  
-# Service-to-Service Auth
-internal:
-  service:
-    key: ${INTERNAL_SERVICE_KEY}
+  secret-key: ${ENCRYPTION_SECRET_KEY}
     
 # gRPC Clients
 grpc:
@@ -201,7 +209,7 @@ CREATE INDEX idx_project_configs_deleted_at ON project_configs(deleted_at);
 ```java
 // Pseudocode
 String encrypt(String plaintext) {
-    byte[] key = hex2bytes(ENCRYPTION_KEY);
+  byte[] key = hex2bytes(ENCRYPTION_SECRET_KEY);
     byte[] iv = generateRandomIV(12);  // 96-bit IV for GCM
     
     Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
@@ -238,28 +246,22 @@ String decrypt(String encrypted) {
 
 ## Security Configuration
 
-### JWT Filter
+### Internal JWT (Resource Server)
 
-**SecurityFilterChain:**
+Project Config Service is configured as a **JWT resource server** and validates the gateway-issued internal JWT (RS256 via JWKS) for both `/api/**` and `/internal/**`.
+
+**SecurityFilterChain (conceptual):**
 ```java
 http
-    .csrf(csrf -> csrf.disable())
-    .authorizeHttpRequests(auth -> auth
-        .requestMatchers("/actuator/health").permitAll()
-        .requestMatchers("/internal/**").permitAll()  // Service auth filter
-        .requestMatchers("/api/**").authenticated()
-    )
-    .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-    .addFilterBefore(serviceAuthFilter, JwtAuthenticationFilter.class);
+  .csrf(csrf -> csrf.disable())
+  .authorizeHttpRequests(auth -> auth
+    .requestMatchers("/actuator/health").permitAll()
+    .requestMatchers("/api/**").authenticated()
+    .requestMatchers("/internal/**").authenticated()
+    .anyRequest().denyAll()
+  )
+  .oauth2ResourceServer(oauth2 -> oauth2.jwt());
 ```
-
-### Service-to-Service Auth Filter
-
-**Validates:**
-- `X-Service-Name` header
-- `X-Service-Key` header
-
-**Applied to:** `/internal/**` endpoints only
 
 ---
 
@@ -638,7 +640,7 @@ log.debug("Encryption key: {}", encryptionKey);        // NEVER DO THIS
 ### Common Issues
 
 **Issue:** "Invalid encryption key"  
-**Solution:** Ensure `ENCRYPTION_KEY` is 32-byte hex string (64 hex chars)
+**Solution:** Ensure `ENCRYPTION_SECRET_KEY` is 32-byte hex string (64 hex chars)
 
 **Issue:** "User-Group Service unavailable"  
 **Solution:** Verify `USER_GROUP_SERVICE_GRPC_PORT=9095` (not 9092)
@@ -662,8 +664,11 @@ project-config-service:
     - "8083:8083"
   environment:
     - DB_HOST=postgres
-    - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET}
-    - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+    - GATEWAY_INTERNAL_JWKS_URI=${GATEWAY_INTERNAL_JWKS_URI}
+    - GATEWAY_INTERNAL_JWT_ISSUER=${GATEWAY_INTERNAL_JWT_ISSUER}
+    - GATEWAY_INTERNAL_JWT_EXPECTED_SERVICE=${GATEWAY_INTERNAL_JWT_EXPECTED_SERVICE}
+    - INTERNAL_JWT_CLOCK_SKEW_SECONDS=${INTERNAL_JWT_CLOCK_SKEW_SECONDS}
+    - ENCRYPTION_SECRET_KEY=${ENCRYPTION_SECRET_KEY}
     - USER_GROUP_SERVICE_GRPC_HOST=user-group-service
   depends_on:
     - postgres
@@ -672,10 +677,11 @@ project-config-service:
 
 ### Production Checklist
 
-- ✅ Set strong `ENCRYPTION_KEY` (32-byte random hex)
-- ✅ Set unique `INTERNAL_SERVICE_KEY` per environment
-- ✅ Set `INTERNAL_SIGNING_SECRET` and keep it consistent with API Gateway
+- ✅ Set strong `ENCRYPTION_SECRET_KEY` (32-byte random hex)
+- ✅ Set `GATEWAY_INTERNAL_JWKS_URI` to the gateway internal JWKS endpoint
+- ✅ Set `GATEWAY_INTERNAL_JWT_ISSUER` / `GATEWAY_INTERNAL_JWT_EXPECTED_SERVICE` to match the gateway internal JWT issuer
 - ✅ Configure API Gateway JWT validation via `JWT_JWKS_URI` (RS256/JWKS)
+- ✅ Enable `mtls` profile for service-to-service traffic when required
 - ✅ Enable HTTPS for external API calls
 - ✅ Configure database connection pooling
 - ✅ Set up monitoring/alerting

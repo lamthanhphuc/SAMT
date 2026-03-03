@@ -2,7 +2,7 @@
 
 **Version:** 1.0  
 **Last Updated:** February 23, 2026  
-**Security Model:** Stateless JWT Validation + Signed Internal Headers + Rate Limiting
+**Security Model:** External JWT Validation + Internal JWT Minting (RS256) + Rate Limiting
 
 ---
 
@@ -15,7 +15,7 @@
 | **Session Model** | Stateless (no session storage) |
 | **Authentication** | JWT token (validated at Gateway) |
 | **Authorization** | Delegated to downstream services |
-| **Internal Communication** | HMAC-SHA256 signed headers |
+| **Internal Communication** | Gateway-issued internal JWT (RS256 via internal JWKS) |
 | **Rate Limiting** | Redis-based (100 req/s global, 5 req/min login) |
 | **CORS** | Whitelist-based configuration |
 | **Request Size Limit** | 10MB max |
@@ -33,8 +33,8 @@
 2. Identity Service issues JWT access token + refresh token
 3. Client includes JWT in `Authorization: Bearer <token>` header
 4. Gateway validates JWT signature and expiration
-5. Gateway extracts user info and injects into headers
-6. Gateway forwards request to downstream service
+5. Gateway mints a short-lived internal JWT (RS256)
+6. Gateway forwards request downstream as `Authorization: Bearer <internal-jwt>`
 
 ### Public Endpoints
 
@@ -75,7 +75,7 @@ Authorization: Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImlkZW50aXR5LTEiLCJ0eXAiOiJKV1
 1. Extract token from `Authorization` header
 2. Verify signature using Identity Service JWKS (configured via `JWT_JWKS_URI`)
 3. Check required claims: `sub`, `roles` (non-empty), `jti`, `iat`, `exp`
-4. Derive role from `roles[0]` for header injection (`X-User-Role`)
+4. Enforce bounded clock skew and issuer/audience validators
 
 **Failure Response (401 Unauthorized):**
 ```json
@@ -103,39 +103,15 @@ Authorization: Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImlkZW50aXR5LTEiLCJ0eXAiOiJKV1
 - Authorization requires context (group membership, resource ownership)
 - Downstream services enforce resource-level authorization
 
-### Signed Header Injection
+### Internal JWT Minting & Forwarding
 
-**Security Model:** HMAC-SHA256 signed headers to prevent header spoofing
+**Security Model:** The gateway mints a **short-lived internal JWT** (RS256) after validating the external JWT. Downstream services validate the internal JWT via the gateway internal JWKS endpoint.
 
-**Problem Solved:** Prevent attackers from bypassing Gateway and sending forged headers directly to downstream services.
+**Problem Solved:** Prevent direct-to-service header spoofing by ensuring downstream identity/roles come from a signed token, not from forwarded `X-*` headers.
 
-Gateway injects user context with cryptographic signature:
-
-| Header | Source | Example |
-|--------|--------|---------|
-| `X-User-Id` | JWT claim `sub` | `123` |
-| `X-User-Role` | JWT claim `roles[0]` | `ADMIN` |
-| `X-Internal-Original-Path` | Request path | `/api/groups/123` |
-| `X-Internal-Timestamp` | Unix timestamp (seconds) | `1708704600` |
-| `X-Internal-Signature` | HMAC signature (request metadata) | `a7f3b8c2d9e1...` |
-| `X-Internal-Key-Id` | Signing key identifier | `gateway-1` |
-
-**Signature Generation (Gateway):**
-
-The gateway computes an internal signature and injects the `X-Internal-*` headers (see `SignedHeaderFilter.java` + `SignedHeaderUtil`). Downstream services MUST verify the internal signature before trusting `X-User-Id` / `X-User-Role`.
-
-**Signature Verification (Downstream Service):**
-
-Downstream services verify `X-Internal-*` headers using their verifier (e.g. `GatewayInternalSignatureVerifier`) and then authorize using `X-User-Role`.
-
-**Security Properties:**
-
-| Property | Implementation | Protection |
-|----------|---------------|------------|
-| **Integrity** | HMAC-SHA256 signature | Prevents header tampering |
-| **Authenticity** | Shared secret (Gateway + Services) | Verifies request from Gateway |
-| **Replay Protection** | Timestamp validation (60s window) | Prevents replay attacks |
-| **Non-repudiation** | Signature includes all user context | Audit trail integrity |
+**Forwarding Contract (Gateway → Service):**
+- `Authorization: Bearer <internal-jwt>`
+- Internal JWT is RS256, includes `kid` header and `jti` claim, and uses a very short TTL.
 
 ### Role-Based Access Control
 
@@ -145,13 +121,13 @@ Downstream services verify `X-Internal-*` headers using their verifier (e.g. `Ga
 - `STUDENT` - Access to own data and groups
 
 **Authorization Logic:**
-- Gateway validates JWT and extracts `roles` claim (list)
-- Gateway injects `X-User-Role` header
-- Downstream service checks `X-User-Role` for authorization
+- Gateway validates the external JWT
+- Gateway mints internal JWT with user identity and roles
+- Downstream service authorizes based on internal JWT claims/authorities
 
 **Example:**
 - User with `STUDENT` role requests `GET /api/groups/1/members`
-- Gateway validates JWT, injects `X-User-Role: STUDENT`
+- Gateway validates external JWT and mints internal JWT containing role `STUDENT`
 - User-Group Service checks if user is member of group 1
 - If not member: Return `403 Forbidden`
 
@@ -188,7 +164,7 @@ Downstream services verify `X-Internal-*` headers using their verifier (e.g. `Ga
 
 | Rule | Check | Failure Response |
 |------|-------|------------------|
-| Signature | Verify HMAC-SHA256 signature | `401 Unauthorized` |
+| Signature | Verify RS256 signature via JWKS | `401 Unauthorized` |
 | Expiration | `exp > now` | `401 Unauthorized` |
 | Required Claims | `userId`, `sub`, `role` present | `401 Unauthorized` |
 | Token Type | `token_type == "ACCESS"` (optional) | `401 Unauthorized` |
@@ -227,82 +203,19 @@ public Claims validateAndParseClaims(String token) {
 
 ### Service-to-Service Authentication
 
-**Implementation:** HMAC-SHA256 signed headers
+**Implementation:** Gateway-issued internal JWT (RS256)
 
-**Shared Secret Model:**
-- Gateway has `GATEWAY_INTERNAL_SECRET` environment variable
-- All downstream services have same secret
-- Secret MUST be 256-bit or longer
-- Secret rotation requires coordinated redeployment
+**Model:**
+- Gateway validates the **external JWT** (Identity JWKS)
+- Gateway mints a **short-lived internal JWT** and forwards it downstream as `Authorization: Bearer <internal-jwt>`
+- Downstream services validate the internal JWT using the gateway internal JWKS (e.g., `GATEWAY_INTERNAL_JWKS_URI`)
 
 **Protection Against:**
-✅ Header spoofing (attacker cannot forge valid signature)  
-✅ Gateway bypass (requests without signature rejected)  
-✅ Replay attacks (timestamp validation)  
-✅ Man-in-the-middle (signature integrity check)
+✅ Direct-to-service header spoofing (identity is token-based)  
+✅ Gateway bypass (services require a valid internal JWT)  
+✅ Replay risk reduction (short TTL + `jti`)  
 
-**Attack Scenarios Mitigated:**
-
-1. **Direct Service Access:**
-   ```bash
-   # Attacker tries to bypass Gateway
-   curl http://project-config-service:8083/project-configs \
-     -H "X-User-Id: 1" \
-     -H "X-User-Role: ADMIN"
-   
-   # Service rejects: Missing or invalid signature
-   ```
-
-2. **Header Tampering:**
-   ```bash
-   # Attacker intercepts request and changes userId
-   X-User-Id: 999  # Changed from 123
-   X-Internal-Signature: a7f3b8c2...  # Original signature
-   
-   # Service rejects: Signature mismatch
-   ```
-
-3. **Replay Attack:**
-   ```bash
-   # Attacker captures valid request and replays later
-  X-Internal-Timestamp: 1708704600  # 5 minutes old
-   
-   # Service rejects: Timestamp expired
-   ```
-
-### Secret Management
-
-**Gateway Internal Secret:**
-
-```bash
-# Production deployment
-INTERNAL_SIGNING_SECRET=$(openssl rand -hex 32)  # 256-bit key
-```
-
-**Secret Distribution:**
-- Store in secret management service (Vault, AWS Secrets Manager)
-- Inject into Gateway and all downstream services
-- NEVER commit to version control
-- NEVER log or expose in error messages
-
-**Secret Rotation Strategy:**
-
-1. **Dual-Secret Model** (zero-downtime rotation):
-   ```java
-   // Services accept both old and new secrets during rotation
-   String oldSecret = env.get("GATEWAY_SECRET_OLD");
-   String newSecret = env.get("GATEWAY_SECRET_NEW");
-   
-   boolean valid = verifySignature(headers, newSecret) || 
-                   verifySignature(headers, oldSecret);
-   ```
-
-2. **Rotation Steps:**
-   - Deploy services with new secret as secondary
-   - Deploy Gateway with new secret as primary
-   - Remove old secret from services after grace period (24 hours)
-
-3. **Rotation Frequency:** Every 90 days (minimum)
+**mTLS:** Under profile `mtls`, services additionally require mutual TLS for service-to-service HTTP/gRPC traffic.
 
 ---
 
@@ -409,7 +322,7 @@ public CorsConfigurationSource corsConfigurationSource() {
     configuration.setAllowedOrigins(List.of("*"));
     configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
     configuration.setAllowedHeaders(List.of("*"));
-    configuration.setExposedHeaders(Arrays.asList("Authorization", "X-User-Id", "X-User-Role"));
+    configuration.setExposedHeaders(Arrays.asList("Authorization"));
     configuration.setAllowCredentials(false);
 
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -425,7 +338,7 @@ public CorsConfigurationSource corsConfigurationSource() {
 | `allowedOrigins` | `*` | Allow requests from any origin |
 | `allowedMethods` | `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS` | Allow all HTTP methods |
 | `allowedHeaders` | `*` | Allow all request headers |
-| `exposedHeaders` | `Authorization`, `X-User-Id`, `X-User-Role` | Expose custom headers to client |
+| `exposedHeaders` | `Authorization` | Expose response auth header (if used) |
 | `allowCredentials` | `false` | Do not allow credentials (cookies, auth headers) |
 
 ### Production Configuration
@@ -456,8 +369,6 @@ spring:
               - X-Request-ID
             exposedHeaders:
               - Authorization
-              - X-User-Id
-              - X-User-Role
               - X-RateLimit-Remaining
             allowCredentials: false
             maxAge: 3600  # Cache preflight for 1 hour
@@ -519,15 +430,15 @@ spring:
 - Can be deployed behind reverse proxy for IP filtering
 - Infrastructure-level whitelisting available (Nginx, HAProxy)
 
-### 4. Shared Secret Model
+### 4. Internal JWT Key Model
 
-**Current Behavior:** Gateway and all services share same HMAC secret.
+**Current Behavior:** Gateway signs **internal JWTs** using an asymmetric keypair and publishes the corresponding public keys via an internal JWKS endpoint.
 
 **Characteristics:**
-- Single secret compromise affects entire system
-- Secret rotation requires coordinated deployment across all services
-- HMAC secret stored in environment variables
-- Future enhancement: Migrate to mTLS (certificate-based, per-service keys)
+- Key compromise impact is scoped to the internal JWT signing key
+- Key rotation can be handled via JWKS `kid` overlap (services accept multiple public keys during rotation)
+- Services only require the JWKS URL (no shared secret distribution)
+- mTLS can be enabled (profile `mtls`) for service-to-service transport security
 
 ### 5. No Request Logging
 
@@ -539,15 +450,14 @@ spring:
 - Cannot trace malicious request payloads
 - Future enhancement: Implement access log filter with centralized logging
 
-### 6. JWT Secret in Environment Variable
+### 6. Key Material Handling
 
-**Current Behavior:** JWT secret stored in environment variable.
+**Current Behavior:** The gateway validates external JWTs via **JWKS URIs** (no shared JWT secret). Internal JWT signing keys (private keys) must be treated as sensitive secrets.
 
 **Characteristics:**
-- Secret visible in process list
-- Secret may be leaked in logs or error messages
-- Shared with Identity Service for JWT validation
-- Future enhancement: Use secret management service (HashiCorp Vault, AWS Secrets Manager)
+- Use a secret manager for private keys (avoid plaintext files checked into the repo)
+- Prevent accidental logging of key material
+- Prefer rotation with `kid` overlap and short internal JWT TTL
 
 ### 7. Redis Dependency
 
@@ -621,8 +531,8 @@ spring:
 - Log JWT tokens (risk of token leakage)
 - Log passwords or sensitive data
 - Log credit card numbers or PII
-- Log gateway internal secret
-- Log internal signatures (HMAC values)
+- Log private keys or key material
+- Log internal JWTs (treat as credentials)
 
 ---
 
@@ -630,15 +540,15 @@ spring:
 
 ### Deployment
 
-- [x] JWT secret is 256-bit or longer
-- [x] Gateway internal secret is 256-bit or longer
+- [x] External JWT validation uses `JWT_JWKS_URI` (RS256)
+- [x] Internal JWT minting is enabled (RS256) and internal JWKS is published
 - [ ] Secrets are stored in secret management service (Vault, AWS Secrets Manager)
 - [x] CORS is configured with specific origins (whitelist)
 - [x] Request body size limit is configured (10MB)
 - [x] Rate limiting is implemented (Redis-based)
-- [x] Signed internal headers are implemented (HMAC-SHA256)
 - [ ] Gateway is deployed behind reverse proxy (TLS termination)
-- [x] Downstream services verify internal signatures
+- [x] Downstream services validate internal JWT via gateway internal JWKS
+- [ ] mTLS is enabled for service-to-service traffic (profile `mtls`)
 - [ ] HTTPS/TLS is enabled for all external traffic
 - [ ] Security headers are configured (HSTS, CSP, X-Frame-Options)
 - [ ] Request logging is enabled for audit trail
@@ -648,7 +558,7 @@ spring:
 - [ ] Monitor authentication failures
 - [ ] Monitor authorization failures
 - [ ] Alert on unusual request patterns
-- [ ] Rotate JWT secret periodically
+- [ ] Rotate JWT signing keys periodically (with `kid` overlap)
 - [ ] Update dependencies regularly (security patches)
 - [ ] Review security logs regularly
 
@@ -662,7 +572,7 @@ spring:
 - [x] Test CORS with different origins (reject unauthorized)
 - [x] Test rate limiting (429 after limit exceeded)
 - [x] Test request size limits (413 for large payloads)
-- [x] Test signed header verification (reject invalid signatures)
-- [x] Test timestamp validation (reject old requests)
+- [x] Test internal JWT validation (reject invalid signatures)
+- [x] Test internal JWT TTL/clock-skew validation
 - [ ] Test circuit breaker (fallback on service failure)
 - [ ] Test timeout (503 after 30 seconds)

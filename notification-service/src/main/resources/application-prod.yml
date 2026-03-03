@@ -1,15 +1,27 @@
 # Production profile: NO fallback secrets. Startup must fail if env vars are missing.
 
-internal:
-  signing:
-    secret: ${INTERNAL_SIGNING_SECRET}
-    key-id: ${INTERNAL_SIGNING_KEY_ID:gateway-1}
-
 spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${GATEWAY_INTERNAL_JWKS_URI}
+
   datasource:
     password: ${SPRING_DATASOURCE_PASSWORD}
+
+security:
+  internal-jwt:
+    issuer: ${GATEWAY_INTERNAL_JWT_ISSUER}
+    expected-service: ${GATEWAY_INTERNAL_JWT_EXPECTED_SERVICE:api-gateway}
+    clock-skew-seconds: ${INTERNAL_JWT_CLOCK_SKEW_SECONDS:30}
 
 samt:
   secrets:
     datasource-password: ${SPRING_DATASOURCE_PASSWORD}
-    internal-signing-secret: ${INTERNAL_SIGNING_SECRET}
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

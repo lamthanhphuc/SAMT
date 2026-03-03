@@ -381,9 +381,8 @@
 
 ### Service-to-Service Auth
 4. **Internal API Authentication**
-   - Doc: Validates `X-Service-Name` and `X-Service-Key`
-   - Code: `service-to-service.sync-service.key` configuration
-   - Implementation confirmed in security filter
+   - Doc: Internal JWT (`Authorization: Bearer <internal-jwt>`) validated via JWKS
+   - Code: `spring.security.oauth2.resourceserver.jwt.jwk-set-uri` + `security.internal-jwt.*`
    - **Consistent** ✓
 
 ## ⚠ INCONSISTENCIES FOUND
@@ -449,7 +448,7 @@
 1. **External JWT Validation (Authoritative)** - Performed at API Gateway via JWKS
    - Identity: signs RS256 with `JWT_PRIVATE_KEY_*` and publishes JWKS at `/.well-known/jwks.json`
    - API Gateway: validates via `JWT_JWKS_URI`
-   - Downstream services: trust gateway headers + verify internal signature (`INTERNAL_SIGNING_SECRET`)
+   - Downstream services: validate gateway-issued internal JWT (RS256) via the gateway internal JWKS (`GATEWAY_INTERNAL_JWKS_URI`)
 
 2. **Role Prefix Handling** - Correctly implemented
    - JWT payload: `["STUDENT"]` (no prefix)

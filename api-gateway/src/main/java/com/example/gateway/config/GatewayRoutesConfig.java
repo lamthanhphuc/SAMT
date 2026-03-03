@@ -1,6 +1,7 @@
 package com.example.gateway.config;
 
 import com.example.gateway.filter.RedisRateLimitGatewayFilter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.context.annotation.Bean;
@@ -11,7 +12,14 @@ public class GatewayRoutesConfig {
 
     @Bean
     public RouteLocator routeLocator(RouteLocatorBuilder builder,
-                                     RedisRateLimitGatewayFilter rateLimitGatewayFilter) {
+                                                                         RedisRateLimitGatewayFilter rateLimitGatewayFilter,
+                                                                         @Value("${gateway.upstream.identity:http://identity-service:8081}") String identityServiceUri,
+                                                                         @Value("${gateway.upstream.user-group:http://user-group-service:8082}") String userGroupServiceUri,
+                                                                         @Value("${gateway.upstream.project-config:http://project-config-service:8083}") String projectConfigServiceUri,
+                                                                         @Value("${gateway.upstream.sync:http://sync-service:8084}") String syncServiceUri,
+                                                                         @Value("${gateway.upstream.analysis:http://analysis-service:8085}") String analysisServiceUri,
+                                                                         @Value("${gateway.upstream.report:http://report-service:8086}") String reportServiceUri
+        ) {
         return builder.routes()
                 .route("identity-login", r -> r
                         .path("/api/identity/login")
@@ -22,7 +30,7 @@ public class GatewayRoutesConfig {
                                 .circuitBreaker(c -> c
                                         .setName("identityServiceCircuitBreaker")
                                         .setFallbackUri("forward:/__gateway/fallback/identity")))
-                        .uri("http://identity-service:8081"))
+                        .uri(identityServiceUri))
 
                 .route("identity-service", r -> r
                         .path("/api/identity/**")
@@ -33,7 +41,7 @@ public class GatewayRoutesConfig {
                                 .circuitBreaker(c -> c
                                         .setName("identityServiceCircuitBreaker")
                                         .setFallbackUri("forward:/__gateway/fallback/identity")))
-                        .uri("http://identity-service:8081"))
+                        .uri(identityServiceUri))
 
                 .route("user-group-service", r -> r
                         .path("/api/groups/**", "/api/users/**")
@@ -44,7 +52,7 @@ public class GatewayRoutesConfig {
                                 .circuitBreaker(c -> c
                                         .setName("userGroupServiceCircuitBreaker")
                                         .setFallbackUri("forward:/__gateway/fallback/user-group")))
-                        .uri("http://user-group-service:8082"))
+                        .uri(userGroupServiceUri))
 
                 .route("project-config-service", r -> r
                         .path("/api/project-configs/**")
@@ -55,7 +63,7 @@ public class GatewayRoutesConfig {
                                 .circuitBreaker(c -> c
                                         .setName("projectConfigServiceCircuitBreaker")
                                         .setFallbackUri("forward:/__gateway/fallback/project-config")))
-                        .uri("http://project-config-service:8083"))
+                        .uri(projectConfigServiceUri))
 
                 .route("sync-service", r -> r
                         .path("/api/sync/**")
@@ -66,7 +74,7 @@ public class GatewayRoutesConfig {
                                 .circuitBreaker(c -> c
                                         .setName("syncServiceCircuitBreaker")
                                         .setFallbackUri("forward:/__gateway/fallback/sync")))
-                        .uri("http://sync-service:8084"))
+                        .uri(syncServiceUri))
 
                 .route("analysis-service", r -> r
                         .path("/api/analysis/**")
@@ -77,7 +85,7 @@ public class GatewayRoutesConfig {
                                 .circuitBreaker(c -> c
                                         .setName("analysisServiceCircuitBreaker")
                                         .setFallbackUri("forward:/__gateway/fallback/analysis")))
-                        .uri("http://analysis-service:8085"))
+                        .uri(analysisServiceUri))
 
                 .route("report-service", r -> r
                         .path("/api/reports/**")
@@ -88,7 +96,7 @@ public class GatewayRoutesConfig {
                                 .circuitBreaker(c -> c
                                         .setName("reportServiceCircuitBreaker")
                                         .setFallbackUri("forward:/__gateway/fallback/report")))
-                        .uri("http://report-service:8086"))
+                                                .uri(reportServiceUri))
 
                 .build();
     }

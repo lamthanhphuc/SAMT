@@ -1058,20 +1058,21 @@ for (UserGroup membership : memberships) {
 
 **CRITICAL DIFFERENCE:** User-Group Service does NOT load user from database.
 
-#### Gateway Header Authentication Filter
+#### Internal JWT Resource Server
 
-**Architecture:** External JWT validation happens ONLY at the API Gateway (RS256 via JWKS). Downstream services authenticate requests using gateway-injected headers that are protected by an internal signature.
+**Architecture:** External JWT validation happens ONLY at the API Gateway (RS256 via Identity JWKS). The gateway then mints a short-lived **internal JWT (RS256)** and forwards it via `Authorization: Bearer <internal-jwt>`. This service validates the internal JWT via the gateway’s **internal JWKS**.
 
-**File:** [`GatewayHeaderAuthenticationFilter.java`](../user-group-service/src/main/java/com/example/user_groupservice/security/GatewayHeaderAuthenticationFilter.java)
+**File:** [`SecurityConfig.java`](../user-group-service/src/main/java/com/example/user_groupservice/security/SecurityConfig.java)
 
 **Flow:**
 
 ```java
-1. Read `X-User-Id` and `X-User-Role` from the request
-2. Verify internal signature headers (X-Internal-*) to ensure the request truly came from the gateway
-3. Create CurrentUser(userId, role)
-4. Set SecurityContext (NO database query)
-5. Continue to controller
+1. Read Authorization: Bearer <internal-jwt>
+2. Validate signature via spring.security.oauth2.resourceserver.jwt.jwk-set-uri (gateway internal JWKS)
+3. Validate issuer + timestamps (bounded skew) + required kid/jti + service claim
+4. Create CurrentUser(userId, authorities) from sub + roles
+5. Set SecurityContext (NO database query)
+6. Continue to controller
 ```
 
 **CurrentUser:**
@@ -1088,7 +1089,7 @@ public class CurrentUser implements UserDetails {
 **Key Points:**
 - No user loading from database
 - No status check (assumes Identity Service validated status during login)
-- Trust gateway-injected headers only when the internal signature verifies
+- Trust only the internal JWT (not caller-supplied `X-*` headers)
 
 **Trade-off:**
 - ✅ Fast (no DB query on every request)
@@ -1151,9 +1152,11 @@ if (isAdmin) {
 
 ### JWT Configuration
 
-**JWT Validation:** Not performed here.
+**JWT Validation:** Performed here (internal JWT).
 
-**Where JWT is validated:** API Gateway validates external JWTs using RS256 + JWKS (`JWT_JWKS_URI`).
+**Where JWTs are validated:**
+- API Gateway validates external JWTs using RS256 + JWKS (`JWT_JWKS_URI`).
+- User-Group Service validates internal JWTs using RS256 + JWKS (`spring.security.oauth2.resourceserver.jwt.jwk-set-uri=${GATEWAY_INTERNAL_JWKS_URI}`).
 
 **JWT Claims Used:**
 
@@ -1161,12 +1164,13 @@ if (isAdmin) {
 {
   "sub": "123",              // userId (extracted)
   "roles": ["STUDENT"],      // roles (extracted)
-  "email": "...",            // NOT used (fetch via gRPC if needed)
-  "token_type": "ACCESS"     // NOT checked
+  "service": "api-gateway",  // validated against expected gateway service name
+  "iss": "samt-gateway",     // validated issuer
+  "jti": "..."               // required (replay-resistant identifier)
 }
 ```
 
-**Note:** This service does not receive or parse the JWT directly; the gateway translates these claims into headers (currently `X-User-Id` and `X-User-Role`).
+**Note:** This service does not accept identity/authorization via `X-User-*` / `X-Internal-*` headers. Any such headers must be treated as untrusted input.
 
 ---
 

@@ -46,27 +46,26 @@ spring:
     baseline-on-migrate: true
     locations: classpath:db/migration
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${GATEWAY_INTERNAL_JWKS_URI:http://api-gateway:8080/.well-known/internal-jwks.json}
+
 # ============================================
-#   GATEWAY TRUST CONFIGURATION
+#   INTERNAL JWT TRUST (GATEWAY → SERVICE)
 # ============================================
-internal:
-  signing:
-    secret: ${INTERNAL_SIGNING_SECRET:}
-    key-id: ${INTERNAL_SIGNING_KEY_ID:gateway-1}
-    max-skew-seconds: ${INTERNAL_SIGNING_MAX_SKEW_SECONDS:300}
+security:
+  internal-jwt:
+    issuer: ${GATEWAY_INTERNAL_JWT_ISSUER:samt-gateway}
+    expected-service: ${GATEWAY_INTERNAL_JWT_EXPECTED_SERVICE:api-gateway}
+    clock-skew-seconds: ${INTERNAL_JWT_CLOCK_SKEW_SECONDS:30}
 
 # ============================================
 #   ENCRYPTION CONFIGURATION (AES-256-GCM)
 # ============================================
 encryption:
   secret-key: ${ENCRYPTION_SECRET_KEY}
-
-# ============================================
-#   SERVICE-TO-SERVICE AUTHENTICATION
-# ============================================
-service-to-service:
-  sync-service:
-    key: ${SERVICE_TO_SERVICE_SYNC_KEY}
 
 # ============================================
 #   VERIFICATION TIMEOUTS

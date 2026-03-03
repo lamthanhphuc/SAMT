@@ -11,7 +11,7 @@
 | Aspect | Specification |
 |--------|--------------|
 | **Authentication (Public API)** | JWT validated at API Gateway (RS256 via JWKS) |
-| **Authentication (Internal API)** | Shared service key (header-based) |
+| **Authentication (Internal API)** | Gateway-issued internal JWT (RS256 via JWKS) + mTLS |
 | **Token Encryption** | AES-256-GCM |
 | **IV Length** | 96 bits (12 bytes) |
 | **Auth Tag Length** | 128 bits |
@@ -23,27 +23,18 @@
 
 ## 1. Authentication Model
 
-Project Config Service uses **dual authentication** depending on endpoint type.
+Project Config Service authenticates requests using a **gateway-issued internal JWT**.
 
 ### Public API (`/api/**`)
 
-**Authentication:** Gateway-authenticated request (JWT validated at gateway)
+**Authentication:** Internal JWT validated by this service (RS256 via gateway JWKS)
 
 **Flow:**
 1. User authenticates via Identity Service (login)
 2. Identity Service issues JWT token
 3. API Gateway validates JWT and forwards request
-4. Project Config Service verifies internal signature headers (`X-Internal-*`)
-5. Reads `X-User-Id` / `X-User-Role` and sets `CurrentUser` in `SecurityContext`
-
-**Required Headers (as seen by this service):**
-```
-X-User-Id: <sub>
-X-User-Role: <roles[0]>
-X-Internal-Timestamp: <seconds>
-X-Internal-Signature: <hmac>
-X-Internal-Key-Id: <key id>
-```
+4. API Gateway mints a short-lived internal JWT and forwards it as `Authorization: Bearer <internal-jwt>`
+5. Project Config Service validates the internal JWT via JWKS and derives user identity from `sub` and roles from `roles`
 
 **JWT Claims Used:**
 
@@ -58,44 +49,13 @@ X-Internal-Key-Id: <key id>
 }
 ```
 
-**Implementation:** `GatewayHeaderAuthenticationFilter.java` + `GatewayInternalSignatureVerifier.java`
+**Implementation:** Spring Security OAuth2 Resource Server (JWT via JWKS)
 
 ### Internal API (`/internal/**`)
 
-**Authentication:** Service-to-service shared key
+**Authentication:** Same internal JWT model as `/api/**`.
 
-**Flow:**
-1. Sync Service includes service authentication headers
-2. Project Config Service validates headers via `ServiceToServiceAuthFilter`
-3. Checks `X-Service-Name` and `X-Service-Key` headers
-4. Allows access if credentials match
-
-**Required Headers:**
-```
-X-Service-Name: sync-service
-X-Service-Key: <shared_secret>
-```
-
-**Implementation:** `ServiceToServiceAuthFilter.java`
-
-```java
-// SEC-INTERNAL-01: Validate service name
-if (!"sync-service".equals(serviceName)) {
-    return 401 UNAUTHORIZED;
-}
-
-// SEC-INTERNAL-02: Validate service key
-if (!syncServiceKey.equals(serviceKey)) {
-    return 401 UNAUTHORIZED;
-}
-```
-
-**Configuration:**
-```yaml
-service-to-service:
-  sync-service:
-    key: ${SYNC_SERVICE_KEY:default_insecure_key}
-```
+**Transport:** Under profile `mtls`, server-side mTLS is required for HTTP.
 
 ### Public Endpoints
 
@@ -282,32 +242,27 @@ Example:
 - `sync-service` (for fetching decrypted tokens)
 
 **Authentication Method:**
-```java
-// ServiceToServiceAuthFilter.java
-String serviceName = request.getHeader("X-Service-Name");
-String serviceKey = request.getHeader("X-Service-Key");
+Downstream services validate the **gateway-issued internal JWT** (RS256) forwarded as `Authorization: Bearer <internal-jwt>` using the gateway JWKS.
 
-// Validate
-if (!"sync-service".equals(serviceName) || !syncServiceKey.equals(serviceKey)) {
-    return 401 UNAUTHORIZED;
-}
-```
+Under profile `mtls`, Project Config Service also requires mTLS for incoming HTTP connections.
 
 **Security Concerns:**
-- Shared key is static (no key rotation mechanism)
-- No request signing or replay protection
-- No audit log of which service accessed which config
+- If internal JWT TTL is too long, lateral movement blast radius increases
+- JWKS availability becomes a dependency for auth
+- mTLS rollout requires certificate distribution/rotation
 
 **Mitigation:**
-- Deploy in private network
-- Use network policies to restrict access
-- Future: Implement mutual TLS or JWT-based service tokens
+- Keep internal JWT TTL short and require `kid`/`jti`
+- Restrict network paths so only the gateway can reach `/internal/**`
+- Enable `mtls` profile for service-to-service traffic
 
 ### gRPC to User-Group Service
 
 **Purpose:** Validate groups and check authorization
 
-**Authentication:** None (trusted internal network)
+**Authentication:**
+- Default: plaintext (local/dev)
+- Profile `mtls`: gRPC TLS/mTLS enabled
 
 **RPCs Used:**
 - `VerifyGroupExists(groupId)` - Check if group exists
@@ -315,9 +270,8 @@ if (!"sync-service".equals(serviceName) || !syncServiceKey.equals(serviceKey)) {
 - `CheckGroupMember(groupId, userId)` - Verify if user is group member
 
 **Security Concerns:**
-- No authentication on gRPC calls
-- Assumes trusted network
-- If network is compromised, attacker can bypass authorization checks
+- Plaintext gRPC assumes a trusted internal network
+- Without mTLS, network compromise may allow service impersonation
 
 ---
 

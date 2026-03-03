@@ -24,6 +24,7 @@ public class SecurityConfig {
                 .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .pathMatchers("/.well-known/internal-jwks.json").permitAll()
                         .pathMatchers(
                                 "/api/identity/register",
                                 "/api/identity/login",
@@ -53,6 +54,7 @@ public class SecurityConfig {
                 .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .pathMatchers("/.well-known/internal-jwks.json").permitAll()
                         .pathMatchers(
                                 "/api/identity/register",
                                 "/api/identity/login",

@@ -1,11 +1,12 @@
 package com.samt.projectconfig.exception;
 
 import com.samt.projectconfig.dto.response.ErrorResponse;
-import io.jsonwebtoken.JwtException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -183,6 +184,17 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(JwtException.class)
     public ResponseEntity<ErrorResponse> handleJwt(JwtException ex) {
         log.warn("JWT error: {}", ex.getMessage());
+        return buildErrorResponse(
+            HttpStatus.UNAUTHORIZED,
+            "UNAUTHORIZED",
+            "Invalid or expired token",
+            null
+        );
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex) {
+        log.warn("Bad credentials: {}", ex.getMessage());
         return buildErrorResponse(
             HttpStatus.UNAUTHORIZED,
             "UNAUTHORIZED",

@@ -151,17 +151,14 @@ public class InternalConfigController {
 │ API Gateway (port 8080)                                         │
 │  1. JwtAuthenticationFilter validates JWT                       │
 │  2. Extract: sub + roles                                        │
-│  3. Inject headers: X-User-Id, X-User-Role, X-Internal-*         │
+│  3. Mint short-lived internal JWT (RS256)                        │
 │  4. Route to Project Config Service                             │
 └────────────────────────────┬────────────────────────────────────┘
-                             │ Headers: X-User-Id: 123
-                             │          X-User-Role: STUDENT
-                             │          X-Internal-Timestamp: 1708704600
-                             │          X-Internal-Signature: ...
+                             │ Authorization: Bearer <internal-jwt>
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │ Project Config Service (port 8083)                              │
-│  1. Read user info from injected headers                        │
+│  1. Validate internal JWT via JWKS and derive identity/roles     │
 │  2. Verify group leadership (gRPC to User-Group)                │
 │  3. Process request                                             │
 │  4. Return response                                             │
@@ -271,10 +268,10 @@ curl http://localhost:8083/api/project-configs \
 curl http://localhost:8080/api/project-configs \
   -H "Authorization: Bearer <token>"  # ✅ Works via Gateway
 
-# Verify JWT injection
+# Verify internal JWT forwarding
 curl http://localhost:8080/api/project-configs \
   -H "Authorization: Bearer <token>" -v
-# Should see X-User-Id, X-User-Role, and X-Internal-* in forwarded request
+# Should NOT rely on `X-User-*` / `X-Internal-*` headers; downstream auth is via internal JWT
 
 # Test invalid JWT
 curl http://localhost:8080/api/project-configs \

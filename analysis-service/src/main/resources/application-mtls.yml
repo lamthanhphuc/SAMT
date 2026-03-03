@@ -1,0 +1,20 @@
+spring:
+  config:
+    activate:
+      on-profile: mtls
+
+  ssl:
+    bundle:
+      pem:
+        mtls-server:
+          keystore:
+            certificate: ${MTLS_SERVER_CERT_PATH}
+            private-key: ${MTLS_SERVER_KEY_PATH}
+          truststore:
+            certificate: ${MTLS_CA_CERT_PATH}
+
+server:
+  ssl:
+    enabled: true
+    bundle: mtls-server
+    client-auth: need

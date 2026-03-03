@@ -80,16 +80,16 @@ See [GRPC_CONTRACT.md](GRPC_CONTRACT.md).
 
 ## 3. Authorization Model
 
-### 3.1 Authentication (Gateway headers)
+### 3.1 Authentication (Internal JWT)
 - The service expects requests to come from the API Gateway.
 - External JWTs are validated at the gateway (RS256 via JWKS).
-- This service authenticates using gateway-injected headers:
-  - `X-User-Id` (from JWT `sub`)
-  - `X-User-Role` (from JWT `roles[0]`)
-- It verifies the internal signature headers (`X-Internal-*`) using `GatewayInternalSignatureVerifier` before trusting `X-User-*` headers.
+- The gateway forwards a short-lived **internal JWT** as `Authorization: Bearer <internal-jwt>`.
+- This service validates the internal JWT (RS256 via gateway JWKS) and derives:
+  - user id from claim `sub`
+  - roles from claim `roles`
 
 Token validation failure behavior (as implemented):
-- If required gateway headers are missing or the internal signature check fails, authentication is not set.
+- If the internal JWT is missing or invalid, authentication is not set.
 - Spring Security returns `401` for protected endpoints via `JwtAuthenticationEntryPoint`.
 
 ### 3.2 System roles vs group roles
@@ -173,7 +173,7 @@ No Redis client/config/dependency exists in this service module.
 The following claims were removed from previous docs because they are not implemented (or contradict code):
 - LECTURER being allowed to create/update/delete groups via REST (`GroupController` is ADMIN-only for those).
 - Group LEADER being allowed to add/remove members via REST (REST endpoints do not check group-role; only system role via `@PreAuthorize`).
-- “User-Group service does not validate JWT signatures” (it authenticates via API Gateway headers and verifies the gateway internal signature using `internal.signing.secret`).
+- “User-Group service does not validate JWT signatures” (the service validates the gateway-issued internal JWT via JWKS; external JWT is validated at the gateway).
 - “Leader auto-promotion not implemented on user deletion” (there is an implementation in `UserDeletedEventConsumer`, though there is also a competing hard-delete consumer).
 - “Planned/future consumers” such as `user.updated` handling and generic event-driven caching.
 - Any Redis caching references.

@@ -19,14 +19,6 @@ spring:
 
   kafka:
     enabled: false
-
-
-# Gateway trust (downstream services do NOT validate external JWT)
-internal:
-  signing:
-    secret: test-internal-signing-secret-32-chars-minimum-0000
-    key-id: gateway-1
-
 grpc:
   server:
     port: 0
