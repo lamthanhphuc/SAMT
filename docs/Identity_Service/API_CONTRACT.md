@@ -994,17 +994,21 @@ Access-Control-Allow-Credentials: true
 **Header:**
 ```json
 {
-  "alg": "HS256",
-  "typ": "JWT"
+  "alg": "RS256",
+  "typ": "JWT",
+  "kid": "identity-1"
 }
 ```
 
 **Payload:**
 ```json
 {
-  "sub": 123,  // User ID (BIGINT/Long)
+  "iss": "identity-service",
+  "aud": "api-gateway",
+  "sub": "123",
   "email": "user@example.com",
   "roles": ["STUDENT"],                            // Array of roles (NO ROLE_ prefix)
+  "jti": "550e8400-e29b-41d4-a716-446655440000",
   "iat": 1706612400,                               // Issued at (Unix timestamp)
   "exp": 1706613300,                               // Expires at (iat + 900 seconds)
   "token_type": "ACCESS"

@@ -714,79 +714,60 @@ T11                                    ROLLBACK
 
 ---
 
-## JWT Secret Coordination (CRITICAL)
+## JWT Key Material (RS256 + JWKS) (CRITICAL)
 
 ### Overview
 
-Identity Service is the **sole issuer** of JWT access tokens. All backend services validate these tokens but **DO NOT issue** them.
+Identity Service is the **sole issuer** of JWT access tokens. The API Gateway is the **only component that validates external JWTs**. Downstream services do **not** validate JWTs directly; they trust gateway-injected headers only when the internal signature verifies.
 
 ### Critical Requirements
 
-**⚠️ BLOCKING REQUIREMENT:** All services MUST share the same JWT secret or public key.
+**⚠️ BLOCKING REQUIREMENT:** Production must use RS256 (asymmetric keys) for external JWTs.
 
-```yaml
-# Environment variables (MUST be identical across all services)
-JWT_SECRET=your-256-bit-secret-key-here-minimum-32-characters-long
-```
+- Identity Service holds the RSA private key (`JWT_PRIVATE_KEY_PEM`) and publishes the corresponding public key via JWKS (`/.well-known/jwks.json`).
+- API Gateway is configured with `JWT_JWKS_URI` to fetch public keys for validation.
+- No production deployment should require `JWT_SECRET` for JWT signature validation.
 
 ### Service Responsibilities
 
 | Service | JWT Responsibility | Configuration Required |
 |---------|-------------------|------------------------|
-| Identity Service | **Issues** JWT tokens (generator) | `JWT_SECRET` - Signs tokens |
-| User-Group Service | **Validates** JWT tokens (consumer) | `JWT_SECRET` - Verifies signatures |
-| Project Config Service | **Validates** JWT tokens (consumer) | `JWT_SECRET` - Verifies signatures |
-| API Gateway | **Validates** JWT tokens (gateway) | `JWT_SECRET` - Verifies signatures |
+| Identity Service | **Issues** JWT tokens (signer) | `JWT_PRIVATE_KEY_PEM`, `JWT_PUBLIC_KEY_PEM` (if provided), `JWT_KEY_ID` |
+| API Gateway | **Validates** external JWTs (RS256 via JWKS) | `JWT_JWKS_URI` |
+| Downstream services | Do **not** validate external JWTs | Internal signature secret (gateway → service trust), not JWT keys |
 
 ### Secret Rotation Policy
 
-**Coordinated Rollout Required:**
+**Key rotation (RS256):**
 
-1. **Planning Phase:**
-   - Generate new secret
-   - Schedule maintenance window (15 minutes)
-   - Notify all stakeholders
-
-2. **Execution Phase:**
-   - Deploy new secret to all services simultaneously
-   - Restart services in order: Identity → User-Group → Project-Config → Gateway
-   - Monitor for 401 errors
-
-3. **Validation Phase:**
-   - Test login flow end-to-end
-   - Verify all services accept new tokens
-   - Monitor error logs for signature failures
+1. Update Identity Service key material (`JWT_PRIVATE_KEY_PEM` + corresponding public key) and bump `JWT_KEY_ID`.
+2. Ensure JWKS endpoint returns the new key.
+3. Ensure API Gateway `JWT_JWKS_URI` points at the correct JWKS endpoint.
 
 **Failure Scenario:**
-- If services have mismatched secrets → All JWT validations fail with `401 UNAUTHORIZED`
-- Symptom: Users can login (Identity Service) but get 401 on protected endpoints
+- If the gateway cannot reach JWKS or the JWKS key set is wrong → Gateway returns `401 UNAUTHORIZED` for protected endpoints.
 
 ### Security Best Practices
 
-- ✅ Use 256-bit (32+ character) random secret
-- ✅ Store secret in environment variables (never in code)
-- ✅ Use same secret in Kubernetes secrets / Docker Compose secrets
-- ✅ Rotate secret every 90 days
+- ✅ Store `JWT_PRIVATE_KEY_PEM` in a secret store (K8s secret, Docker secret, Vault)
+- ✅ Publish only public keys via JWKS (never publish private keys)
+- ✅ Rotate keys with an explicit procedure (including `kid`/`JWT_KEY_ID` changes)
 - ❌ Never commit secret to Git
-- ❌ Never log JWT secret in application logs
+- ❌ Never log private keys in application logs
 
 ### Troubleshooting
 
 **Problem:** 401 errors after login
 
-```bash
-# Check if all services have same secret
-kubectl get secret jwt-secret -o jsonpath='{.data.JWT_SECRET}' | base64 -d
-```
+Checklist:
+- Verify Identity Service JWKS is reachable: `GET /.well-known/jwks.json`
+- Verify API Gateway has `JWT_JWKS_URI` set correctly
+- Verify the JWT header `kid` matches a key in JWKS
 
 **Problem:** Token signature verification failed
 
 ```
-Solution: Verify JWT_SECRET environment variable is identical across:
-- identity-service deployment
-- user-group-service deployment  
-- project-config-service deployment
-- api-gateway deployment
+Solution: Verify Identity Service key material and JWKS publication (JWT_PRIVATE_KEY_PEM/JWT_PUBLIC_KEY_PEM/JWT_KEY_ID) and that the gateway is configured with the correct JWT_JWKS_URI.
 ```
 
 ---
@@ -1070,10 +1051,10 @@ SELECT * FROM users WHERE email = 'john@example.com' AND deleted_at IS NULL;
   - [ ] Set deadline (recommended: 3 seconds)
 
 - [ ] **Authentication:**
-  - [ ] Copy `JwtAuthenticationFilter.java` from User-Group Service
-  - [ ] Configure same `JWT_SECRET` as Identity Service (CRITICAL)
-  - [ ] Extract userId + roles from JWT claims
-  - [ ] Do NOT load user from local database (use gRPC)
+  - [ ] Do NOT validate external JWTs in downstream services
+  - [ ] Verify API Gateway internal signature (`X-Internal-*`) on every request
+  - [ ] Consume gateway-injected identity headers: `X-User-Id` + `X-User-Role`
+  - [ ] Configure `INTERNAL_SIGNING_SECRET` (shared between gateway and services)
 
 - [ ] **Authorization:**
   - [ ] Implement role-based checks in service layer

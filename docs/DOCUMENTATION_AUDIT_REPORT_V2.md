@@ -446,11 +446,10 @@
 ## Security & Authorization
 
 ### ✅ Consistent Across All Services
-1. **JWT Secret Key** - Same key required across services
-   - Identity: `JWT_SECRET` (from env)
-   - UserGroup: `JWT_SECRET` (from env)
-   - ProjectConfig: `JWT_SECRET` (from env)
-   - **CRITICAL:** Must be identical for token validation
+1. **External JWT Validation (Authoritative)** - Performed at API Gateway via JWKS
+   - Identity: signs RS256 with `JWT_PRIVATE_KEY_*` and publishes JWKS at `/.well-known/jwks.json`
+   - API Gateway: validates via `JWT_JWKS_URI`
+   - Downstream services: trust gateway headers + verify internal signature (`INTERNAL_SIGNING_SECRET`)
 
 2. **Role Prefix Handling** - Correctly implemented
    - JWT payload: `["STUDENT"]` (no prefix)

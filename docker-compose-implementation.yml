@@ -94,7 +94,8 @@ services:
   #   container_name: samt-api-gateway
   #   environment:
   #     SERVER_PORT: 8080
-  #     JWT_SECRET: ${JWT_SECRET}
+  #     JWT_JWKS_URI: ${JWT_JWKS_URI}
+  #     INTERNAL_SIGNING_SECRET: ${INTERNAL_SIGNING_SECRET}
   #     SPRING_DATA_REDIS_HOST: redis
   #     SPRING_DATA_REDIS_PORT: 6379
   #     LOG_LEVEL: INFO
@@ -122,7 +123,8 @@ services:
   #     SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-core:5432/samt_identity
   #     SPRING_DATASOURCE_USERNAME: postgres
   #     SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-  #     JWT_SECRET: ${JWT_SECRET}
+  #     JWT_KEY_ID: ${JWT_KEY_ID}
+  #     JWT_PRIVATE_KEY_PEM: ${JWT_PRIVATE_KEY_PEM}
   #     KAFKA_BOOTSTRAP_SERVERS: kafka:9092
   #     DDL_AUTO: validate
   #     LOG_LEVEL: INFO
@@ -154,7 +156,7 @@ services:
   #     SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-core:5432/samt_usergroup
   #     SPRING_DATASOURCE_USERNAME: postgres
   #     SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-  #     JWT_SECRET: ${JWT_SECRET}
+  #     INTERNAL_SIGNING_SECRET: ${INTERNAL_SIGNING_SECRET}
   #     IDENTITY_SERVICE_GRPC_HOST: identity-service
   #     IDENTITY_SERVICE_GRPC_PORT: 9091
   #     KAFKA_BOOTSTRAP_SERVERS: kafka:9092

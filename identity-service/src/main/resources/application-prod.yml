@@ -1,0 +1,17 @@
+# Production profile: NO fallback secrets. Startup must fail if env vars are missing.
+
+jwt:
+  key:
+    id: ${JWT_KEY_ID}
+    private-key-path: ${JWT_PRIVATE_KEY_PATH:}
+    private-key-pem: ${JWT_PRIVATE_KEY_PEM:}
+    public-key-path: ${JWT_PUBLIC_KEY_PATH:}
+    public-key-pem: ${JWT_PUBLIC_KEY_PEM:}
+
+spring:
+  datasource:
+    password: ${SPRING_DATASOURCE_PASSWORD}
+
+samt:
+  secrets:
+    datasource-password: ${SPRING_DATASOURCE_PASSWORD}

@@ -27,13 +27,13 @@ API Gateway is the **single entry point** for all client requests to SAMT system
 - Service discovery via direct URLs (no load balancer)
 
 ✅ **Authentication:**
-- JWT validation for protected endpoints
+- JWT validation for protected endpoints (RS256 via JWKS)
 - Public endpoint bypass (login, register, refresh token)
 - Extract user info from JWT claims
 
 ✅ **Authorization Context Injection:**
 - Signed internal headers with HMAC-SHA256
-- Inject `X-User-Id`, `X-User-Email`, `X-User-Role`, `X-Timestamp`, `X-Internal-Signature`
+- Inject `X-User-Id`, `X-User-Role`, `X-Internal-Original-Path`, `X-Internal-Timestamp`, `X-Internal-Signature`, `X-Internal-Key-Id`
 - Downstream services verify signature (prevent header spoofing)
 - Replay attack prevention with timestamp validation
 
@@ -70,7 +70,7 @@ Client (REST/JSON)
 API Gateway (port 8080)
       ↓ Rate Limiting (Redis-based)
       ↓ JWT Validation
-      ↓ Signed Header Injection (X-User-Id, X-User-Email, X-User-Role, X-Internal-Signature)
+      ↓ Signed Header Injection (X-User-Id, X-User-Role, X-Internal-*)
       ↓ Circuit Breaker + Timeout
       ↓
 Downstream Services
@@ -129,16 +129,16 @@ api-gateway/
 ```http
 GET /api/groups/1 HTTP/1.1
 Host: gateway:8080
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImlkZW50aXR5LTEifQ...
 ```
 
 **Gateway Processing:**
 1. Check rate limit (Redis)
 2. Extract JWT from `Authorization` header
-3. Validate signature using shared JWT secret
+3. Validate signature using JWKS (`JWT_JWKS_URI`)
 4. Check token expiration
-5. Extract claims: `userId`, `email`, `role`
-6. Generate signed headers with HMAC-SHA256
+5. Extract claims: `sub` (userId) + `roles` (array)
+6. Generate signed internal headers (HMAC-SHA256)
 7. Forward to `http://user-group-service:8082/groups/1` with circuit breaker
 
 **Forwarded Request:**
@@ -146,17 +146,18 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 GET /groups/1 HTTP/1.1
 Host: user-group-service:8082
 X-User-Id: 123
-X-User-Email: admin@example.com
 X-User-Role: ADMIN
-X-Timestamp: 1708704600000
+X-Internal-Original-Path: /groups/1
+X-Internal-Timestamp: 1708704600
 X-Internal-Signature: a7f3b8c2...
+X-Internal-Key-Id: gateway-1
 X-Forwarded-Host: gateway
 ```
 
 **Downstream Service:**
-1. Verify `X-Internal-Signature` using shared gateway secret
-2. Check `X-Timestamp` (reject if older than 60 seconds)
-3. Read `X-User-Id`, `X-User-Email`, `X-User-Role` from headers
+1. Verify `X-Internal-Signature` using `INTERNAL_SIGNING_SECRET`
+2. Check `X-Internal-Timestamp` skew (default max 300 seconds)
+3. Read `X-User-Id`, `X-User-Role` from headers
 4. Perform business authorization (group membership, resource ownership)
 5. Return response
 
@@ -186,8 +187,8 @@ Content-Type: application/json
 # Server
 SERVER_PORT=8080
 
-# JWT (MUST match Identity Service)
-JWT_SECRET=your-256-bit-secret-key-change-this-in-production-environment-please
+# JWT validation (RS256 via JWKS)
+JWT_JWKS_URI=http://identity-service:8081/.well-known/jwks.json
 
 # Internal Gateway Secret (for signed headers)
 GATEWAY_INTERNAL_SECRET=gateway-to-service-hmac-secret-256-bit-minimum
@@ -238,7 +239,8 @@ docker build -t api-gateway:1.0 .
 
 # Run
 docker run -p 8080:8080 \
-  -e JWT_SECRET=your-secret \
+  -e JWT_JWKS_URI=http://identity-service:8081/.well-known/jwks.json \
+  -e GATEWAY_INTERNAL_SECRET=gateway-to-service-hmac-secret-256-bit-minimum \
   api-gateway:1.0
 ```
 
@@ -252,7 +254,7 @@ api-gateway:
   ports:
     - "8080:8080"
   environment:
-    - JWT_SECRET=${JWT_SECRET}
+    - JWT_JWKS_URI=${JWT_JWKS_URI}
   depends_on:
     - identity-service
     - user-group-service

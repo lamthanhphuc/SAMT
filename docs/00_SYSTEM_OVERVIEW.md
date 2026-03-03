@@ -58,7 +58,7 @@ SAMT (Student Assignment Management Tool) is a microservices-based system for ma
 - Spring Security 6.x
 - PostgreSQL (JPA/Hibernate)
 - gRPC (server)
-- JWT (HS256)
+- JWT (RS256, validated at Gateway via JWKS)
 
 ---
 
@@ -75,13 +75,13 @@ SAMT (Student Assignment Management Tool) is a microservices-based system for ma
 
 **Technology Stack:**
 - Spring Boot 3.x
-- Spring Security 6.x (JWT validation only)
+- Spring Security 6.x (Gateway header authentication)
 - PostgreSQL (JPA/Hibernate)
 - gRPC (client to Identity Service)
 
 **Does NOT:**
 - Manage user accounts (delegates to Identity Service)
-- Issue or validate JWT (only reads claims)
+- Issue or validate external JWT (trusts gateway-signed headers)
 - Store user credentials
 
 ---
@@ -345,7 +345,7 @@ Both services implement soft delete (retention policy: 90 days per SRS).
 | Database Transactions | ✅ Production | @Transactional boundaries correct       |
 | API Documentation     | ✅ Production | Swagger/OpenAPI available               |
 | Monitoring            | ❌ Missing    | No metrics/health checks                |
-| Secrets Management    | ⚠️ Partial    | JWT_SECRET in env (no vault)            |
+| Secrets Management    | ⚠️ Partial    | JWT_PRIVATE_KEY_PEM (Identity), JWT_JWKS_URI (Gateway) |
 
 ---
 
@@ -358,7 +358,7 @@ Both services implement soft delete (retention policy: 90 days per SRS).
 
 2. **Setup Local Environment:**
    - PostgreSQL instances (ports: 5432 for identity, 5433 for user-group)
-   - Environment variables (JWT_SECRET, CORS_ALLOWED_ORIGINS)
+   - Environment variables (JWT_PRIVATE_KEY_PEM, JWT_JWKS_URI, CORS_ALLOWED_ORIGINS)
    - Run `mvn clean install` in root directory
 
 3. **Key Files to Study:**

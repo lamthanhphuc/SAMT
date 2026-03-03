@@ -18,7 +18,7 @@ spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/samt_usergroup}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:12345}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -51,9 +51,12 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
-# JWT
-jwt:
-  secret: ${JWT_SECRET:samt-super-secret-key-for-jwt-hs256-algorithm-minimum-32-chars}
+# Gateway trust (downstream services do NOT validate external JWT)
+internal:
+  signing:
+    secret: ${INTERNAL_SIGNING_SECRET:}
+    key-id: ${INTERNAL_SIGNING_KEY_ID:gateway-1}
+    max-skew-seconds: ${INTERNAL_SIGNING_MAX_SKEW_SECONDS:300}
 
 # gRPC
 grpc:

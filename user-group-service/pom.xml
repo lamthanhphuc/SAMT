@@ -190,6 +190,12 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
@@ -239,17 +245,28 @@
                 <groupId>org.xolstice.maven.plugins</groupId>
                 <artifactId>protobuf-maven-plugin</artifactId>
                 <version>0.6.1</version>
-                <configuration>
-                    <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
-                    <pluginId>grpc-java</pluginId>
-                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
-                </configuration>
                 <executions>
                     <execution>
+                        <id>protobuf-compile</id>
                         <goals>
                             <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
+                            <temporaryProtoFileDirectory>${project.build.directory}/protoc-dependencies-java</temporaryProtoFileDirectory>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>grpc-compile</id>
+                        <goals>
                             <goal>compile-custom</goal>
                         </goals>
+                        <configuration>
+                            <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
+                            <pluginId>grpc-java</pluginId>
+                            <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
+                            <temporaryProtoFileDirectory>${project.build.directory}/protoc-dependencies-grpc</temporaryProtoFileDirectory>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

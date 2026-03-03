@@ -39,7 +39,8 @@ spring:
           acquire-timeout: 45000
 
 jwt:
-  secret: ${JWT_SECRET}
+  # Identity Service JWKS endpoint. Production should set JWT_JWKS_URI explicitly.
+  jwks-uri: ${JWT_JWKS_URI:http://identity-service:8081/.well-known/jwks.json}
 
 gateway:
   cors:

@@ -31,7 +31,7 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
         
         ErrorResponse errorResponse = ErrorResponse.of(
                 "UNAUTHORIZED",
-                "Authentication required. Please provide a valid JWT token."
+            "Authentication required. Request must come via API Gateway."
         );
         
         objectMapper.writeValue(response.getOutputStream(), errorResponse);

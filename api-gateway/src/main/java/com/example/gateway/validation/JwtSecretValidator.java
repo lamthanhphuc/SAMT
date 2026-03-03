@@ -2,22 +2,20 @@ package com.example.gateway.validation;
 
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
+@Profile("prod")
 public class JwtSecretValidator implements InitializingBean {
 
-    @Value("${jwt.secret}")
-    private String jwtSecret;
+    @Value("${jwt.jwks-uri}")
+    private String jwksUri;
 
     @Override
     public void afterPropertiesSet() {
-        if (jwtSecret == null || jwtSecret.isBlank()) {
-            throw new IllegalStateException("JWT secret is not configured");
-        }
-
-        if (jwtSecret.length() < 32) {
-            throw new IllegalStateException("JWT secret must be at least 32 characters");
+        if (jwksUri == null || jwksUri.isBlank()) {
+            throw new IllegalStateException("JWT_JWKS_URI environment variable must be set (non-blank).");
         }
     }
 }

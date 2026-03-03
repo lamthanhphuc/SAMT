@@ -175,7 +175,7 @@ Project Config gRPC Server
 **Standards:**
 - ✅ REST API follows OpenAPI 3.0 spec (documented in 02_API_Contract.md)
 - ✅ gRPC uses Protobuf 3.0 (usergroup_service.proto, projectconfig_service.proto)
-- ✅ Authentication: JWT (HS256) for REST, Metadata for gRPC
+- ✅ Authentication: JWT (RS256 via JWKS at API Gateway) for REST, Metadata for gRPC
 - ✅ Database: PostgreSQL with Flyway migrations
 
 **Security:**

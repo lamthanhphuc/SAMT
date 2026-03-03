@@ -183,7 +183,7 @@ Identity Service → Kafka → UserGroup Service
 ```
 1. Client → ProjectConfig Service: POST /api/project-configs/{id}/verify
 2. ProjectConfig Service:
-   - Extract userId from JWT
+  - Extract userId/role from gateway headers (`X-User-Id`, `X-User-Role`) after verifying internal signature
 3. ProjectConfig Service → UserGroup Service (gRPC):
    - Verify user is group leader (checkGroupLeader RPC)
 4. UserGroup Service → ProjectConfig Service: Authorization result
@@ -206,7 +206,7 @@ Identity Service → Kafka → UserGroup Service
 │                     JWT TOKEN (15 min)                        │
 ├──────────────────────────────────────────────────────────────┤
 │ Header:                                                       │
-│   { "alg": "HS256", "typ": "JWT" }                           │
+│   { "alg": "RS256", "kid": "identity-1", "typ": "JWT" }             │
 │                                                               │
 │ Payload:                                                      │
 │   {                                                           │
@@ -219,10 +219,10 @@ Identity Service → Kafka → UserGroup Service
 │   }                                                           │
 │                                                               │
 │ Signature: HMACSHA256(base64(header) + "." + base64(payload),│
-│                       JWT_SECRET)                             │
+│   RSA-SHA256 signature (Identity Service private key)          │
 └──────────────────────────────────────────────────────────────┘
 
-⚠️ CRITICAL: JWT_SECRET must be IDENTICAL across all services
+Gateway validates JWT signature using public keys from JWKS: `/.well-known/jwks.json` (configured via `JWT_JWKS_URI`).
 ```
 
 ### 6.2 Authorization Matrix
@@ -343,7 +343,9 @@ services:
       - "9091:9091"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-identity:5432/identityservice_db
-      - JWT_SECRET=${JWT_SECRET}
+      - JWT_PRIVATE_KEY_PEM=${JWT_PRIVATE_KEY_PEM}
+      - JWT_PUBLIC_KEY_PEM=${JWT_PUBLIC_KEY_PEM}
+      - JWT_KEY_ID=${JWT_KEY_ID}
       - SPRING_DATA_REDIS_HOST=redis
     depends_on:
       - postgres-identity
@@ -356,7 +358,7 @@ services:
       - "9095:9095"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-usergroup:5432/samt_usergroup
-      - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET}
       - IDENTITY_SERVICE_GRPC_HOST=identity-service
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
@@ -369,7 +371,7 @@ services:
       - "8083:8083"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-projectconfig:5432/projectconfig_db
-      - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET}
       - USER_GROUP_SERVICE_GRPC_HOST=usergroup-service
       - JIRA_API_TIMEOUT_SECONDS=6
       - GITHUB_API_TIMEOUT_SECONDS=6
@@ -380,9 +382,18 @@ services:
 
 ### 9.2 Environment Variables
 
-**Critical Shared Variables:**
+**Critical Variables (JWT + Gateway trust):**
 ```bash
-JWT_SECRET=your-256-bit-secret-key-must-be-same-across-all-services
+# Identity Service (JWT signing)
+JWT_PRIVATE_KEY_PEM="-----BEGIN PRIVATE KEY-----..."
+JWT_PUBLIC_KEY_PEM="-----BEGIN PUBLIC KEY-----..."   # optional if derived
+JWT_KEY_ID=identity-1
+
+# API Gateway (JWT validation)
+JWT_JWKS_URI=http://identity-service:8081/.well-known/jwks.json
+
+# Gateway → Downstream trust (internal signature)
+INTERNAL_SIGNING_SECRET=gateway-to-service-hmac-secret-256-bit-minimum
 ```
 
 **Per-Service Variables:**

@@ -261,7 +261,7 @@ https://app.diagrams.net/\#G1dIYlz7NYFMqShsOqYqw3pEyXYfOpgjYT\#%7B%22pageId%22%3
 #### **4.2.1 Authentication & Authorization**
 
 * **JWT Tokens:**
-  - Access Token: JWT với HS256, TTL = 15 minutes
+  - Access Token: JWT với RS256 (public key qua JWKS tại API Gateway), TTL = 15 minutes
   - Refresh Token: Opaque UUID, TTL = 7 days, stored in database
   - Token Rotation: Refresh token bị revoke và sinh token mới mỗi lần refresh
   - Reuse Detection: Nếu revoked token bị reuse → thu hồi TẤT CẢ tokens của user (force re-login)

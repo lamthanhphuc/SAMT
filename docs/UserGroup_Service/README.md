@@ -80,16 +80,17 @@ See [GRPC_CONTRACT.md](GRPC_CONTRACT.md).
 
 ## 3. Authorization Model
 
-### 3.1 Authentication & internal JWT validation
-- The service expects `Authorization: Bearer <jwt>`.
-- It **validates HS256 signature and expiration** using `jwt.secret` (see `JwtService`).
-- It extracts:
-  - `userId` from claim `userId` (string) **or** falls back to JWT `sub`.
-  - `roles` from claim `roles` as a JSON array of strings.
+### 3.1 Authentication (Gateway headers)
+- The service expects requests to come from the API Gateway.
+- External JWTs are validated at the gateway (RS256 via JWKS).
+- This service authenticates using gateway-injected headers:
+  - `X-User-Id` (from JWT `sub`)
+  - `X-User-Role` (from JWT `roles[0]`)
+- It verifies the internal signature headers (`X-Internal-*`) using `GatewayInternalSignatureVerifier` before trusting `X-User-*` headers.
 
 Token validation failure behavior (as implemented):
-- `JwtAuthenticationFilter` logs a warning and continues the filter chain **without** setting authentication.
-- Spring Security then returns `401` for protected endpoints via `JwtAuthenticationEntryPoint`.
+- If required gateway headers are missing or the internal signature check fails, authentication is not set.
+- Spring Security returns `401` for protected endpoints via `JwtAuthenticationEntryPoint`.
 
 ### 3.2 System roles vs group roles
 - **System roles** are taken from JWT `roles`: `ADMIN`, `LECTURER`, `STUDENT`.
@@ -172,7 +173,7 @@ No Redis client/config/dependency exists in this service module.
 The following claims were removed from previous docs because they are not implemented (or contradict code):
 - LECTURER being allowed to create/update/delete groups via REST (`GroupController` is ADMIN-only for those).
 - Group LEADER being allowed to add/remove members via REST (REST endpoints do not check group-role; only system role via `@PreAuthorize`).
-- “User-Group service does not validate JWT signatures” (it does validate signature using `jwt.secret`).
+- “User-Group service does not validate JWT signatures” (it authenticates via API Gateway headers and verifies the gateway internal signature using `internal.signing.secret`).
 - “Leader auto-promotion not implemented on user deletion” (there is an implementation in `UserDeletedEventConsumer`, though there is also a competing hard-delete consumer).
 - “Planned/future consumers” such as `user.updated` handling and generic event-driven caching.
 - Any Redis caching references.

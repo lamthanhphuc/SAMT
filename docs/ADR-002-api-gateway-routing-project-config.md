@@ -150,13 +150,14 @@ public class InternalConfigController {
 ┌─────────────────────────────────────────────────────────────────┐
 │ API Gateway (port 8080)                                         │
 │  1. JwtAuthenticationFilter validates JWT                       │
-│  2. Extract: userId, email, role                                │
-│  3. Inject headers: X-User-Id, X-User-Email, X-User-Role        │
+│  2. Extract: sub + roles                                        │
+│  3. Inject headers: X-User-Id, X-User-Role, X-Internal-*         │
 │  4. Route to Project Config Service                             │
 └────────────────────────────┬────────────────────────────────────┘
                              │ Headers: X-User-Id: 123
-                             │          X-User-Email: user@example.com
                              │          X-User-Role: STUDENT
+                             │          X-Internal-Timestamp: 1708704600
+                             │          X-Internal-Signature: ...
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │ Project Config Service (port 8083)                              │
@@ -273,7 +274,7 @@ curl http://localhost:8080/api/project-configs \
 # Verify JWT injection
 curl http://localhost:8080/api/project-configs \
   -H "Authorization: Bearer <token>" -v
-# Should see X-User-Id, X-User-Email, X-User-Role in forwarded request
+# Should see X-User-Id, X-User-Role, and X-Internal-* in forwarded request
 
 # Test invalid JWT
 curl http://localhost:8080/api/project-configs \

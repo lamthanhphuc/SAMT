@@ -44,7 +44,8 @@ mvn spring-boot:run
 # Run with Docker
 docker build -t api-gateway:1.0 .
 docker run -p 8080:8080 \
-  -e JWT_SECRET=your-secret \
+  -e JWT_JWKS_URI=http://identity-service:8081/.well-known/jwks.json \
+  -e GATEWAY_INTERNAL_SECRET=gateway-service-hmac-secret-256-bit \
   api-gateway:1.0
 ```
 
@@ -64,7 +65,7 @@ curl http://localhost:8080/actuator/health
 
 | Variable | Description | Default | Example |
 |----------|-------------|---------|---------|
-| `JWT_SECRET` | JWT signing secret (MUST match Identity Service) | - | `your-256-bit-secret-key-here` |
+| `JWT_JWKS_URI` | Identity Service JWKS endpoint for JWT validation (RS256) | - | `http://identity-service:8081/.well-known/jwks.json` |
 | `GATEWAY_INTERNAL_SECRET` | HMAC secret for signed headers | - | `gateway-service-hmac-secret-256-bit` |
 
 **Optional:**
@@ -143,9 +144,9 @@ spring:
   codec:
     max-in-memory-size: 10MB  # Request body size limit
 
-# JWT Configuration
+# JWT Configuration (RS256 via JWKS)
 jwt:
-  secret: ${JWT_SECRET:your-256-bit-secret-key-change-this-in-production-environment-please}
+  jwks-uri: ${JWT_JWKS_URI:http://identity-service:8081/.well-known/jwks.json}
 
 # Internal Gateway Secret
 gateway:
@@ -438,26 +439,29 @@ public Claims validateAndParseClaims(String token) {
 
 **Process:**
 ```java
-// Generate signed headers
-Long userId = claims.get("userId", Long.class);
-String email = claims.getSubject();
-String role = claims.get("role", String.class);
-long timestamp = System.currentTimeMillis();
+// Generate signed headers (simplified)
+String userId = jwt.getSubject();
+String role = jwt.getClaimAsStringList("roles").get(0);
+long timestampSeconds = Instant.now().getEpochSecond();
+String method = request.getMethod().toString();
+String path = request.getURI().getPath();
+String bodyHash = "<sha256-of-body-or-empty>";
 
-// Generate HMAC-SHA256 signature
-String payload = userId + "|" + email + "|" + role + "|" + timestamp;
-String signature = HmacUtils.hmacSha256Hex(gatewaySecret, payload);
+String payload = timestampSeconds + "|" + method + "|" + path + "|" + bodyHash;
+String signature = HmacUtils.hmacSha256Hex(internalSigningSecret, payload);
 
-// Inject headers
+// Inject headers (and strip Authorization)
 ServerWebExchange mutatedExchange = exchange.mutate()
-        .request(builder -> builder
-                .header("X-User-Id", String.valueOf(userId))
-                .header("X-User-Email", email)
-                .header("X-User-Role", role)
-                .header("X-Timestamp", String.valueOf(timestamp))
-                .header("X-Internal-Signature", signature)
-        )
-        .build();
+  .request(builder -> builder
+    .headers(headers -> headers.remove(HttpHeaders.AUTHORIZATION))
+    .header("X-User-Id", userId)
+    .header("X-User-Role", role)
+    .header("X-Internal-Original-Path", path)
+    .header("X-Internal-Timestamp", String.valueOf(timestampSeconds))
+    .header("X-Internal-Signature", signature)
+    .header("X-Internal-Key-Id", "gateway-1")
+  )
+  .build();
 ```
 
 ### 5. Spring Security Context
@@ -491,10 +495,11 @@ Gateway forwards request to downstream service with:
 GET /groups/1 HTTP/1.1
 Host: user-group-service:8082
 X-User-Id: 123
-X-User-Email: admin@example.com
 X-User-Role: ADMIN
-X-Timestamp: 1708704600000
+X-Internal-Original-Path: /groups/1
+X-Internal-Timestamp: 1708704600
 X-Internal-Signature: a7f3b8c2d9e1f4a3b8c2d9e1f4a3b8c2
+X-Internal-Key-Id: gateway-1
 X-Forwarded-Host: gateway
 ```
 
@@ -502,39 +507,19 @@ X-Forwarded-Host: gateway
 
 ## JWT Validation Strategy
 
-### Shared Secret Model
+### JWKS Model (Authoritative)
 
-**Security Model:** Symmetric key (HS256)
+**Security Model:** Asymmetric key (RS256)
 
-**Key Requirement:** JWT secret MUST be identical across all services
+**Source of truth:** API Gateway validates external access tokens using Identity Service JWKS (`/.well-known/jwks.json`).
 
 **Configuration:**
-- Identity Service: `jwt.secret` environment variable
-- API Gateway: `jwt.secret` environment variable (MUST match)
+- API Gateway: `jwt.jwks-uri` / `JWT_JWKS_URI`
+- Identity Service: signs tokens with RSA private key and publishes JWKS
 
-**Secret Validation on Startup:**
+**Startup Validation:**
 
-**File:** `JwtSecretValidator.java`
-
-```java
-@Component
-public class JwtSecretValidator implements InitializingBean {
-
-    @Value("${jwt.secret}")
-    private String jwtSecret;
-
-    @Override
-    public void afterPropertiesSet() throws Exception {
-        if (jwtSecret == null || jwtSecret.isEmpty()) {
-            throw new IllegalStateException("JWT secret is not configured");
-        }
-        if (jwtSecret.length() < 32) {
-            throw new IllegalStateException("JWT secret must be at least 256 bits (32 characters)");
-        }
-        log.info("JWT secret validated successfully (length: {} bytes)", jwtSecret.getBytes().length);
-    }
-}
-```
+**File:** `JwtSecretValidator.java` (name is legacy; it validates `jwt.jwks-uri` is non-blank)
 
 ### Token Expiration Handling
 
@@ -703,10 +688,10 @@ public class SignatureVerificationFilter implements Filter {
         
         // Read headers
         String userId = httpRequest.getHeader("X-User-Id");
-        String email = httpRequest.getHeader("X-User-Email");
         String role = httpRequest.getHeader("X-User-Role");
-        String timestamp = httpRequest.getHeader("X-Timestamp");
+        String timestamp = httpRequest.getHeader("X-Internal-Timestamp");
         String signature = httpRequest.getHeader("X-Internal-Signature");
+        String originalPath = httpRequest.getHeader("X-Internal-Original-Path");
         
         // Validate headers exist
         if (userId == null || signature == null) {
@@ -714,16 +699,18 @@ public class SignatureVerificationFilter implements Filter {
             return;
         }
         
-        // Validate timestamp (60 second window)
+        // Validate timestamp skew (seconds; default max 300)
         long requestTime = Long.parseLong(timestamp);
-        long currentTime = System.currentTimeMillis();
-        if (Math.abs(currentTime - requestTime) > 60000) {
+        long currentTime = Instant.now().getEpochSecond();
+        if (Math.abs(currentTime - requestTime) > 300) {
             sendError(response, 401, "Request timestamp expired");
             return;
         }
         
         // Verify signature
-        String payload = userId + "|" + email + "|" + role + "|" + timestamp;
+        String method = httpRequest.getMethod();
+        String bodyHash = "<sha256-of-request-body-or-empty>";
+        String payload = requestTime + "|" + method + "|" + originalPath + "|" + bodyHash;
         String expectedSignature = HmacUtils.hmacSha256Hex(gatewaySecret, payload);
         if (!expectedSignature.equals(signature)) {
             sendError(response, 401, "Invalid internal signature");
@@ -1349,7 +1336,7 @@ docker build -t api-gateway:1.0 .
 **Run:**
 ```bash
 docker run -p 8080:8080 \
-  -e JWT_SECRET=your-secret \
+  -e JWT_JWKS_URI=http://identity-service:8081/.well-known/jwks.json \
   api-gateway:1.0
 ```
 
@@ -1363,7 +1350,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - JWT_SECRET=${JWT_SECRET}
+      - JWT_JWKS_URI=${JWT_JWKS_URI}
       - SPRING_DATA_REDIS_HOST=redis
     depends_on:
       - identity-service

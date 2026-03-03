@@ -3,34 +3,40 @@ package com.example.identityservice.service;
 import com.example.identityservice.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
+
+import com.example.identityservice.security.JwtKeyMaterial;
+
+import java.security.PrivateKey;
+import java.security.PublicKey;
 
 /**
  * JWT Service for token generation and validation.
  * @see docs/Authentication-Authorization-Design.md - JWT Specification
  * 
- * Algorithm: HS256
- * Signing Key: JWT_SECRET (environment variable)
+ * Algorithm: RS256
+ * Signing Key: RSA private key (Identity Service only)
  * Access Token TTL: 15 minutes
  */
 @Service
 public class JwtService {
 
-    private final SecretKey secretKey;
+    private final PrivateKey privateKey;
+    private final PublicKey publicKey;
+    private final String keyId;
     private final long accessTokenExpiration;
 
     public JwtService(
-            @Value("${jwt.secret}") String jwtSecret,
+            JwtKeyMaterial keyMaterial,
             @Value("${jwt.access-token-expiration:900000}") long accessTokenExpiration) {
-        // HS256 requires at least 256 bits (32 bytes) key
-        this.secretKey = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+        this.privateKey = keyMaterial.privateKey();
+        this.publicKey = keyMaterial.publicKey();
+        this.keyId = keyMaterial.keyId();
         this.accessTokenExpiration = accessTokenExpiration; // Default: 900000ms = 15 minutes
     }
 
@@ -51,15 +57,23 @@ public class JwtService {
     public String generateAccessToken(User user) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + accessTokenExpiration);
+        String jti = UUID.randomUUID().toString();
 
         return Jwts.builder()
+            .header()
+            .type("JWT")
+            .keyId(keyId)
+            .and()
+            .id(jti)                                                // jti
+                .issuer("identity-service")                              // iss: trusted issuer
+                .audience().add("api-gateway").and()                     // aud: intended audience
                 .subject(String.valueOf(user.getId()))                    // sub: User ID
                 .claim("email", user.getEmail())                          // email: User email
                 .claim("roles", List.of(user.getRole().name()))           // roles: List of roles
                 .claim("token_type", "ACCESS")                            // token_type: ACCESS
                 .issuedAt(now)                                            // iat: Issued at
                 .expiration(expiration)                                   // exp: Expiration
-                .signWith(secretKey)                                      // Algorithm: HS256
+            .signWith(privateKey, Jwts.SIG.RS256)                      // Algorithm: RS256
                 .compact();
     }
 
@@ -120,7 +134,7 @@ public class JwtService {
      */
     private Claims extractAllClaims(String token) {
         return Jwts.parser()
-                .verifyWith(secretKey)
+            .verifyWith(publicKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();

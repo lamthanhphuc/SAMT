@@ -1,8 +1,7 @@
 package com.example.gateway.filter;
 
-import com.example.gateway.util.JwtUtil;
-import io.jsonwebtoken.Claims;
 import org.springframework.core.Ordered;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -10,6 +9,8 @@ import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
@@ -19,18 +20,21 @@ import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 
 @Component  // ENABLED FOR HEADER SPOOFING PREVENTION
 public class JwtAuthenticationFilter implements WebFilter, Ordered {
 
     public static final String AUTHENTICATED_MARKER_ATTRIBUTE = "gateway.authenticated";
-    public static final String AUTHENTICATED_CLAIMS_ATTRIBUTE = "gateway.authenticatedClaims";
+    public static final String AUTHENTICATED_JWT_ATTRIBUTE = "gateway.authenticatedJwt";
 
-    private final JwtUtil jwtUtil;
+    private final ReactiveJwtDecoder jwtDecoder;
+    private final boolean prodProfile;
 
-    public JwtAuthenticationFilter(JwtUtil jwtUtil) {
-        this.jwtUtil = jwtUtil;
+    public JwtAuthenticationFilter(ReactiveJwtDecoder jwtDecoder, Environment environment) {
+        this.jwtDecoder = jwtDecoder;
+        this.prodProfile = Arrays.asList(environment.getActiveProfiles()).contains("prod");
     }
 
     @Override
@@ -50,49 +54,41 @@ public class JwtAuthenticationFilter implements WebFilter, Ordered {
             return unauthorized(exchange);
         }
 
-        final Claims claims;
-        try {
-            claims = jwtUtil.validateAndParseClaims(token);
-        } catch (IllegalArgumentException ignored) {
+        return jwtDecoder.decode(token)
+                .flatMap(jwt -> authenticateAndContinue(exchange, chain, jwt))
+                .onErrorResume(ex -> unauthorized(exchange));
+    }
+
+    private Mono<Void> authenticateAndContinue(ServerWebExchange exchange, WebFilterChain chain, Jwt jwt) {
+        if (!StringUtils.hasText(jwt.getSubject())) {
             return unauthorized(exchange);
         }
 
-        String userId = readUserId(claims);
-        String subject = claims.getSubject();
-        String email = claims.get("email", String.class);
-        String role = claims.get("role", String.class);
-
-        if (!StringUtils.hasText(email)) {
-            email = subject;
-        }
-
-        if (!StringUtils.hasText(userId) || !StringUtils.hasText(subject) || !StringUtils.hasText(role) || !StringUtils.hasText(email)) {
+        List<String> roles = jwt.getClaimAsStringList("roles");
+        if (roles == null || roles.isEmpty() || roles.stream().noneMatch(StringUtils::hasText)) {
             return unauthorized(exchange);
         }
+
+        if (!StringUtils.hasText(jwt.getId()) || jwt.getIssuedAt() == null || jwt.getExpiresAt() == null) {
+            return unauthorized(exchange);
+        }
+
+        List<SimpleGrantedAuthority> authorities = roles.stream()
+                .filter(StringUtils::hasText)
+                .map(r -> new SimpleGrantedAuthority("ROLE_" + r))
+                .toList();
 
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                subject,
+                jwt.getSubject(),
                 null,
-                List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                authorities
         );
 
-        // Set authentication attributes for SignedHeaderFilter to use
         exchange.getAttributes().put(AUTHENTICATED_MARKER_ATTRIBUTE, Boolean.TRUE);
-        exchange.getAttributes().put(AUTHENTICATED_CLAIMS_ATTRIBUTE, claims);
+        exchange.getAttributes().put(AUTHENTICATED_JWT_ATTRIBUTE, jwt);
 
         return chain.filter(exchange)
                 .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
-    }
-
-    private String readUserId(Claims claims) {
-        Object raw = claims.get("userId");
-        if (raw == null) {
-            return null;
-        }
-        if (raw instanceof Number number) {
-            return String.valueOf(number.longValue());
-        }
-        return String.valueOf(raw);
     }
 
     private String resolveBearerToken(ServerHttpRequest request) {
@@ -104,11 +100,22 @@ public class JwtAuthenticationFilter implements WebFilter, Ordered {
     }
 
     private boolean isPublicEndpoint(String path) {
-        return "/api/identity/register".equals(path)
+        if ("/api/identity/register".equals(path)
                 || "/api/identity/login".equals(path)
                 || "/api/identity/refresh-token".equals(path)
-                || path.startsWith("/api/public/")
-                || path.startsWith("/actuator/")
+                || path.startsWith("/api/public/")) {
+            return true;
+        }
+
+        if ("/actuator/health".equals(path) || path.startsWith("/actuator/health/")) {
+            return true;
+        }
+
+        if (prodProfile) {
+            return false;
+        }
+
+        return path.startsWith("/actuator/")
                 || "/actuator".equals(path)
                 || path.startsWith("/swagger-ui/")
                 || "/swagger-ui.html".equals(path)

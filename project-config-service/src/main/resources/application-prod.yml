@@ -1,0 +1,24 @@
+# Production profile: NO fallback secrets. Startup must fail if env vars are missing.
+
+internal:
+  signing:
+    secret: ${INTERNAL_SIGNING_SECRET}
+    key-id: ${INTERNAL_SIGNING_KEY_ID:gateway-1}
+
+encryption:
+  secret-key: ${ENCRYPTION_SECRET_KEY}
+
+service-to-service:
+  sync-service:
+    key: ${SERVICE_TO_SERVICE_SYNC_KEY}
+
+spring:
+  datasource:
+    password: ${SPRING_DATASOURCE_PASSWORD}
+
+samt:
+  secrets:
+    datasource-password: ${SPRING_DATASOURCE_PASSWORD}
+    encryption-secret-key: ${ENCRYPTION_SECRET_KEY}
+    service-to-service-sync-key: ${SERVICE_TO_SERVICE_SYNC_KEY}
+    internal-signing-secret: ${INTERNAL_SIGNING_SECRET}

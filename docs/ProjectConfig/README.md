@@ -172,7 +172,7 @@ project-config-service/
 ### JWT Authentication
 
 **Token Source:** Identity Service  
-**Validation:** Shared secret (HS256)  
+**Validation:** RS256 via JWKS at API Gateway (`JWT_JWKS_URI`)  
 **Claims:** `sub` (userId), `roles` (array)
 
 **No database lookup:** JWT validation is stateless.

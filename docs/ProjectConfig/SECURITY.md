@@ -10,7 +10,7 @@
 
 | Aspect | Specification |
 |--------|--------------|
-| **Authentication (Public API)** | JWT validation (HS256) |
+| **Authentication (Public API)** | JWT validated at API Gateway (RS256 via JWKS) |
 | **Authentication (Internal API)** | Shared service key (header-based) |
 | **Token Encryption** | AES-256-GCM |
 | **IV Length** | 96 bits (12 bytes) |
@@ -27,19 +27,22 @@ Project Config Service uses **dual authentication** depending on endpoint type.
 
 ### Public API (`/api/**`)
 
-**Authentication:** JWT Bearer token (stateless)
+**Authentication:** Gateway-authenticated request (JWT validated at gateway)
 
 **Flow:**
 1. User authenticates via Identity Service (login)
 2. Identity Service issues JWT token
 3. API Gateway validates JWT and forwards request
-4. Project Config Service validates JWT signature and expiration
-5. Extracts `userId`, `email`, `role` from JWT claims
-6. Sets `CurrentUser` in `SecurityContext`
+4. Project Config Service verifies internal signature headers (`X-Internal-*`)
+5. Reads `X-User-Id` / `X-User-Role` and sets `CurrentUser` in `SecurityContext`
 
-**Required Header:**
+**Required Headers (as seen by this service):**
 ```
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+X-User-Id: <sub>
+X-User-Role: <roles[0]>
+X-Internal-Timestamp: <seconds>
+X-Internal-Signature: <hmac>
+X-Internal-Key-Id: <key id>
 ```
 
 **JWT Claims Used:**
@@ -55,7 +58,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 }
 ```
 
-**Implementation:** `JwtAuthenticationFilter.java`
+**Implementation:** `GatewayHeaderAuthenticationFilter.java` + `GatewayInternalSignatureVerifier.java`
 
 ### Internal API (`/internal/**`)
 

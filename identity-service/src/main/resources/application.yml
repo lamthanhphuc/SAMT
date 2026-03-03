@@ -18,11 +18,11 @@ spring:
     timeout-per-shutdown-phase: 30s
 
   datasource:
-    # Local dev: default password là 12345 (khớp với Docker PostgreSQL)
-    # Docker: sẽ override bởi SPRING_DATASOURCE_PASSWORD từ .env
+    # Password MUST be provided via SPRING_DATASOURCE_PASSWORD (no insecure fallback)
+    # Docker: will typically be provided via SPRING_DATASOURCE_PASSWORD from environment
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/samt_identity?serverTimezone=UTC&ApplicationName=identity-service}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:12345}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       connection-timeout: 30000
@@ -90,9 +90,14 @@ grpc:
 # JWT CONFIGURATION
 # ==============================================
 jwt:
-  # Secret key for HS256 (minimum 32 characters for 256 bits)
-  # ⚠️ CHANGE THIS IN PRODUCTION! Use environment variable JWT_SECRET
-  secret: ${JWT_SECRET:samt-super-secret-key-for-jwt-hs256-algorithm-minimum-32-chars}
+  # RS256 asymmetric signing.
+  # Identity Service loads the PRIVATE key; public key is derived or provided and exposed via JWKS.
+  key:
+    id: ${JWT_KEY_ID:identity-1}
+    private-key-path: ${JWT_PRIVATE_KEY_PATH:}
+    private-key-pem: ${JWT_PRIVATE_KEY_PEM:}
+    public-key-path: ${JWT_PUBLIC_KEY_PATH:}
+    public-key-pem: ${JWT_PUBLIC_KEY_PEM:}
   # Access token expiration: 15 minutes (900000 ms)
   access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:900000}
   # Refresh token expiration: 7 days (604800000 ms)

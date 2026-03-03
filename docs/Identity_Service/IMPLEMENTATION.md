@@ -32,7 +32,10 @@ SPRING_DATA_REDIS_HOST=localhost
 SPRING_DATA_REDIS_PORT=6379
 
 # Security
-JWT_SECRET=your-256-bit-secret-key-must-be-same-across-all-services
+JWT_KEY_ID=identity-1
+JWT_PRIVATE_KEY_PEM="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+# Optional if not derivable in your runtime:
+JWT_PUBLIC_KEY_PEM="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
 
 # gRPC Server
 GRPC_SERVER_PORT=9091
@@ -90,9 +93,14 @@ grpc:
     port: ${GRPC_SERVER_PORT:9091}
 
 jwt:
-  secret: ${JWT_SECRET}
-  access-token-expiration-ms: 900000   # 15 minutes
-  refresh-token-expiration-days: 7
+    key:
+        id: ${JWT_KEY_ID:identity-1}
+        private-key-path: ${JWT_PRIVATE_KEY_PATH:}
+        private-key-pem: ${JWT_PRIVATE_KEY_PEM:}
+        public-key-path: ${JWT_PUBLIC_KEY_PATH:}
+        public-key-pem: ${JWT_PUBLIC_KEY_PEM:}
+    access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:900000}   # 15 minutes
+    refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:604800000} # 7 days
 ```
 
 ### Hikari Connection Pool
@@ -561,8 +569,9 @@ boolean valid = passwordEncoder.matches(plainPassword, hash);
 @Component
 public class JwtService {
     
-    @Value("${jwt.secret}")
-    private String secret;  // MUST: 256+ bit secret
+    private final PrivateKey privateKey;
+    private final PublicKey publicKey;
+    private final String keyId;
     
     @Value("${jwt.access-token-ttl}")
     private int accessTokenTtl;  // MUST: 900 seconds (15 minutes)
@@ -573,15 +582,20 @@ public class JwtService {
     public String generateAccessToken(User user) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + accessTokenTtl * 1000L);
+        String jti = UUID.randomUUID().toString();
         
         return Jwts.builder()
-            .setSubject(user.getId().toString())  // User ID
+            .header().type("JWT").keyId(keyId).and()
+            .id(jti)
+            .issuer("identity-service")
+            .audience().add("api-gateway").and()
+            .subject(user.getId().toString())  // User ID
             .claim("email", user.getEmail())
             .claim("roles", List.of(user.getRole().name()))  // NO ROLE_ prefix
             .claim("token_type", "ACCESS")
             .setIssuedAt(now)
             .setExpiration(expiry)
-            .signWith(SignatureAlgorithm.HS256, secret)
+            .signWith(privateKey, Jwts.SIG.RS256)
             .compact();
     }
     
@@ -591,9 +605,10 @@ public class JwtService {
     public Claims validateToken(String token) {
         try {
             return Jwts.parser()
-                .setSigningKey(secret)
-                .parseClaimsJws(token)
-                .getBody();
+                .verifyWith(publicKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
         } catch (ExpiredJwtException e) {
             throw new TokenExpiredException("Token expired");
         } catch (JwtException e) {
@@ -604,8 +619,8 @@ public class JwtService {
 ```
 
 **Critical Notes:**
-- ⚠️ **MUST** use HS256 algorithm (HMAC-SHA256)
-- ⚠️ **MUST** use secret key ≥ 256 bits (32+ characters)
+- ⚠️ **MUST** use RS256 algorithm (asymmetric signing)
+- ⚠️ **MUST** set `kid` header and publish matching key via JWKS
 - ⚠️ **MUST** include `roles` claim as array WITHOUT `ROLE_` prefix (e.g., `["STUDENT"]`, `["ADMIN"]`)
 - ⚠️ **MUST** set `exp` claim (automatic expiration validation)
 - 💡 **NOTE**: Spring Security adds `ROLE_` prefix internally when creating `GrantedAuthority`

@@ -30,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
  */
 @DataJpaTest(properties = {"spring.main.allow-bean-definition-overriding=true"},
              excludeAutoConfiguration = {FlywayAutoConfiguration.class})
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import(GithubCommitRepositoryImpl.class)
 class GithubCommitUpsertIntegrationTest {

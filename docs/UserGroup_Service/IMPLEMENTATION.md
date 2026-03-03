@@ -7,9 +7,12 @@ This document lists only configuration and runtime behavior that exists in the c
 ### REST
 - `server.port`: `${SERVER_PORT:8082}`
 
-### JWT
-- `jwt.secret`: `${JWT_SECRET:...}`
-- Algorithm: HS256
+### Gateway trust (internal signature)
+- `internal.signing.secret`: `${INTERNAL_SIGNING_SECRET:}`
+- `internal.signing.key-id`: `${INTERNAL_SIGNING_KEY_ID:gateway-1}`
+- `internal.signing.max-skew-seconds`: `${INTERNAL_SIGNING_MAX_SKEW_SECONDS:300}`
+
+Note: External JWT validation is performed at the API Gateway (RS256 via JWKS); this service does not accept `JWT_SECRET` for JWT signature validation.
 
 ### gRPC server
 - `grpc.server.port`: `${GRPC_SERVER_PORT:9095}`

@@ -860,24 +860,28 @@
 - JWT Header:
 ```json
 {
-  "alg": "HS256",
-  "typ": "JWT"
+  "alg": "RS256",
+  "typ": "JWT",
+  "kid": "identity-1"
 }
 ```
 - JWT Payload:
 ```json
 {
   "sub": "1",
+  "iss": "identity-service",
+  "aud": "api-gateway",
   "email": "student@university.edu",
   "roles": ["STUDENT"],
   "token_type": "ACCESS",
+  "jti": "<uuid>",
   "iat": 1738234800,
   "exp": 1738235700
 }
 ```
 - **CRITICAL**: `roles` array contains plain string `"STUDENT"` (NO `ROLE_` prefix)
 - TTL = 900 seconds (15 minutes)
-- Signature valid with secret key (HS256 algorithm)
+- Signature valid with public key (RS256); verify via Identity JWKS at `/.well-known/jwks.json`
 
 ---
 
@@ -2732,7 +2736,7 @@ if (user.getStatus() != User.Status.ACTIVE) {
 | **Type** | Negative - Security |
 
 **Steps:**
-1. Create JWT signed with RS256 instead of HS256
+1. Create JWT signed with HS256 (or any non-RS256 algorithm) instead of RS256
 2. Send request with this token
 
 **Expected Result:**

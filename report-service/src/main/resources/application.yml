@@ -14,11 +14,11 @@ spring:
     timeout-per-shutdown-phase: 30s
 
   datasource:
-    # Local dev: default password là 12345 (khớp với Docker PostgreSQL)
-    # Docker: sẽ override bởi SPRING_DATASOURCE_PASSWORD từ .env
+    # Password MUST be provided via SPRING_DATASOURCE_PASSWORD (no insecure fallback)
+    # Docker: will typically be provided via SPRING_DATASOURCE_PASSWORD from environment
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/samt_core?serverTimezone=UTC&ApplicationName=report-service}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:12345}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       connection-timeout: 30000
@@ -54,6 +54,13 @@ spring:
           batch_size: 20
         order_inserts: true
         order_updates: true
+
+# Gateway trust (downstream services do NOT validate external JWT)
+internal:
+  signing:
+    secret: ${INTERNAL_SIGNING_SECRET:}
+    key-id: ${INTERNAL_SIGNING_KEY_ID:gateway-1}
+    max-skew-seconds: ${INTERNAL_SIGNING_MAX_SKEW_SECONDS:300}
 
 management:
   endpoints:

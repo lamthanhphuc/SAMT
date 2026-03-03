@@ -1058,21 +1058,20 @@ for (UserGroup membership : memberships) {
 
 **CRITICAL DIFFERENCE:** User-Group Service does NOT load user from database.
 
-#### JWT Validation Filter
+#### Gateway Header Authentication Filter
 
-**File:** [`JwtAuthenticationFilter.java`](../user-group-service/src/main/java/com/example/user_groupservice/security/JwtAuthenticationFilter.java)
+**Architecture:** External JWT validation happens ONLY at the API Gateway (RS256 via JWKS). Downstream services authenticate requests using gateway-injected headers that are protected by an internal signature.
+
+**File:** [`GatewayHeaderAuthenticationFilter.java`](../user-group-service/src/main/java/com/example/user_groupservice/security/GatewayHeaderAuthenticationFilter.java)
 
 **Flow:**
 
 ```java
-1. Extract "Authorization: Bearer <token>" header
-2. Parse JWT and validate signature (same JWT_SECRET as Identity Service)
-3. Check expiration
-4. Extract userId from "sub" claim
-5. Extract roles from "roles" claim (List<String>)
-6. Create CurrentUser(userId, roles)
-7. Set SecurityContext (NO database query)
-8. Continue to controller
+1. Read `X-User-Id` and `X-User-Role` from the request
+2. Verify internal signature headers (X-Internal-*) to ensure the request truly came from the gateway
+3. Create CurrentUser(userId, role)
+4. Set SecurityContext (NO database query)
+5. Continue to controller
 ```
 
 **CurrentUser:**
@@ -1089,7 +1088,7 @@ public class CurrentUser implements UserDetails {
 **Key Points:**
 - No user loading from database
 - No status check (assumes Identity Service validated status during login)
-- Trust JWT claims (signed by Identity Service)
+- Trust gateway-injected headers only when the internal signature verifies
 
 **Trade-off:**
 - ✅ Fast (no DB query on every request)
@@ -1152,12 +1151,9 @@ if (isAdmin) {
 
 ### JWT Configuration
 
-**Shared Secret:** Same `JWT_SECRET` as Identity Service (MUST be identical).
+**JWT Validation:** Not performed here.
 
-**Validation:**
-- Signature verification (HS256)
-- Expiration check
-- No revocation check (stateless, same limitation as Identity Service)
+**Where JWT is validated:** API Gateway validates external JWTs using RS256 + JWKS (`JWT_JWKS_URI`).
 
 **JWT Claims Used:**
 
@@ -1169,6 +1165,8 @@ if (isAdmin) {
   "token_type": "ACCESS"     // NOT checked
 }
 ```
+
+**Note:** This service does not receive or parse the JWT directly; the gateway translates these claims into headers (currently `X-User-Id` and `X-User-Role`).
 
 ---
 

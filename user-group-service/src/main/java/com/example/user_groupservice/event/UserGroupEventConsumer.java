@@ -5,6 +5,7 @@ import com.example.user_groupservice.entity.UserSemesterMembership;
 import com.example.user_groupservice.repository.UserSemesterMembershipRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ import java.util.List;
  */
 @Slf4j
 @Component
+@ConditionalOnProperty(name = "spring.kafka.enabled", havingValue = "true")
 @RequiredArgsConstructor
 public class UserGroupEventConsumer {
 

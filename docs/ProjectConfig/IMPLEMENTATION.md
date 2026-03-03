@@ -31,9 +31,9 @@ DB_USERNAME=postgres
 DB_PASSWORD=postgres123
 
 # Security
-JWT_SECRET=your-256-bit-secret-key-here-must-be-same-across-all-services
 ENCRYPTION_KEY=0123456789abcdef0123456789abcdef  # 32-byte hex (256-bit AES)
 INTERNAL_SERVICE_KEY=shared-secret-for-sync-service
+INTERNAL_SIGNING_SECRET=gateway-to-service-hmac-secret-256-bit-minimum
 
 # gRPC Clients
 USER_GROUP_SERVICE_GRPC_HOST=localhost
@@ -66,7 +66,7 @@ docker build -t project-config-service:1.0 .
 # Run
 docker run -p 8083:8083 \
   -e DB_HOST=postgres \
-  -e JWT_SECRET=your-secret \
+  -e INTERNAL_SIGNING_SECRET=gateway-to-service-hmac-secret-256-bit-minimum \
   project-config-service:1.0
 ```
 
@@ -111,9 +111,12 @@ spring:
 server:
   port: ${SERVER_PORT:8083}
 
-# Security
-jwt:
-  secret: ${JWT_SECRET}
+# Gateway trust (internal signature)
+internal:
+  signing:
+    secret: ${INTERNAL_SIGNING_SECRET:}
+    key-id: ${INTERNAL_SIGNING_KEY_ID:gateway-1}
+    max-skew-seconds: ${INTERNAL_SIGNING_MAX_SKEW_SECONDS:300}
   
 # Encryption
 encryption:
@@ -659,7 +662,7 @@ project-config-service:
     - "8083:8083"
   environment:
     - DB_HOST=postgres
-    - JWT_SECRET=${JWT_SECRET}
+    - INTERNAL_SIGNING_SECRET=${INTERNAL_SIGNING_SECRET}
     - ENCRYPTION_KEY=${ENCRYPTION_KEY}
     - USER_GROUP_SERVICE_GRPC_HOST=user-group-service
   depends_on:
@@ -671,7 +674,8 @@ project-config-service:
 
 - ✅ Set strong `ENCRYPTION_KEY` (32-byte random hex)
 - ✅ Set unique `INTERNAL_SERVICE_KEY` per environment
-- ✅ Use same `JWT_SECRET` across all services
+- ✅ Set `INTERNAL_SIGNING_SECRET` and keep it consistent with API Gateway
+- ✅ Configure API Gateway JWT validation via `JWT_JWKS_URI` (RS256/JWKS)
 - ✅ Enable HTTPS for external API calls
 - ✅ Configure database connection pooling
 - ✅ Set up monitoring/alerting

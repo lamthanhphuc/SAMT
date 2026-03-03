@@ -888,9 +888,11 @@ message ListUsersResponse {
 
 #### 1. JWT Structure
 
-**Algorithm:** HS256 (HMAC-SHA256)  
-**Signing Key:** `JWT_SECRET` environment variable (min 32 bytes)  
+**Algorithm:** RS256  
+**Signing Key:** RSA private key (`JWT_PRIVATE_KEY_PEM`, Identity Service only)  
 **Access Token TTL:** 15 minutes (900 seconds)
+
+**Verification (Gateway):** API Gateway validates tokens using the Identity Service JWKS endpoint (`/.well-known/jwks.json`) configured via `JWT_JWKS_URI`.
 
 **JWT Claims:**
 
@@ -900,6 +902,8 @@ message ListUsersResponse {
   "email": "user@example.com",    // User email
   "roles": ["STUDENT"],           // List of roles (always 1 role)
   "token_type": "ACCESS",         // Distinguish from refresh tokens
+  "iss": "identity-service",       // Trusted issuer
+  "aud": ["api-gateway"],          // Intended audience
   "iat": 1738483200,              // Issued at (Unix timestamp)
   "exp": 1738484100               // Expiration (iat + 900 seconds)
 }
@@ -1341,14 +1345,16 @@ public LoginResponse refreshToken(String oldToken) {
 **Secrets Management:**
 
 **Required Environment Variables:**
-- `JWT_SECRET`: Min 32 bytes, random (use `openssl rand -hex 32`)
+- `JWT_PRIVATE_KEY_PEM`: RSA private key (PEM) used to sign JWTs (Identity Service only)
+- `JWT_PUBLIC_KEY_PEM`: RSA public key (PEM) used for local verification and JWKS publishing (if not derived automatically)
+- `JWT_KEY_ID`: Key identifier (`kid`) published in JWKS and included in JWT headers
 - `SPRING_DATASOURCE_PASSWORD`: Database password
 - `CORS_ALLOWED_ORIGINS`: Comma-separated list of allowed origins
 
 **DO NOT:**
 - Hardcode secrets in `application.yml`
 - Commit `.env` files to git
-- Use default/weak JWT secret in production
+- Use ad-hoc/self-generated keys in production without a rotation plan
 
 **Production:** Use secret management service (AWS Secrets Manager, Vault, etc.)
 

@@ -111,16 +111,16 @@ Copy the output key to environment variables.
 
 ```bash
 # Windows PowerShell
-$env:JWT_SECRET="yourJwtSecretMinimum64CharactersLong..."
 $env:ENCRYPTION_SECRET_KEY="a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6..."
 $env:SERVICE_TO_SERVICE_SYNC_KEY="yourServiceToServiceKeyForSyncService"
+$env:INTERNAL_SIGNING_SECRET="gateway-to-service-hmac-secret-256-bit-minimum"
 $env:DATABASE_URL="jdbc:postgresql://localhost:5432/projectconfig_db"
 $env:DATABASE_USERNAME="postgres"
 $env:DATABASE_PASSWORD="yourPassword"
 
 # Linux/Mac
-export JWT_SECRET="..."
 export ENCRYPTION_SECRET_KEY="..."
+export INTERNAL_SIGNING_SECRET="gateway-to-service-hmac-secret-256-bit-minimum"
 ```
 
 ### 4. Run Application
@@ -253,12 +253,11 @@ X-Service-Key: <SERVICE_KEY>
 
 ## 🔐 Security
 
-### JWT Authentication
+### Authentication (Authoritative)
 
-All `/api/**` endpoints require JWT with:
-- **Algorithm:** HS256
-- **Claims:** `sub` (userId), `roles` (array)
-- **Header:** `Authorization: Bearer <JWT>`
+External JWT authentication is performed at the API Gateway (RS256 via JWKS). This service does **not** validate JWTs directly.
+
+This service authenticates requests using gateway-injected headers (`X-User-Id`, `X-User-Role`) and requires the internal gateway signature headers (`X-Internal-*`) to verify.
 
 ### Token Encryption
 
@@ -371,8 +370,11 @@ spring:
     enabled: true
     baseline-on-migrate: true
 
-jwt:
-  secret: ${JWT_SECRET:defaultSecretChangeInProduction}
+internal:
+  signing:
+    secret: ${INTERNAL_SIGNING_SECRET:}
+    key-id: ${INTERNAL_SIGNING_KEY_ID:gateway-1}
+    max-skew-seconds: ${INTERNAL_SIGNING_MAX_SKEW_SECONDS:300}
 
 encryption:
   secret-key: ${ENCRYPTION_SECRET_KEY:a1b2c3d4e5f6g7h8...}
@@ -400,10 +402,10 @@ cleanup:
 
 ```bash
 # 1. Create JWT (use Identity Service)
-JWT="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+JWT="eyJhbGciOiJSUzI1NiIsImtpZCI6ImlkZW50aXR5LTEiLCJ0eXAiOiJKV1QifQ..."
 
-# 2. Create configuration
-curl -X POST http://localhost:8083/api/project-configs \
+# 2. Create configuration (call via API Gateway)
+curl -X POST http://localhost:9080/api/project-configs \
   -H "Authorization: Bearer $JWT" \
   -H "Content-Type: application/json" \
   -d '{
@@ -416,11 +418,11 @@ curl -X POST http://localhost:8083/api/project-configs \
 
 # 3. Verify credentials
 CONFIG_ID="123e4567-e89b-12d3-a456-426614174000"
-curl -X POST http://localhost:8083/api/project-configs/$CONFIG_ID/verify \
+curl -X POST http://localhost:9080/api/project-configs/$CONFIG_ID/verify \
   -H "Authorization: Bearer $JWT"
 
 # 4. Get configuration (tokens masked)
-curl http://localhost:8083/api/project-configs/$CONFIG_ID \
+curl http://localhost:9080/api/project-configs/$CONFIG_ID \
   -H "Authorization: Bearer $JWT"
 ```
 

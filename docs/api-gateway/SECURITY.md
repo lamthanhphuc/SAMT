@@ -10,8 +10,8 @@
 
 | Aspect | Specification |
 |--------|--------------|
-| **JWT Algorithm** | HS256 (HMAC-SHA256) |
-| **JWT Validation** | Signature + Expiration check |
+| **JWT Algorithm** | RS256 (validated via JWKS) |
+| **JWT Validation** | JWKS signature validation + required-claims checks |
 | **Session Model** | Stateless (no session storage) |
 | **Authentication** | JWT token (validated at Gateway) |
 | **Authorization** | Delegated to downstream services |
@@ -68,14 +68,14 @@ All other endpoints require valid JWT token:
 
 **Required Header:**
 ```
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Authorization: Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImlkZW50aXR5LTEiLCJ0eXAiOiJKV1QifQ...
 ```
 
 **Validation Steps:**
 1. Extract token from `Authorization` header
-2. Verify signature using shared JWT secret
-3. Check expiration time (`exp` claim)
-4. Extract claims: `userId`, `email`, `role`
+2. Verify signature using Identity Service JWKS (configured via `JWT_JWKS_URI`)
+3. Check required claims: `sub`, `roles` (non-empty), `jti`, `iat`, `exp`
+4. Derive role from `roles[0]` for header injection (`X-User-Role`)
 
 **Failure Response (401 Unauthorized):**
 ```json
@@ -113,80 +113,20 @@ Gateway injects user context with cryptographic signature:
 
 | Header | Source | Example |
 |--------|--------|---------|
-| `X-User-Id` | JWT claim `userId` | `123` |
-| `X-User-Email` | JWT claim `subject` | `admin@example.com` |
-| `X-User-Role` | JWT claim `role` | `ADMIN` |
-| `X-Timestamp` | Current Unix timestamp (ms) | `1708704600000` |
-| `X-Internal-Signature` | HMAC-SHA256(headers, gateway-secret) | `a7f3b8c2d9e1...` |
+| `X-User-Id` | JWT claim `sub` | `123` |
+| `X-User-Role` | JWT claim `roles[0]` | `ADMIN` |
+| `X-Internal-Original-Path` | Request path | `/api/groups/123` |
+| `X-Internal-Timestamp` | Unix timestamp (seconds) | `1708704600` |
+| `X-Internal-Signature` | HMAC signature (request metadata) | `a7f3b8c2d9e1...` |
+| `X-Internal-Key-Id` | Signing key identifier | `gateway-1` |
 
 **Signature Generation (Gateway):**
 
-```java
-// Step 1: Extract user info from JWT
-Long userId = claims.get("userId", Long.class);
-String email = claims.getSubject();
-String role = claims.get("role", String.class);
-long timestamp = System.currentTimeMillis();
-
-// Step 2: Generate signature
-String payload = userId + "|" + email + "|" + role + "|" + timestamp;
-String signature = HmacUtils.hmacSha256Hex(gatewaySecret, payload);
-
-// 🔐 Encoding Requirement (Critical for Cross-Service Consistency)
-//
-// The payload string MUST be encoded using UTF-8 before HMAC SHA-256 hashing.
-//
-// All services verifying the signature MUST use UTF-8 encoding explicitly.
-//
-// Default platform charset MUST NOT be relied upon.
-//
-// Example (Java):
-// payload.getBytes(StandardCharsets.UTF_8)
-//
-// Failure to enforce UTF-8 encoding may cause signature mismatch between services.
-
-// Step 3: Inject headers
-request.header("X-User-Id", userId);
-request.header("X-User-Email", email);
-request.header("X-User-Role", role);
-request.header("X-Timestamp", timestamp);
-request.header("X-Internal-Signature", signature);
-```
+The gateway computes an internal signature and injects the `X-Internal-*` headers (see `SignedHeaderFilter.java` + `SignedHeaderUtil`). Downstream services MUST verify the internal signature before trusting `X-User-Id` / `X-User-Role`.
 
 **Signature Verification (Downstream Service):**
 
-```java
-// Step 1: Read headers
-String userId = request.getHeader("X-User-Id");
-String email = request.getHeader("X-User-Email");
-String role = request.getHeader("X-User-Role");
-String timestamp = request.getHeader("X-Timestamp");
-String receivedSignature = request.getHeader("X-Internal-Signature");
-
-// Step 2: Validate headers exist
-if (userId == null || receivedSignature == null) {
-    throw new UnauthorizedException("Missing internal headers");
-}
-
-// Step 3: Check timestamp (prevent replay attacks)
-long requestTime = Long.parseLong(timestamp);
-long currentTime = System.currentTimeMillis();
-if (Math.abs(currentTime - requestTime) > 60000) {  // 60 seconds
-    throw new UnauthorizedException("Request timestamp expired");
-}
-
-// Step 4: Verify signature
-String payload = userId + "|" + email + "|" + role + "|" + timestamp;
-String expectedSignature = HmacUtils.hmacSha256Hex(gatewaySecret, payload);
-if (!expectedSignature.equals(receivedSignature)) {
-    throw new UnauthorizedException("Invalid internal signature");
-}
-
-// Step 5: Enforce authorization
-if (!"ADMIN".equals(role) && !isGroupLeader(Long.parseLong(userId), groupId)) {
-    throw new ForbiddenException("Insufficient permissions");
-}
-```
+Downstream services verify `X-Internal-*` headers using their verifier (e.g. `GatewayInternalSignatureVerifier`) and then authorize using `X-User-Role`.
 
 **Security Properties:**
 
@@ -205,7 +145,7 @@ if (!"ADMIN".equals(role) && !isGroupLeader(Long.parseLong(userId), groupId)) {
 - `STUDENT` - Access to own data and groups
 
 **Authorization Logic:**
-- Gateway validates JWT and extracts `role` claim
+- Gateway validates JWT and extracts `roles` claim (list)
 - Gateway injects `X-User-Role` header
 - Downstream service checks `X-User-Role` for authorization
 
@@ -219,38 +159,15 @@ if (!"ADMIN".equals(role) && !isGroupLeader(Long.parseLong(userId), groupId)) {
 
 ## 3. JWT Validation Rules
 
-### Shared Secret Model
+### JWKS Model (Authoritative)
 
-**Security Model:** Symmetric key (HS256)
+**Security Model:** Asymmetric key (RS256)
 
-**Key Requirement:** JWT secret MUST be identical across Identity Service and API Gateway
+**Key Material:**
+- Identity Service signs JWTs using `JWT_PRIVATE_KEY_PEM` and publishes public keys via `/.well-known/jwks.json`.
+- API Gateway validates JWTs using `JWT_JWKS_URI`.
 
-**Configuration:**
-- Identity Service: `${JWT_SECRET}` environment variable
-- API Gateway: `${JWT_SECRET}` environment variable (MUST match)
-
-**Secret Validation:**
-
-On startup, Gateway validates JWT secret:
-
-```java
-@Component
-public class JwtSecretValidator implements InitializingBean {
-
-    @Value("${jwt.secret}")
-    private String jwtSecret;
-
-    @Override
-    public void afterPropertiesSet() throws Exception {
-        if (jwtSecret == null || jwtSecret.isEmpty()) {
-            throw new IllegalStateException("JWT secret is not configured");
-        }
-        if (jwtSecret.length() < 32) {
-            throw new IllegalStateException("JWT secret must be at least 256 bits (32 characters)");
-        }
-    }
-}
-```
+**LEGACY (deprecated):** Earlier documentation referenced `HS256` / `JWT_SECRET` and a shared-secret JWT model. That model is not used by the current codebase and must not be used for production deployments.
 
 ### Token Structure
 
@@ -348,7 +265,7 @@ public Claims validateAndParseClaims(String token) {
 3. **Replay Attack:**
    ```bash
    # Attacker captures valid request and replays later
-   X-Timestamp: 1708704600000  # 5 minutes old
+  X-Internal-Timestamp: 1708704600  # 5 minutes old
    
    # Service rejects: Timestamp expired
    ```
@@ -359,7 +276,7 @@ public Claims validateAndParseClaims(String token) {
 
 ```bash
 # Production deployment
-GATEWAY_INTERNAL_SECRET=$(openssl rand -hex 32)  # 256-bit key
+INTERNAL_SIGNING_SECRET=$(openssl rand -hex 32)  # 256-bit key
 ```
 
 **Secret Distribution:**

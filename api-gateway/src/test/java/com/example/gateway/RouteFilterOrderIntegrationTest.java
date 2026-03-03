@@ -3,30 +3,37 @@ package com.example.gateway;
 import com.example.gateway.filter.JwtAuthenticationFilter;
 import com.example.gateway.filter.RedisRateLimitGatewayFilter;
 import com.example.gateway.filter.SignedHeaderFilter;
-import com.example.gateway.util.JwtUtil;
 import com.example.gateway.util.SignedHeaderUtil;
 import org.junit.jupiter.api.Test;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
 import org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
+import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class RouteFilterOrderIntegrationTest {
 
     @Test
     void order_jwt_before_signed_header() {
-        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(mock(JwtUtil.class));
+        ReactiveJwtDecoder jwtDecoder = mock(ReactiveJwtDecoder.class);
+        Environment environment = mock(Environment.class);
+        when(environment.getActiveProfiles()).thenReturn(new String[0]);
+
+        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtDecoder, environment);
         SignedHeaderFilter signedHeaderFilter = new SignedHeaderFilter(mock(SignedHeaderUtil.class));
 
         assertThat(jwtAuthenticationFilter.getOrder()).isEqualTo(-2147483638); // HIGHEST_PRECEDENCE + 10
@@ -36,8 +43,11 @@ public class RouteFilterOrderIntegrationTest {
 
     @Test
     void authFail_withoutToken_returns401_and_stops_chain() {
-        JwtUtil jwtUtil = mock(JwtUtil.class);
-        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtUtil);
+        ReactiveJwtDecoder jwtDecoder = mock(ReactiveJwtDecoder.class);
+        Environment environment = mock(Environment.class);
+        when(environment.getActiveProfiles()).thenReturn(new String[0]);
+
+        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtDecoder, environment);
         SignedHeaderFilter signedHeaderFilter = new SignedHeaderFilter(mock(SignedHeaderUtil.class));
 
         MockServerWebExchange exchange = MockServerWebExchange.from(
@@ -56,7 +66,7 @@ public class RouteFilterOrderIntegrationTest {
         assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(signedHeaderReached.get()).isFalse();
         assertThat(exchange.getResponse().getHeaders().getFirst("X-Internal-Signature")).isNull();
-        verify(jwtUtil, never()).validateAndParseClaims(org.mockito.ArgumentMatchers.anyString());
+        verify(jwtDecoder, never()).decode(anyString());
     }
 
     @Test

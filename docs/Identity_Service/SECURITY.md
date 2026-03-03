@@ -10,7 +10,7 @@
 
 | Aspect | Specification |
 |--------|--------------|
-| **JWT Algorithm** | HS256 (HMAC-SHA256) |
+| **JWT Algorithm** | RS256 (JWKS published for gateway validation) |
 | **Access Token TTL** | 15 minutes |
 | **Refresh Token TTL** | 7 days |
 | **Password Hashing** | BCrypt, strength 10 |
@@ -24,7 +24,7 @@
 ### Token Types
 
 **Access Token (JWT):**
-- Algorithm: HS256
+- Algorithm: RS256
 - Lifetime: 15 minutes
 - Self-contained (no database lookup needed)
 - Passed in `Authorization: Bearer <token>` header
@@ -93,7 +93,7 @@
     "role": "STUDENT",
     "status": "ACTIVE"
   },
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "accessToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImlkZW50aXR5LTEifQ...",
   "refreshToken": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
@@ -124,7 +124,7 @@
 **Response:**
 ```json
 {
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "accessToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImlkZW50aXR5LTEifQ...",
   "refreshToken": "550e8400-e29b-41d4-a716-446655440000",
   "user": { ... }
 }
@@ -170,7 +170,7 @@ If a **revoked** refresh token is reused:
 **Response:**
 ```json
 {
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "accessToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImlkZW50aXR5LTEifQ...",
   "refreshToken": "660e8400-e29b-41d4-a716-446655440001"
 }
 ```
@@ -294,32 +294,19 @@ $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
 
 ### Signing Key Management
 
-**Environment Variable:**
+**Environment Variables (preferred):**
 ```bash
-JWT_SECRET=your-256-bit-secret-key-here-min-43-chars
+JWT_KEY_ID=identity-1
+JWT_PRIVATE_KEY_PEM="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+# Optional (public key can be derived from private key if supported):
+JWT_PUBLIC_KEY_PEM="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
 ```
 
 **⚠️ CRITICAL REQUIREMENTS:**
-1. Minimum length: **43 characters** (256 bits for HS256)
-2. High entropy (use random generator, not dictionary words)
-3. **Must be identical** across all services (Gateway, Identity, User-Group)
-4. Never commit to version control (use `.env` or secrets manager)
-
-**Startup Validation:**
-
-The system validates JWT secret at startup:
-- ✅ Not null/empty
-- ✅ Length ≥ 43 characters
-- ✅ Not in known insecure defaults list
-- ⚠️ Warns if weak (lowercase only, no special chars)
-
-**Insecure Examples (DO NOT USE):**
-- ❌ `secret` - Too short, too weak
-- ❌ `mySecretKey123` - Too short, predictable
-- ❌ `your-256-bit-secret-key-here-min-43-chars` - Example from docs
-
-**Secure Example:**
-- ✅ `7Kf!9mP#qR2&tU$vW8xY*zAB3cD5eF@gH1iJ4kL6nM0oP` (50 chars, mixed case, numbers, symbols)
+1. Private key MUST be kept secret (Identity Service only)
+2. JWKS endpoint (`/.well-known/jwks.json`) MUST remain reachable by API Gateway
+3. Rotate keys by introducing a new `kid` and publishing it via JWKS (gateway fetches keys from JWKS)
+4. Never commit keys to version control (use `.env` / secrets manager / key vault)
 
 ### Token Transmission
 
@@ -327,7 +314,7 @@ The system validates JWT secret at startup:
 ```http
 GET /api/users/profile HTTP/1.1
 Host: localhost:8080
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 **❌ DO NOT:**
@@ -423,7 +410,7 @@ CREATE TABLE audit_logs (
 ### ✅ Implemented
 
 - [x] Passwords hashed with BCrypt (strength 10)
-- [x] JWT signed with HS256 (secret key validation at startup)
+- [x] JWT signed with RS256 (JWKS published at `/.well-known/jwks.json`)
 - [x] Refresh token rotation (old token revoked immediately)
 - [x] Reuse detection (revoke all tokens on suspicious activity)
 - [x] Account status check during refresh (prevent locked user bypass)
@@ -505,15 +492,15 @@ curl -X POST http://localhost:8081/api/auth/login \
 4. Notify user (via email/notification service)
 5. Investigate audit logs for suspicious activity
 
-### Compromised JWT Secret
+### Compromised JWT Private Key
 
 **Actions:**
-1. ⚠️ **CRITICAL EMERGENCY:** All issued JWTs become invalid
-2. Generate new secret (50+ chars, high entropy)
-3. Update `JWT_SECRET` in all services (Gateway, Identity, User-Group)
-4. Restart all services
-5. Force all users to re-login (revoke all refresh tokens)
-6. Investigate how secret was compromised
+1. ⚠️ **CRITICAL EMERGENCY:** Assume attacker can mint valid access tokens
+2. Generate a new RSA keypair and a new `JWT_KEY_ID`
+3. Deploy Identity Service with the new private key and updated `kid` (JWKS will publish the new public key)
+4. Restart Identity Service; API Gateway will validate against the new JWKS keyset
+5. Consider forcing re-login (revoke refresh tokens) depending on incident severity
+6. Investigate how the private key was compromised
 
 ### Brute Force Attack Detected
 

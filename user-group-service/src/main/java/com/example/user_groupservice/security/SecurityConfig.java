@@ -21,7 +21,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
     
-    private final JwtAuthenticationFilter jwtAuthFilter;
+    private final GatewayHeaderAuthenticationFilter gatewayAuthFilter;
     private final JwtAuthenticationEntryPoint authEntryPoint;
     private final JwtAccessDeniedHandler accessDeniedHandler;
     
@@ -57,7 +57,7 @@ public class SecurityConfig {
             )
             
             // Add JWT filter
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(gatewayAuthFilter, UsernamePasswordAuthenticationFilter.class);
         
         return http.build();
     }

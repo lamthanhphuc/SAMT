@@ -2,19 +2,14 @@
 
 This file documents **the security behavior implemented in `user-group-service`**, without re-explaining JWT theory.
 
-## Authentication & JWT validation (implemented)
+## Authentication (implemented)
 
-- Input: `Authorization: Bearer <jwt>`
-- `JwtAuthenticationFilter` parses the header and calls `JwtService`.
-- `JwtService` validates:
-  - **HS256 signature** using `jwt.secret` (HMAC key)
-  - **expiration** (`exp`), when present
-- Claims consumed:
-  - `userId` claim as string, or fallback to `sub`
-  - `roles` claim as list of strings
+- Input: gateway-injected headers (`X-User-Id`, `X-User-Role`) plus internal signature headers (`X-Internal-*`).
+- `GatewayHeaderAuthenticationFilter` reads `X-User-Id` / `X-User-Role`.
+- `GatewayInternalSignatureVerifier` verifies `X-Internal-*` using `internal.signing.secret`.
 
-If JWT validation fails:
-- The filter logs and continues **without** setting authentication.
+If authentication fails:
+- The filter continues **without** setting authentication.
 - Protected endpoints are then rejected by Spring Security with `401` using `JwtAuthenticationEntryPoint`.
 
 ## Authorization (implemented)

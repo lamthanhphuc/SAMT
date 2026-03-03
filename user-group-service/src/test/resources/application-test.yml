@@ -1,0 +1,37 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:usergroup_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+  flyway:
+    enabled: false
+
+  kafka:
+    enabled: false
+
+
+# Gateway trust (downstream services do NOT validate external JWT)
+internal:
+  signing:
+    secret: test-internal-signing-secret-32-chars-minimum-0000
+    key-id: gateway-1
+
+grpc:
+  server:
+    port: 0
+  client:
+    identity-service:
+      address: static://localhost:0
+      negotiationType: plaintext
+

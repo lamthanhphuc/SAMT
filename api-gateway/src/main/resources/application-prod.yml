@@ -1,0 +1,34 @@
+# Production profile: NO fallback secrets. Startup must fail if env vars are missing.
+
+jwt:
+  jwks-uri: ${JWT_JWKS_URI}
+
+# API Gateway has no datasource, but it has a critical internal signing secret.
+internal:
+  signing:
+    secret: ${INTERNAL_SIGNING_SECRET}
+
+gateway:
+  internal:
+    secret: ${INTERNAL_SIGNING_SECRET}
+
+samt:
+  secrets:
+    jwt-jwks-uri: ${JWT_JWKS_URI}
+    internal-signing-secret: ${INTERNAL_SIGNING_SECRET}
+
+# Production hardening: expose only health; disable API docs.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

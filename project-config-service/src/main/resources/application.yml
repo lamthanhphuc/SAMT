@@ -16,7 +16,7 @@ spring:
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5434/projectconfig_db}
     username: ${DATABASE_USERNAME:postgres}
-    password: ${DATABASE_PASSWORD:12345}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       connection-timeout: 30000
@@ -47,23 +47,26 @@ spring:
     locations: classpath:db/migration
 
 # ============================================
-#   JWT CONFIGURATION
+#   GATEWAY TRUST CONFIGURATION
 # ============================================
-jwt:
-  secret: ${JWT_SECRET:samt-super-secret-key-for-jwt-hs256-algorithm-minimum-64-chars-long}
+internal:
+  signing:
+    secret: ${INTERNAL_SIGNING_SECRET:}
+    key-id: ${INTERNAL_SIGNING_KEY_ID:gateway-1}
+    max-skew-seconds: ${INTERNAL_SIGNING_MAX_SKEW_SECONDS:300}
 
 # ============================================
 #   ENCRYPTION CONFIGURATION (AES-256-GCM)
 # ============================================
 encryption:
-  secret-key: ${ENCRYPTION_SECRET_KEY:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+  secret-key: ${ENCRYPTION_SECRET_KEY}
 
 # ============================================
 #   SERVICE-TO-SERVICE AUTHENTICATION
 # ============================================
 service-to-service:
   sync-service:
-    key: ${SERVICE_TO_SERVICE_SYNC_KEY:s3cr3t_k3y_f0r_sync_s3rv1c3_ch4ng3_1n_pr0duct10n}
+    key: ${SERVICE_TO_SERVICE_SYNC_KEY}
 
 # ============================================
 #   VERIFICATION TIMEOUTS
