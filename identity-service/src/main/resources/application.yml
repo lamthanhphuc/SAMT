@@ -87,10 +87,8 @@ grpc:
     max-inbound-message-size: 4MB
     security:
       enabled: true
-      certificate-chain: ${GRPC_CERT_CHAIN:file:/etc/certs/tls.crt}
-      private-key: ${GRPC_PRIVATE_KEY:file:/etc/certs/tls.key}
-      trust-cert-collection: ${GRPC_TRUST_CERT:file:/etc/certs/ca.crt}
-      client-auth: REQUIRE
+      certificateChain: file:/certs/server.crt
+      privateKey: file:/certs/server.key
 
 # ==============================================
 # JWT CONFIGURATION

@@ -3,7 +3,7 @@ syntax = "proto3";
 //package samt.usergroup.v1;
 
 option java_multiple_files = true;
-option java_package = "com.example.project_configservice.grpc";
+option java_package = "com.example.user_groupservice.grpc";
 
 /**
  * User-Group Service gRPC API
@@ -12,13 +12,13 @@ option java_package = "com.example.project_configservice.grpc";
 service UserGroupGrpcService {
   // Verify if a group exists and is not soft-deleted
   rpc VerifyGroupExists (VerifyGroupRequest) returns (VerifyGroupResponse);
-  
+
   // Check if a user is the LEADER of a group
   rpc CheckGroupLeader (CheckGroupLeaderRequest) returns (CheckGroupLeaderResponse);
-  
+
   // Check if a user is a MEMBER (any role) of a group
   rpc CheckGroupMember (CheckGroupMemberRequest) returns (CheckGroupMemberResponse);
-  
+
   // Get group details (optional - for future use)
   rpc GetGroup (GetGroupRequest) returns (GetGroupResponse);
 }

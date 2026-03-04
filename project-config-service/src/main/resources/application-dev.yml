@@ -4,6 +4,9 @@ spring:
       ddl-auto: update
 
 grpc:
+  server:
+    security:
+      enabled: false
   client:
     default:
       negotiation-type: plaintext

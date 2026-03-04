@@ -44,15 +44,15 @@ Overall, the system shows a solid *conceptual* perimeter pattern (JWT at gateway
 | SAMT-SEC-002 | CRITICAL | AuthZ / Integrity | Gateway + All services | Signature payload does not bind `X-User-Id` / `X-User-Role` |
 | SAMT-SEC-003 | HIGH | Replay / Auth | All services | Timestamp-only anti-replay; no nonce/jti cache |
 | SAMT-SEC-004 | CRITICAL | Secrets Exposure | project-config-service | Internal API returns decrypted tokens; guarded by static header key |
-| SAMT-SEC-005 | CRITICAL | Supply Chain / RCE | user-group-service | Kafka `trusted.packages="*"` enables gadget deserialization risk |
+| SAMT-SEC-005 | CRITICAL | Supply Chain / RCE | user-group-service | Kafka `trusted.packages` configured with a wildcard enables gadget deserialization risk |
 | SAMT-SEC-006 | HIGH | Data Integrity | Multiple services | `ddl-auto` defaults to `update` (and `.env.example` sets it) |
 | SAMT-SEC-007 | HIGH | Transport Security | sync-service + project-config-service + user-group-service | gRPC configured as plaintext |
 | SAMT-DEP-001 | CRITICAL | Build/Release | All Dockerfiles | Dockerfiles run `mvn` in Temurin Alpine without ensuring Maven |
 | SAMT-DEP-002 | CRITICAL | Build/Release | All Dockerfiles | `COPY ../pom.xml` likely outside build context (build fails) |
 | SAMT-DEP-003 | HIGH | Deployment Correctness | docker-compose.yml | Application services are commented out (docs drift) |
-| SAMT-DEP-004 | CRITICAL | Secure Deploy | docker-compose.secure.yml | Redis secret name mismatch breaks stack deploy |
+| SAMT-DEP-004 | CRITICAL | Secure Deploy | docker-compose.secure.yml | Redis secret canonicalization via Swarm secret (RESOLVED) |
 | SAMT-SEC-008 | CRITICAL | Attack Surface | identity-service | Swagger/OpenAPI no longer public (RESOLVED) |
-| SAMT-SEC-009 | HIGH | Observability Exposure | project-config-service | Actuator/Prometheus enabled; prod profile doesn’t restrict |
+| SAMT-SEC-009 | HIGH | Observability Exposure | project-config-service | Actuator hardened in prod (RESOLVED) |
 | SAMT-ARCH-001 | HIGH | Architecture | user-group-service | Microservice-to-microservice Maven dependency coupling |
 
 ---
@@ -182,9 +182,7 @@ Overall, the system shows a solid *conceptual* perimeter pattern (JWT at gateway
       - sync-service: [sync-service/src/main/resources/META-INF/spring/org.springframework.boot.env.EnvironmentPostProcessor](sync-service/src/main/resources/META-INF/spring/org.springframework.boot.env.EnvironmentPostProcessor#L1)
       - project-config-service: [project-config-service/src/main/resources/META-INF/spring/org.springframework.boot.env.EnvironmentPostProcessor](project-config-service/src/main/resources/META-INF/spring/org.springframework.boot.env.EnvironmentPostProcessor#L1)
   - Placeholder cert material present (must be replaced for real deployments):
-    - user-group-service CA placeholder: [user-group-service/src/main/resources/certs/ca.crt](user-group-service/src/main/resources/certs/ca.crt)
-    - sync-service CA placeholder: [sync-service/src/main/resources/certs/ca.crt](sync-service/src/main/resources/certs/ca.crt)
-    - project-config-service CA placeholder: [project-config-service/src/main/resources/certs/ca.crt](project-config-service/src/main/resources/certs/ca.crt)
+    - Certificates are not bundled; mount at `/certs` at runtime.
 - **Fix (implemented)**:
   - Default to TLS with CA verification (`negotiation-type: TLS` + `trustCertCollection`) for service-to-service gRPC.
   - Enforce mTLS in `prod` (`clientAuth: REQUIRE` + client/server cert/key material).
@@ -211,20 +209,23 @@ Overall, the system shows a solid *conceptual* perimeter pattern (JWT at gateway
   - Enforced the above in `prod` via `EnvironmentPostProcessor` to prevent env/CLI overrides.
 - **Residual risk**: Ensure production deployments activate the `prod` profile (e.g., `SPRING_PROFILES_ACTIVE=prod`).
 
-## SAMT-SEC-009 – project-config-service exposes Prometheus/metrics; prod profile doesn’t restrict
+## SAMT-SEC-009 – project-config-service actuator exposure not hardened for prod
 - **Severity**: HIGH
 - **Category**: Observability Exposure
 - **Components**: project-config-service
-- **Description**: Actuator exposes `prometheus` and `metrics`; health details are `always`. `application-prod.yml` does not override these.
-- **Why this matters**: Metrics/health can leak sensitive operational data and aid attackers (service names, environment, timings). `show-details: always` is generally unsafe for production.
+- **Status**: RESOLVED (prod hardened + fail-fast guard)
+- **Description**: Default configuration enables actuator metrics/prometheus features and includes non-health endpoints. In production, actuator must be restricted to minimize information disclosure and attack surface.
+- **Why this matters**: Metrics and detailed health can leak sensitive operational data (service names, environment, timings, dependency states) and increase attacker efficiency. Production should follow least exposure.
 - **Evidence**:
-  - Actuator exposure includes prometheus: [project-config-service/src/main/resources/application.yml](project-config-service/src/main/resources/application.yml#L212)
-  - Health show-details always: [project-config-service/src/main/resources/application.yml](project-config-service/src/main/resources/application.yml#L215)
-  - No prod override: [project-config-service/src/main/resources/application-prod.yml](project-config-service/src/main/resources/application-prod.yml#L1-L23)
-- **Fix**:
-  - In prod: expose only `health` and set `show-details: never`.
-  - Put Prometheus behind internal network policy / auth.
-- **Residual risk if unfixed**: Information disclosure.
+  - Default actuator web exposure includes non-health endpoint(s): [project-config-service/src/main/resources/application.yml](project-config-service/src/main/resources/application.yml#L215-L223)
+  - Production restricts exposure to health-only and disables metrics/prometheus: [project-config-service/src/main/resources/application-prod.yml](project-config-service/src/main/resources/application-prod.yml#L37-L63)
+  - Prod fail-fast guard blocks unsafe exposure via env vars / CLI: [project-config-service/src/main/java/com/samt/projectconfig/security/ProdHardeningEnvironmentPostProcessor.java](project-config-service/src/main/java/com/samt/projectconfig/security/ProdHardeningEnvironmentPostProcessor.java#L23-L67)
+  - Post-processor registration: [project-config-service/src/main/resources/META-INF/spring/org.springframework.boot.env.EnvironmentPostProcessor](project-config-service/src/main/resources/META-INF/spring/org.springframework.boot.env.EnvironmentPostProcessor#L1-L2)
+- **Fix (implemented)**:
+  - In `prod`: expose ONLY `health` and set `management.endpoint.health.show-details=never`.
+  - Disable Prometheus export and disable actuator `metrics`/`prometheus` endpoints in `prod`.
+  - Enforce fail-closed startup in `prod` if `management.endpoints.web.exposure.include` contains `metrics`, `prometheus`, or `*`, or if health details are not `never`.
+- **Residual risk**: Ensure production deployments actually activate the `prod` profile (e.g., `SPRING_PROFILES_ACTIVE=prod`) and that the actuator port is not exposed publicly by ingress/firewall rules.
 
 ## SAMT-SEC-010 – Role truncation: gateway forwards only the first role
 - **Severity**: MEDIUM
@@ -245,14 +246,21 @@ Overall, the system shows a solid *conceptual* perimeter pattern (JWT at gateway
 - **Severity**: CRITICAL
 - **Category**: Build/Release Reliability
 - **Components**: all services
-- **Description**: Dockerfiles use `eclipse-temurin:21-jdk-alpine` and then run `mvn ...`.
-- **Why this matters**: Builds will fail in CI/CD or on clean machines unless Maven is installed in-image.
+- **Status**: RESOLVED (standardized multi-stage builds)
+- **Description (previous state)**: Dockerfiles used `eclipse-temurin:21-jdk-alpine` and then ran `mvn ...` without ensuring Maven exists.
+- **Why this matters**: Builds fail in CI/CD / clean environments if Maven is not present in the image.
+- **Current state**:
+  - Builder stage uses `maven:3.9-eclipse-temurin-21` and runs the Maven build.
+  - Runtime stage uses `eclipse-temurin:21-jre-alpine` with no Maven present.
+  - Builds are intended to run from repository root context (`docker build -f <service>/Dockerfile .`).
 - **Evidence** (example service):
   - Builder base image: [api-gateway/Dockerfile](api-gateway/Dockerfile#L6)
-  - Maven commands: [api-gateway/Dockerfile](api-gateway/Dockerfile#L10-L12)
-- **Fix**:
-  - Use `maven:3.9-eclipse-temurin-21` for builder stage, or `apk add --no-cache maven`.
-- **Residual risk if unfixed**: Non-reproducible builds, broken release pipeline.
+  - Maven commands (builder stage): [api-gateway/Dockerfile](api-gateway/Dockerfile#L20), [api-gateway/Dockerfile](api-gateway/Dockerfile#L32)
+  - Runtime base image: [api-gateway/Dockerfile](api-gateway/Dockerfile#L34)
+  - Runtime entrypoint (no `mvn`): [api-gateway/Dockerfile](api-gateway/Dockerfile#L37)
+- **Fix (implemented)**:
+  - Refactored all service Dockerfiles to production multi-stage builds with a Maven builder image and a JRE-only runtime image.
+- **Residual risk**: Low (primary remaining risk is external dependency availability: Maven Central / artifact repos during build).
 
 ## SAMT-DEP-002 – Dockerfiles attempt `COPY ../pom.xml` (likely outside build context)
 - **Severity**: CRITICAL
@@ -278,19 +286,23 @@ Overall, the system shows a solid *conceptual* perimeter pattern (JWT at gateway
   - Either uncomment + validate app services, or provide a separate `docker-compose.apps.yml` and update docs.
 - **Residual risk if unfixed**: Onboarding friction and broken local/prod parity.
 
-## SAMT-DEP-004 – docker-compose.secure.yml Redis secret mismatch breaks deployment
+## SAMT-DEP-004 – docker-compose.secure.yml Redis secret drift (RESOLVED)
 - **Severity**: CRITICAL
 - **Category**: Secure Deployment
 - **Components**: docker-compose.secure.yml
-- **Description**: Secrets declare `REDIS_PASSWORD`, but the `redis` service expects a secret named `SPRING_DATA_REDIS_PASSWORD`.
-- **Why this matters**: `docker stack deploy` will fail or Redis will start without the intended password injection.
-- **Evidence**:
-  - Declared secret: [docker-compose.secure.yml](docker-compose.secure.yml#L23)
-  - Redis service reads different secret: [docker-compose.secure.yml](docker-compose.secure.yml#L158-L169)
-- **Fix**:
-  - Align on one secret name and consumption path.
-  - Add a validation step in Makefile to ensure all referenced secrets exist.
-- **Residual risk if unfixed**: Broken secure deployment and possible insecure fallback.
+- **Status**: RESOLVED
+- **Description**: Redis secret declaration and consumption are now aligned to a single canonical Swarm secret `redis_password`, consumed via file-based env vars.
+- **Why this matters**: Prevents `docker stack deploy` failures due to secret name drift and prevents Redis from starting without a non-empty password.
+- **Evidence (current state)**:
+  - Canonical secret declaration: [docker-compose.secure.yml](docker-compose.secure.yml#L20-L26)
+  - Redis fail-fast + requirepass from secret: [docker-compose.secure.yml](docker-compose.secure.yml#L166-L201)
+  - Downstream services consume via `SPRING_DATA_REDIS_PASSWORD_FILE`: [docker-compose.secure.yml](docker-compose.secure.yml#L228-L239)
+- **Fix (implemented)**:
+  - Use one canonical secret name `redis_password` declared once as `external: true`.
+  - Attach `redis_password` to Redis + all dependent services.
+  - Configure consumers with `SPRING_DATA_REDIS_PASSWORD_FILE=/run/secrets/redis_password`.
+  - Fail fast on missing/empty secret (`test -s /run/secrets/redis_password`) and enforce Redis auth via `--requirepass`.
+- **Residual risk**: Deployment still requires the external Swarm secret `redis_password` to be created before `docker stack deploy`.
 
 ---
 
@@ -300,13 +312,25 @@ Overall, the system shows a solid *conceptual* perimeter pattern (JWT at gateway
 - **Severity**: HIGH
 - **Category**: Architecture / Service Boundaries
 - **Components**: user-group-service, project-config-service
-- **Description**: `user-group-service` has a compile-scope dependency on `project-config-service`.
+- **Status**: RESOLVED (extracted shared contracts)
+- **Description (previous state)**: `user-group-service` had a compile-scope Maven dependency on `project-config-service`.
+- **Current state**: No service module depends on another service module; shared DTOs/events/protos live in `common-contracts`.
 - **Why this matters**: This defeats independent versioning and deployability; it tends to create hidden runtime coupling and circular release trains.
-- **Evidence**:
-  - Dependency: [user-group-service/pom.xml](user-group-service/pom.xml#L203-L210)
-- **Fix**:
-  - Extract shared contracts into a dedicated library module (e.g., `common-contracts`), or use API/schema-based integration.
-- **Residual risk if unfixed**: Fragile deployments, cascading changes across services.
+- **Evidence (current state)**:
+  - New contracts module in reactor build order: [pom.xml](pom.xml#L40-L52)
+  - `user-group-service` depends on `common-contracts` (and does not reference `project-config-service`): [user-group-service/pom.xml](user-group-service/pom.xml#L95-L120)
+  - `project-config-service` depends on `common-contracts`: [project-config-service/pom.xml](project-config-service/pom.xml#L85-L112)
+  - `common-contracts` module definition: [common-contracts/pom.xml](common-contracts/pom.xml#L1)
+- **Fix (implemented)**:
+  - Created `common-contracts` as a pure model module (no Spring Boot, no service logic).
+  - Moved shared event models and shared gRPC proto definitions into `common-contracts`.
+  - Removed `project-config-service` dependency from `user-group-service`.
+  - Updated `project-config-service` to use gRPC stubs generated from `common-contracts`.
+- **Validation (performed)**:
+  - `grep -R "<artifactId>project-config-service</artifactId>" .` returns matches only inside the `project-config-service` module.
+  - `mvnw clean package -DskipTests` succeeds with no reactor circular dependencies.
+- **Residual risk**:
+  - Contract evolution must be managed explicitly (semantic versioning and backward compatibility for DTO/proto changes) to avoid breaking dependent services.
 
 ---
 
@@ -315,7 +339,7 @@ Overall, the system shows a solid *conceptual* perimeter pattern (JWT at gateway
 ## Phase 0 (0–72 hours) – Stop the bleeding
 1) Lock down Swagger/OpenAPI and actuator in **identity-service** and **project-config-service** for prod.
 2) Fix `docker-compose.secure.yml` Redis secret mismatch.
-3) Remove Kafka `trusted.packages="*"` and restrict to known DTO packages.
+3) Remove Kafka `trusted.packages` wildcard configuration and restrict to known DTO packages.
 
 ## Phase 1 (1–2 weeks) – Restore trust boundaries
 1) Replace header/HMAC trust with internal JWT token exchange (gateway-minted RS256) and enforce via mTLS.

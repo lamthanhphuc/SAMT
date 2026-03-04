@@ -99,13 +99,13 @@ grpc:
     port: ${GRPC_SERVER_PORT:9094}
     security:
       enabled: true
-      certificateChain: classpath:certs/server.crt
-      privateKey: classpath:certs/server.key
+      certificateChain: file:/certs/server.crt
+      privateKey: file:/certs/server.key
   client:
     default:
       negotiation-type: TLS
       security:
-        trustCertCollection: classpath:certs/ca.crt
+        trustCertCollection: file:/certs/ca.crt
     project-config-service:
       address: dns:///project-config-service:9093
       max-inbound-message-size: 4194304

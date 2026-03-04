@@ -2,33 +2,36 @@
 # Multi-Stage Build for Notification Service
 # ==============================================
 
-# Stage 1: Builder (optional)
-FROM eclipse-temurin:21-jdk-alpine AS builder
-WORKDIR /build
-COPY pom.xml ./
-COPY ../pom.xml ../pom.xml
-RUN mvn dependency:go-offline || true
-COPY src ./src
-RUN mvn clean package -DskipTests
-
-# Stage 2: Runtime
-FROM eclipse-temurin:21-jre-alpine
-LABEL maintainer="samt-team"
-LABEL service="notification-service"
-
-RUN addgroup -S spring && adduser -S spring -G spring
-USER spring:spring
-
+# Stage 1: Builder
+FROM maven:3.9-eclipse-temurin-21 AS builder
 WORKDIR /app
 
-ARG JAR_FILE=target/*.jar
-COPY --chown=spring:spring ${JAR_FILE} app.jar
+COPY pom.xml .
+COPY analysis-service/pom.xml analysis-service/pom.xml
+COPY api-gateway/pom.xml api-gateway/pom.xml
+COPY common-events/pom.xml common-events/pom.xml
+COPY identity-service/pom.xml identity-service/pom.xml
+COPY notification-service/pom.xml notification-service/pom.xml
+COPY project-config-service/pom.xml project-config-service/pom.xml
+COPY report-service/pom.xml report-service/pom.xml
+COPY sync-service/pom.xml sync-service/pom.xml
+COPY user-group-service/pom.xml user-group-service/pom.xml
 
-EXPOSE 8080
+RUN mvn -B -q -e -DskipTests dependency:go-offline -pl notification-service -am
 
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=40s \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
+COPY analysis-service/src analysis-service/src
+COPY api-gateway/src api-gateway/src
+COPY common-events/src common-events/src
+COPY identity-service/src identity-service/src
+COPY notification-service/src notification-service/src
+COPY project-config-service/src project-config-service/src
+COPY report-service/src report-service/src
+COPY sync-service/src sync-service/src
+COPY user-group-service/src user-group-service/src
 
-ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+RUN mvn -B clean package -DskipTests -pl notification-service -am
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY --from=builder /app/notification-service/target/*.jar /app/app.jar
+ENTRYPOINT ["java","-jar","/app/app.jar"]

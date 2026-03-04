@@ -1,6 +1,6 @@
 package com.samt.projectconfig.config;
 
-import com.example.project_configservice.grpc.UserGroupGrpcServiceGrpc;
+import com.example.user_groupservice.grpc.UserGroupGrpcServiceGrpc;
 import io.grpc.ManagedChannel;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.context.annotation.Bean;

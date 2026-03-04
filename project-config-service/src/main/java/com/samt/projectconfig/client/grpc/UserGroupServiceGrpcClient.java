@@ -1,6 +1,6 @@
 package com.samt.projectconfig.client.grpc;
 
-import com.example.project_configservice.grpc.*;
+import com.example.user_groupservice.grpc.*;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;

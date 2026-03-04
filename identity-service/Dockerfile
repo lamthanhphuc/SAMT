@@ -1,45 +1,37 @@
 # ==============================================
 # Multi-Stage Build for Identity Service
 # ==============================================
-# Stage 1: Build với Maven (nếu cần build trong Docker)
-# Stage 2: Runtime với JRE nhỏ gọn
 
-# Stage 1: Builder (optional - dùng nếu build trong Docker)
-FROM eclipse-temurin:21-jdk-alpine AS builder
-WORKDIR /build
-# Copy only dependencies first (layer caching)
-COPY pom.xml ./
-COPY ../pom.xml ../pom.xml
-# Download dependencies (cached nếu pom.xml không đổi)
-RUN mvn dependency:go-offline || true
-# Copy source and build
-COPY src ./src
-RUN mvn clean package -DskipTests
-
-# Stage 2: Runtime (lightweight)
-FROM eclipse-temurin:21-jre-alpine
-LABEL maintainer="samt-team"
-LABEL service="identity-service"
-
-# Security: Run as non-root user
-RUN addgroup -S spring && adduser -S spring -G spring
-USER spring:spring
-
+# Stage 1: Builder
+FROM maven:3.9-eclipse-temurin-21 AS builder
 WORKDIR /app
 
-# Copy JAR from builder or target (use ARG for flexibility)
-ARG JAR_FILE=target/*.jar
-COPY --chown=spring:spring ${JAR_FILE} app.jar
+COPY pom.xml .
+COPY analysis-service/pom.xml analysis-service/pom.xml
+COPY api-gateway/pom.xml api-gateway/pom.xml
+COPY common-events/pom.xml common-events/pom.xml
+COPY identity-service/pom.xml identity-service/pom.xml
+COPY notification-service/pom.xml notification-service/pom.xml
+COPY project-config-service/pom.xml project-config-service/pom.xml
+COPY report-service/pom.xml report-service/pom.xml
+COPY sync-service/pom.xml sync-service/pom.xml
+COPY user-group-service/pom.xml user-group-service/pom.xml
 
-# Expose port
-EXPOSE 8080
+RUN mvn -B -q -e -DskipTests dependency:go-offline -pl identity-service -am
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=40s \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
+COPY analysis-service/src analysis-service/src
+COPY api-gateway/src api-gateway/src
+COPY common-events/src common-events/src
+COPY identity-service/src identity-service/src
+COPY notification-service/src notification-service/src
+COPY project-config-service/src project-config-service/src
+COPY report-service/src report-service/src
+COPY sync-service/src sync-service/src
+COPY user-group-service/src user-group-service/src
 
-# JVM Options từ environment variable
-ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+RUN mvn -B clean package -DskipTests -pl identity-service -am
 
-# Entrypoint với dynamic JAVA_OPTS
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY --from=builder /app/identity-service/target/*.jar /app/app.jar
+ENTRYPOINT ["java","-jar","/app/app.jar"]

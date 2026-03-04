@@ -204,7 +204,7 @@ The following services use gRPC and must NOT run plaintext in production:
 - `project-config-service`
 
 Each service includes placeholder cert material at:
-- `src/main/resources/certs/`
+- Certificates must be mounted at `/certs` (do not bake into images)
 	- `ca.crt`
 	- `server.crt`, `server.key`
 	- `client.crt`, `client.key`

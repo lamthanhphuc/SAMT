@@ -70,7 +70,7 @@ ProjectConfig Service **consumes** gRPC APIs from User-Group Service for group v
 
 - Plaintext gRPC is forbidden in production.
 - Production uses **mTLS** (client cert required by server, and server identity verified by client).
-- Default cert placeholders live at `src/main/resources/certs/` and must be replaced for production.
+- Certificates/keys must be mounted at `/certs` (do not bake into images).
 - Prefer Kubernetes secret mounts (or Docker secrets) for real certificate material.
 
 **Connects to:** User-Group Service (port `9095`)

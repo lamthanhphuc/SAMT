@@ -34,15 +34,15 @@ grpc:
     security:
       enabled: true
       clientAuth: REQUIRE
-      certificateChain: classpath:certs/server.crt
-      privateKey: classpath:certs/server.key
-      trustCertCollection: classpath:certs/ca.crt
+      certificateChain: file:/certs/server.crt
+      privateKey: file:/certs/server.key
+      trustCertCollection: file:/certs/ca.crt
   client:
     default:
       negotiation-type: TLS
       security:
-        certificateChain: classpath:certs/client.crt
-        privateKey: classpath:certs/client.key
-        trustCertCollection: classpath:certs/ca.crt
+        certificateChain: file:/certs/client.crt
+        privateKey: file:/certs/client.key
+        trustCertCollection: file:/certs/ca.crt
     project-config-service:
       address: dns:///project-config-service:9093

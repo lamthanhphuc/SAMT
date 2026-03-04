@@ -46,7 +46,9 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
-        spring.json.trusted.packages: "*"
+        spring.json.trusted.packages: com.example.common.events
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: com.example.common.events.UserDeletedEvent
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -63,13 +65,13 @@ grpc:
     max-inbound-message-size: 4MB
     security:
       enabled: true
-      certificateChain: classpath:certs/server.crt
-      privateKey: classpath:certs/server.key
+      certificateChain: file:/certs/server.crt
+      privateKey: file:/certs/server.key
   client:
     default:
       negotiation-type: TLS
       security:
-        trustCertCollection: classpath:certs/ca.crt
+        trustCertCollection: file:/certs/ca.crt
     identity-service:
       address: dns:///identity-service:9091
       enable-keep-alive: true
@@ -138,7 +140,7 @@ grpc:
     default:
       negotiation-type: TLS
       security:
-        trustCertCollection: classpath:certs/ca.crt
+        trustCertCollection: file:/certs/ca.crt
     identity-service:
       address: dns:///identity-service:9091
 

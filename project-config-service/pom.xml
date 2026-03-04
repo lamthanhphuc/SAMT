@@ -96,6 +96,13 @@
             <version>1.0.0</version>
         </dependency>
 
+        <!-- Shared contracts (DTOs / events / gRPC stubs) -->
+        <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>common-contracts</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
         <!-- Kafka (for consuming UserDeletedEvent) -->
         <dependency>
             <groupId>org.springframework.kafka</groupId>

@@ -39,4 +39,5 @@ grpc:
   server:
     security:
       enabled: true
-      client-auth: REQUIRE
+      trustCertCollection: file:/certs/ca.crt
+      clientAuth: REQUIRE

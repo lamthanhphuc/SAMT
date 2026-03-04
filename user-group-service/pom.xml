@@ -112,6 +112,13 @@
             <version>1.0.0</version>
         </dependency>
 
+        <!-- Shared contracts (DTOs / events / gRPC stubs) -->
+        <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>common-contracts</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
         <!-- Kafka -->
         <dependency>
             <groupId>org.springframework.kafka</groupId>
@@ -186,12 +193,6 @@
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.example</groupId>
-            <artifactId>project-config-service</artifactId>
-            <version>1.0.0</version>
-            <scope>compile</scope>
         </dependency>
     </dependencies>
 

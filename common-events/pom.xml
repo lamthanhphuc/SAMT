@@ -23,6 +23,13 @@
     </properties>
 
     <dependencies>
+
+        <!-- Pure shared contracts (DTOs / events / protos) -->
+        <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>common-contracts</artifactId>
+            <version>1.0.0</version>
+        </dependency>
         
         <!-- Lombok for @Data, @Builder -->
         <dependency>
@@ -39,6 +46,13 @@
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
+
+        <!-- For EnvironmentPostProcessor-based security enforcement (provided by the application) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot</artifactId>
+            <scope>provided</scope>
         </dependency>
 
     </dependencies>

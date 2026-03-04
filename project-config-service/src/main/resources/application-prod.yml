@@ -40,10 +40,22 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health
   endpoint:
     health:
       show-details: never
+    metrics:
+      enabled: false
+    prometheus:
+      enabled: false
+  prometheus:
+    metrics:
+      export:
+        enabled: false
+  metrics:
+    export:
+      prometheus:
+        enabled: false
   server:
     port: 9001
     add-application-context-header: false
@@ -53,15 +65,15 @@ grpc:
     security:
       enabled: true
       clientAuth: REQUIRE
-      certificateChain: classpath:certs/server.crt
-      privateKey: classpath:certs/server.key
-      trustCertCollection: classpath:certs/ca.crt
+      certificateChain: file:/certs/server.crt
+      privateKey: file:/certs/server.key
+      trustCertCollection: file:/certs/ca.crt
   client:
     default:
       negotiation-type: TLS
       security:
-        certificateChain: classpath:certs/client.crt
-        privateKey: classpath:certs/client.key
-        trustCertCollection: classpath:certs/ca.crt
+        certificateChain: file:/certs/client.crt
+        privateKey: file:/certs/client.key
+        trustCertCollection: file:/certs/ca.crt
     user-group-service:
       address: dns:///user-group-service:9095

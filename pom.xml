@@ -40,6 +40,7 @@
 
 	<!-- Khai báo các microservice -->
 	<modules>
+		<module>common-contracts</module>
 		<module>analysis-service</module>
 		<module>api-gateway</module>
 		<module>identity-service</module>

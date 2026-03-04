@@ -90,13 +90,13 @@ grpc:
   server:
     security:
       enabled: true
-      certificateChain: classpath:certs/server.crt
-      privateKey: classpath:certs/server.key
+      certificateChain: file:/certs/server.crt
+      privateKey: file:/certs/server.key
   client:
     default:
       negotiation-type: TLS
       security:
-        trustCertCollection: classpath:certs/ca.crt
+        trustCertCollection: file:/certs/ca.crt
     user-group-service:
       address: dns:///user-group-service:9095
       deadline: 2000
