@@ -1,6 +1,9 @@
 # Production profile: NO fallback secrets. Startup must fail if env vars are missing.
 
 spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
   security:
     oauth2:
       resourceserver:

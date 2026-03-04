@@ -1,0 +1,9 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+grpc:
+  client:
+    default:
+      negotiation-type: plaintext

@@ -24,7 +24,11 @@ grpc:
   client:
     identity-service:
       address: static://${IDENTITY_SERVICE_GRPC_HOST:localhost}:${IDENTITY_SERVICE_GRPC_PORT:9091}
-      negotiationType: plaintext
+      negotiationType: TLS
+      security:
+        trustCertCollection: ${GRPC_TRUST_CERT:file:/etc/certs/ca.crt}
+        clientCertChain: ${GRPC_CERT_CHAIN:file:/etc/certs/tls.crt}
+        clientPrivateKey: ${GRPC_PRIVATE_KEY:file:/etc/certs/tls.key}
 ```
 
 Deadline:

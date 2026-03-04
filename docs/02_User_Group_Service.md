@@ -966,7 +966,11 @@ grpc:
   client:
     identity-service:
       address: 'static://localhost:9090'
-      negotiation-type: plaintext
+      negotiationType: TLS
+      security:
+        trustCertCollection: ${GRPC_TRUST_CERT:file:/etc/certs/ca.crt}
+        clientCertChain: ${GRPC_CERT_CHAIN:file:/etc/certs/tls.crt}
+        clientPrivateKey: ${GRPC_PRIVATE_KEY:file:/etc/certs/tls.key}
       deadline-seconds: 3
 ```
 

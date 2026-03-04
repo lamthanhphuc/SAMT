@@ -383,7 +383,7 @@ try {
 
 ### Transport Security
 
-- **Development:** Plaintext gRPC (localhost)
+- **Development:** mTLS gRPC (localhost)
 - **Production:** TLS encryption recommended
 - **Authentication:** Currently none (rely on network isolation)
 
@@ -407,19 +407,19 @@ try {
 
 ```bash
 # 1. GetUser
-grpcurl -plaintext -d '{"user_id": "1"}' \
+grpcurl -cacert /etc/certs/ca.crt -cert /etc/certs/tls.crt -key /etc/certs/tls.key -d '{"user_id": "1"}' \
   localhost:9091 UserGrpcService/GetUser
 
 # 2. VerifyUserExists
-grpcurl -plaintext -d '{"user_id": "2"}' \
+grpcurl -cacert /etc/certs/ca.crt -cert /etc/certs/tls.crt -key /etc/certs/tls.key -d '{"user_id": "2"}' \
   localhost:9091 UserGrpcService/VerifyUserExists
 
 # 3. GetUsers (batch)
-grpcurl -plaintext -d '{"user_ids": ["1", "2", "3"]}' \
+grpcurl -cacert /etc/certs/ca.crt -cert /etc/certs/tls.crt -key /etc/certs/tls.key -d '{"user_ids": ["1", "2", "3"]}' \
   localhost:9091 UserGrpcService/GetUsers
 
 # 4. ListUsers
-grpcurl -plaintext -d '{"page": 0, "size": 10, "role": "STUDENT"}' \
+grpcurl -cacert /etc/certs/ca.crt -cert /etc/certs/tls.crt -key /etc/certs/tls.key -d '{"page": 0, "size": 10, "role": "STUDENT"}' \
   localhost:9091 UserGrpcService/ListUsers
 ```
 

@@ -23,7 +23,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: ${DDL_AUTO:validate}
     open-in-view: false
     show-sql: true
     properties:
@@ -34,7 +34,7 @@ spring:
 
   flyway:
     enabled: true
-    locations: classpath:db/migration/usergroup
+    locations: classpath:db/migration
 
   kafka:
     enabled: ${KAFKA_ENABLED:true}  # Default disabled for local dev
@@ -61,10 +61,17 @@ grpc:
     keep-alive-timeout: 10s
     permit-keep-alive-without-calls: true
     max-inbound-message-size: 4MB
+    security:
+      enabled: true
+      certificateChain: classpath:certs/server.crt
+      privateKey: classpath:certs/server.key
   client:
+    default:
+      negotiation-type: TLS
+      security:
+        trustCertCollection: classpath:certs/ca.crt
     identity-service:
-      address: static://${IDENTITY_SERVICE_GRPC_HOST:localhost}:${IDENTITY_SERVICE_GRPC_PORT:9091}
-      negotiationType: plaintext
+      address: dns:///identity-service:9091
       enable-keep-alive: true
       keep-alive-time: 30s
       keep-alive-timeout: 10s
@@ -128,9 +135,12 @@ grpc:
   server:
     port: 9095  # Keep consistent gRPC port
   client:
+    default:
+      negotiation-type: TLS
+      security:
+        trustCertCollection: classpath:certs/ca.crt
     identity-service:
-      address: static://identity-service:9091
-      negotiationType: plaintext
+      address: dns:///identity-service:9091
 
 server:
   port: 8082  # Keep consistent REST API port

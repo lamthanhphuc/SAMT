@@ -9,6 +9,9 @@ jwt:
     public-key-pem: ${JWT_PUBLIC_KEY_PEM:}
 
 spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
   datasource:
     password: ${SPRING_DATASOURCE_PASSWORD}
 
@@ -21,7 +24,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,info
   endpoint:
     health:
       show-details: never
@@ -31,3 +34,9 @@ springdoc:
     enabled: false
   swagger-ui:
     enabled: false
+
+grpc:
+  server:
+    security:
+      enabled: true
+      client-auth: REQUIRE

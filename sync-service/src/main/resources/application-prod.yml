@@ -1,6 +1,9 @@
 # Production profile: NO fallback secrets. Startup must fail if env vars are missing.
 
 spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
   security:
     oauth2:
       resourceserver:
@@ -25,3 +28,21 @@ springdoc:
     enabled: false
   swagger-ui:
     enabled: false
+
+grpc:
+  server:
+    security:
+      enabled: true
+      clientAuth: REQUIRE
+      certificateChain: classpath:certs/server.crt
+      privateKey: classpath:certs/server.key
+      trustCertCollection: classpath:certs/ca.crt
+  client:
+    default:
+      negotiation-type: TLS
+      security:
+        certificateChain: classpath:certs/client.crt
+        privateKey: classpath:certs/client.key
+        trustCertCollection: classpath:certs/ca.crt
+    project-config-service:
+      address: dns:///project-config-service:9093

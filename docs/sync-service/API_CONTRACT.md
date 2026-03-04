@@ -328,7 +328,7 @@ resilience4j:
 ### Service-to-Service Authentication
 
 **With ProjectConfig Service:**
-- Default: plaintext gRPC within trusted network
+- Default: mTLS gRPC (TLS + client cert)
 - Profile `mtls`: enforce gRPC TLS/mTLS
 - Prefer network policies so only Sync Service can reach ProjectConfig internal endpoints
 

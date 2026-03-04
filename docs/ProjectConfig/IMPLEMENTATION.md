@@ -140,7 +140,11 @@ grpc:
   client:
     user-group-service:
       address: static://${USER_GROUP_SERVICE_GRPC_HOST:localhost}:${USER_GROUP_SERVICE_GRPC_PORT:9095}
-      negotiation-type: plaintext
+      negotiationType: TLS
+      security:
+        trustCertCollection: ${GRPC_TRUST_CERT:file:/etc/certs/ca.crt}
+        clientCertChain: ${GRPC_CERT_CHAIN:file:/etc/certs/tls.crt}
+        clientPrivateKey: ${GRPC_PRIVATE_KEY:file:/etc/certs/tls.key}
       deadline: 2000  # 2 seconds
       retry:
         max-attempts: 3

@@ -87,10 +87,18 @@ cleanup:
 #   GRPC CONFIGURATION
 # ============================================
 grpc:
+  server:
+    security:
+      enabled: true
+      certificateChain: classpath:certs/server.crt
+      privateKey: classpath:certs/server.key
   client:
+    default:
+      negotiation-type: TLS
+      security:
+        trustCertCollection: classpath:certs/ca.crt
     user-group-service:
-      address: static://${USER_GROUP_SERVICE_GRPC_HOST:user-group-service}:${USER_GROUP_SERVICE_GRPC_PORT:9095}
-      negotiation-type: plaintext
+      address: dns:///user-group-service:9095
       deadline: 2000
 
 # ============================================
@@ -208,10 +216,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
+        include: health,info
   endpoint:
     health:
-      show-details: always
+      show-details: never
       probes:
         enabled: true
     metrics:

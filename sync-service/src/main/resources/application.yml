@@ -42,7 +42,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: ${DDL_AUTO:validate}
     show-sql: ${SHOW_SQL:false}
     open-in-view: false
     properties:
@@ -95,10 +95,19 @@ sync:
 #   GRPC CLIENT CONFIGURATION
 # ==============================================
 grpc:
+  server:
+    port: ${GRPC_SERVER_PORT:9094}
+    security:
+      enabled: true
+      certificateChain: classpath:certs/server.crt
+      privateKey: classpath:certs/server.key
   client:
+    default:
+      negotiation-type: TLS
+      security:
+        trustCertCollection: classpath:certs/ca.crt
     project-config-service:
-      address: static://${PROJECT_CONFIG_GRPC_HOST:localhost}:${PROJECT_CONFIG_GRPC_PORT:9093}
-      negotiation-type: plaintext
+      address: dns:///project-config-service:9093
       max-inbound-message-size: 4194304
       enable-keep-alive: true
       keep-alive-time: 300s

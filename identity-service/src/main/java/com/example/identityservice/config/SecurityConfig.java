@@ -74,11 +74,6 @@ public class SecurityConfig {
                     .requestMatchers("/.well-known/jwks.json").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/actuator/info").permitAll()
-                        // Swagger UI
-                        .requestMatchers("/swagger-ui/**").permitAll()
-                        .requestMatchers("/swagger-ui.html").permitAll()
-                        .requestMatchers("/api-docs/**").permitAll()
-                        .requestMatchers("/v3/api-docs/**").permitAll()
                         // All other requests require authentication (including /api/auth/logout)
                         .anyRequest().authenticated()
                 )

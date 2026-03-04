@@ -3,7 +3,8 @@
 **Version:** 1.0.0  
 **Spring Boot:** 3.2+  
 **Java:** 21  
-**Port:** 8083
+**Port:** 8083  
+**Management/Actuator (prod):** 9001 (internal-only; do not expose externally)
 
 ---
 
@@ -64,6 +65,13 @@ PostgreSQL Database
 ## 🔌 gRPC Integration
 
 ProjectConfig Service **consumes** gRPC APIs from User-Group Service for group validation and authorization.
+
+### Transport Security (TLS + mTLS)
+
+- Plaintext gRPC is forbidden in production.
+- Production uses **mTLS** (client cert required by server, and server identity verified by client).
+- Default cert placeholders live at `src/main/resources/certs/` and must be replaced for production.
+- Prefer Kubernetes secret mounts (or Docker secrets) for real certificate material.
 
 **Connects to:** User-Group Service (port `9095`)
 

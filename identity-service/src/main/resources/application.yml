@@ -46,7 +46,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: ${DDL_AUTO:update}
+      ddl-auto: ${DDL_AUTO:validate}
     show-sql: ${SHOW_SQL:false}
     open-in-view: false
     properties:
@@ -85,6 +85,12 @@ grpc:
     keep-alive-timeout: 10s
     permit-keep-alive-without-calls: true
     max-inbound-message-size: 4MB
+    security:
+      enabled: true
+      certificate-chain: ${GRPC_CERT_CHAIN:file:/etc/certs/tls.crt}
+      private-key: ${GRPC_PRIVATE_KEY:file:/etc/certs/tls.key}
+      trust-cert-collection: ${GRPC_TRUST_CERT:file:/etc/certs/ca.crt}
+      client-auth: REQUIRE
 
 # ==============================================
 # JWT CONFIGURATION

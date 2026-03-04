@@ -196,6 +196,24 @@ curl http://localhost:8081/actuator/metrics
 - [ ] Sử dụng Docker secrets cho credentials
 - [ ] Giới hạn resource limits cho containers
 
+### gRPC TLS/mTLS Certificates (Required)
+
+The following services use gRPC and must NOT run plaintext in production:
+- `user-group-service`
+- `sync-service`
+- `project-config-service`
+
+Each service includes placeholder cert material at:
+- `src/main/resources/certs/`
+	- `ca.crt`
+	- `server.crt`, `server.key`
+	- `client.crt`, `client.key`
+
+Production requirement:
+- Replace placeholders with real CA-signed certificates.
+- Prefer Kubernetes/Docker secret mounts (file paths) or image-time injection.
+- Do not deploy with the placeholder PEM files.
+
 **Zero-Trust (Gateway JWT → Internal JWT + mTLS):**
 - Xem hướng dẫn migration chính thức: [docs/ZERO_TRUST_MIGRATION.md](docs/ZERO_TRUST_MIGRATION.md)
 

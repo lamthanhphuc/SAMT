@@ -49,7 +49,11 @@ grpc:
   client:
     user-group-service:
       address: static://${USER_GROUP_SERVICE_GRPC_HOST:localhost}:${USER_GROUP_SERVICE_GRPC_PORT:9095}
-      negotiation-type: plaintext
+            negotiationType: TLS
+            security:
+                trustCertCollection: ${GRPC_TRUST_CERT:file:/etc/certs/ca.crt}
+                clientCertChain: ${GRPC_CERT_CHAIN:file:/etc/certs/tls.crt}
+                clientPrivateKey: ${GRPC_PRIVATE_KEY:file:/etc/certs/tls.key}
 ```
 
 **RPCs Used:**
@@ -183,7 +187,11 @@ grpc:
   client:
     user-group-service:
       address: static://user-group-service:9095
-      negotiation-type: plaintext
+            negotiationType: TLS
+            security:
+                trustCertCollection: ${GRPC_TRUST_CERT:file:/etc/certs/ca.crt}
+                clientCertChain: ${GRPC_CERT_CHAIN:file:/etc/certs/tls.crt}
+                clientPrivateKey: ${GRPC_PRIVATE_KEY:file:/etc/certs/tls.key}
       deadline: 2000  # 2 seconds
 ```
 
@@ -212,7 +220,7 @@ public CheckGroupLeaderResponse checkGroupLeader(Long groupId, Long userId) {
 
 ### Transport Security
 
-- **Development:** Plaintext gRPC (localhost)
+- **Development:** mTLS gRPC (localhost)
 - **Production:** TLS encryption recommended
 - **Authentication:** Currently none (rely on network isolation)
 
@@ -274,10 +282,10 @@ void shouldCreateConfigWhenGroupExistsAndUserIsLeader() {
 
 ```bash
 # From project-config-service container
-grpcurl -plaintext -d '{"group_id": "1"}' \
+grpcurl -cacert /etc/certs/ca.crt -cert /etc/certs/tls.crt -key /etc/certs/tls.key -d '{"group_id": "1"}' \
   user-group-service:9095 UserGroupGrpcService/VerifyGroupExists
 
-grpcurl -plaintext -d '{"group_id": "1", "user_id": "2"}' \
+grpcurl -cacert /etc/certs/ca.crt -cert /etc/certs/tls.crt -key /etc/certs/tls.key -d '{"group_id": "1", "user_id": "2"}' \
   user-group-service:9095 UserGroupGrpcService/CheckGroupLeader
 ```
 

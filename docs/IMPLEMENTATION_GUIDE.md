@@ -823,10 +823,10 @@ curl -X POST http://localhost:8080/api/groups \
 go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
 
 # List services
-grpcurl -plaintext localhost:9092 list
+grpcurl -cacert /etc/certs/ca.crt -cert /etc/certs/tls.crt -key /etc/certs/tls.key localhost:9092 list
 
 # Call VerifyUser
-grpcurl -plaintext \
+grpcurl -cacert /etc/certs/ca.crt -cert /etc/certs/tls.crt -key /etc/certs/tls.key \
   -d '{"user_id": 1}' \
   localhost:9091 IdentityService/VerifyUser
 ```

@@ -953,7 +953,11 @@ grpc:
   client:
     identity-service:
       address: 'static://localhost:9090'
-      negotiation-type: plaintext
+      negotiationType: TLS
+      security:
+        trustCertCollection: ${GRPC_TRUST_CERT:file:/etc/certs/ca.crt}
+        clientCertChain: ${GRPC_CERT_CHAIN:file:/etc/certs/tls.crt}
+        clientPrivateKey: ${GRPC_PRIVATE_KEY:file:/etc/certs/tls.key}
       max-inbound-message-size: 4194304  # 4MB
 ```
 
@@ -1132,7 +1136,7 @@ curl http://localhost:8081/actuator/health
 netstat -an | grep 9090
 
 # Check gRPC connectivity
-grpcurl -plaintext localhost:9091 list
+grpcurl -cacert /etc/certs/ca.crt -cert /etc/certs/tls.crt -key /etc/certs/tls.key localhost:9091 list
 ```
 
 **Resolution:**

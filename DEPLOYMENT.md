@@ -8,8 +8,21 @@
 - [ ] Đổi `POSTGRES_PASSWORD` trong `.env`
 - [ ] Đặt Redis password
 - [ ] Cấu hình SSL/TLS cho databases
+- [ ] Cấu hình gRPC mTLS (cert/key/CA) cho internal services
 - [ ] Review exposed ports
 - [ ] Kiểm tra firewall rules
+
+⚠️ **gRPC mTLS REQUIREMENT (NO PLAINTEXT):**
+- Internal gRPC calls require TLS with mutual authentication.
+- Do NOT commit certificates/keys into the repository.
+- Mount certificates from secrets to:
+   - `/etc/certs/tls.crt`
+   - `/etc/certs/tls.key`
+   - `/etc/certs/ca.crt`
+- Services read these via:
+   - `GRPC_CERT_CHAIN` (default `file:/etc/certs/tls.crt`)
+   - `GRPC_PRIVATE_KEY` (default `file:/etc/certs/tls.key`)
+   - `GRPC_TRUST_CERT` (default `file:/etc/certs/ca.crt`)
 
 ⚠️ **CRITICAL REDIS SECURITY WARNING:**
 **Never run Redis without authentication in production!**

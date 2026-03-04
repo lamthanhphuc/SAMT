@@ -1,4 +1,7 @@
 spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
   datasource:
     password: ${SPRING_DATASOURCE_PASSWORD}
 
@@ -21,3 +24,21 @@ springdoc:
     enabled: false
   swagger-ui:
     enabled: false
+
+grpc:
+  server:
+    security:
+      enabled: true
+      clientAuth: REQUIRE
+      certificateChain: classpath:certs/server.crt
+      privateKey: classpath:certs/server.key
+      trustCertCollection: classpath:certs/ca.crt
+  client:
+    default:
+      negotiation-type: TLS
+      security:
+        certificateChain: classpath:certs/client.crt
+        privateKey: classpath:certs/client.key
+        trustCertCollection: classpath:certs/ca.crt
+    identity-service:
+      address: dns:///identity-service:9091

@@ -131,7 +131,11 @@ grpc:
   client:
     project-config-service:
       address: static://${PROJECT_CONFIG_SERVICE_GRPC_HOST:localhost}:${PROJECT_CONFIG_SERVICE_GRPC_PORT:9093}
-      negotiation-type: plaintext
+      negotiationType: TLS
+      security:
+        trustCertCollection: ${GRPC_TRUST_CERT:file:/etc/certs/ca.crt}
+        clientCertChain: ${GRPC_CERT_CHAIN:file:/etc/certs/tls.crt}
+        clientPrivateKey: ${GRPC_PRIVATE_KEY:file:/etc/certs/tls.key}
       enable-keep-alive: true
       keep-alive-time: 30s
       keep-alive-timeout: 10s

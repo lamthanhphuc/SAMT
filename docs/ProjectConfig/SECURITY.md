@@ -270,7 +270,7 @@ Under profile `mtls`, Project Config Service also requires mTLS for incoming HTT
 - `CheckGroupMember(groupId, userId)` - Verify if user is group member
 
 **Security Concerns:**
-- Plaintext gRPC assumes a trusted internal network
+- mTLS gRPC (TLS + client cert) is required for internal service calls
 - Without mTLS, network compromise may allow service impersonation
 
 ---

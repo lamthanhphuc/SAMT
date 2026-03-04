@@ -35,7 +35,7 @@ Sync Service is the **background data synchronization service** for the SAMT sys
 
 ✅ **Service Integration:**
 - gRPC client for ProjectConfig Service (get decrypted tokens)
-- No gRPC server (operates autonomously)
+- gRPC transport is TLS/mTLS-enforced (no plaintext)
 - No user-facing REST endpoints
 
 ### What It Does NOT Do

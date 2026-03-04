@@ -51,7 +51,7 @@ Overall, the system shows a solid *conceptual* perimeter pattern (JWT at gateway
 | SAMT-DEP-002 | CRITICAL | Build/Release | All Dockerfiles | `COPY ../pom.xml` likely outside build context (build fails) |
 | SAMT-DEP-003 | HIGH | Deployment Correctness | docker-compose.yml | Application services are commented out (docs drift) |
 | SAMT-DEP-004 | CRITICAL | Secure Deploy | docker-compose.secure.yml | Redis secret name mismatch breaks stack deploy |
-| SAMT-SEC-008 | CRITICAL | Attack Surface | identity-service | Swagger + api-docs are `permitAll()` in SecurityConfig |
+| SAMT-SEC-008 | CRITICAL | Attack Surface | identity-service | Swagger/OpenAPI no longer public (RESOLVED) |
 | SAMT-SEC-009 | HIGH | Observability Exposure | project-config-service | Actuator/Prometheus enabled; prod profile doesn’t restrict |
 | SAMT-ARCH-001 | HIGH | Architecture | user-group-service | Microservice-to-microservice Maven dependency coupling |
 
@@ -140,7 +140,7 @@ Overall, the system shows a solid *conceptual* perimeter pattern (JWT at gateway
 - **Severity**: HIGH
 - **Category**: Data Integrity / Migration Safety
 - **Components**: identity-service, analysis-service, notification-service, report-service, user-group-service
-- **Description**: Several services default to `ddl-auto: update` (or `${DDL_AUTO:update}`), and `.env.example` explicitly sets `DDL_AUTO=update`.
+- **Description**: Services default `ddl-auto` to `${DDL_AUTO:validate}` and production enforces `validate`.
 - **Why this matters**: `update` can silently change schemas, create drift, and break reproducibility. It is unsafe for production and complicates rollback.
 - **Evidence**:
   - Identity default: [identity-service/src/main/resources/application.yml](identity-service/src/main/resources/application.yml#L49)
@@ -156,30 +156,60 @@ Overall, the system shows a solid *conceptual* perimeter pattern (JWT at gateway
 - **Severity**: HIGH
 - **Category**: Transport Security
 - **Components**: user-group-service, sync-service, project-config-service
-- **Description**: gRPC clients use plaintext negotiation.
-- **Why this matters**: Plaintext gRPC is susceptible to sniffing/modification on any compromised network segment. It also prevents strong service identity.
-- **Evidence**:
-  - user-group-service: [user-group-service/src/main/resources/application.yml](user-group-service/src/main/resources/application.yml#L72)
-  - sync-service: [sync-service/src/main/resources/application.yml](sync-service/src/main/resources/application.yml#L94)
-  - project-config-service: [project-config-service/src/main/resources/application.yml](project-config-service/src/main/resources/application.yml#L94)
-- **Fix**:
-  - Enable TLS for gRPC channels and enforce server identity verification.
-  - Prefer mTLS between services.
-- **Residual risk if unfixed**: Credential/session leakage on internal network.
+- **Status**: RESOLVED (TLS by default; prod enforces mTLS + fail-closed; dev-only plaintext allowed)
+- **Description**: gRPC client defaults are TLS with CA verification (server identity verification). In `prod`, services require mTLS and fail startup if plaintext negotiation (or disabling gRPC server security) is configured via any property source (env vars, command line args, config maps, etc.). Plaintext is only permitted in `dev` profile.
+- **Why this matters**: TLS prevents sniffing/modification; mTLS prevents service impersonation and enables strong service identity.
+- **Evidence (current state)**:
+  - TLS defaults (no plaintext) for gRPC clients:
+    - user-group-service: [user-group-service/src/main/resources/application.yml](user-group-service/src/main/resources/application.yml#L57-L75)
+    - sync-service: [sync-service/src/main/resources/application.yml](sync-service/src/main/resources/application.yml#L97-L115)
+    - project-config-service: [project-config-service/src/main/resources/application.yml](project-config-service/src/main/resources/application.yml#L89-L104)
+  - Prod mTLS required (`clientAuth: REQUIRE` + client cert material):
+    - user-group-service: [user-group-service/src/main/resources/application-prod.yml](user-group-service/src/main/resources/application-prod.yml#L28-L42)
+    - sync-service: [sync-service/src/main/resources/application-prod.yml](sync-service/src/main/resources/application-prod.yml#L32-L46)
+    - project-config-service: [project-config-service/src/main/resources/application-prod.yml](project-config-service/src/main/resources/application-prod.yml#L51-L65)
+    - (Upstream server) identity-service mTLS: [identity-service/src/main/resources/application.yml](identity-service/src/main/resources/application.yml#L81-L100)
+  - Dev-only plaintext (explicitly scoped to `dev` profile):
+    - user-group-service: [user-group-service/src/main/resources/application-dev.yml](user-group-service/src/main/resources/application-dev.yml#L6-L9)
+    - sync-service: [sync-service/src/main/resources/application-dev.yml](sync-service/src/main/resources/application-dev.yml#L6-L9)
+    - project-config-service: [project-config-service/src/main/resources/application-dev.yml](project-config-service/src/main/resources/application-dev.yml#L6-L9)
+  - Prod fail-closed enforcement (startup fails if plaintext / TLS disabled is configured in `prod`):
+    - user-group-service enforcement: [user-group-service/src/main/java/com/example/user_groupservice/config/ProdHardeningEnvironmentPostProcessor.java](user-group-service/src/main/java/com/example/user_groupservice/config/ProdHardeningEnvironmentPostProcessor.java#L33-L110)
+    - sync-service enforcement: [sync-service/src/main/java/com/example/syncservice/config/ProdHardeningEnvironmentPostProcessor.java](sync-service/src/main/java/com/example/syncservice/config/ProdHardeningEnvironmentPostProcessor.java#L33-L122)
+    - project-config-service enforcement: [project-config-service/src/main/java/com/samt/projectconfig/config/ProdHardeningEnvironmentPostProcessor.java](project-config-service/src/main/java/com/samt/projectconfig/config/ProdHardeningEnvironmentPostProcessor.java#L21-L142)
+    - Post-processor registrations:
+      - user-group-service: [user-group-service/src/main/resources/META-INF/spring/org.springframework.boot.env.EnvironmentPostProcessor](user-group-service/src/main/resources/META-INF/spring/org.springframework.boot.env.EnvironmentPostProcessor#L1)
+      - sync-service: [sync-service/src/main/resources/META-INF/spring/org.springframework.boot.env.EnvironmentPostProcessor](sync-service/src/main/resources/META-INF/spring/org.springframework.boot.env.EnvironmentPostProcessor#L1)
+      - project-config-service: [project-config-service/src/main/resources/META-INF/spring/org.springframework.boot.env.EnvironmentPostProcessor](project-config-service/src/main/resources/META-INF/spring/org.springframework.boot.env.EnvironmentPostProcessor#L1)
+  - Placeholder cert material present (must be replaced for real deployments):
+    - user-group-service CA placeholder: [user-group-service/src/main/resources/certs/ca.crt](user-group-service/src/main/resources/certs/ca.crt)
+    - sync-service CA placeholder: [sync-service/src/main/resources/certs/ca.crt](sync-service/src/main/resources/certs/ca.crt)
+    - project-config-service CA placeholder: [project-config-service/src/main/resources/certs/ca.crt](project-config-service/src/main/resources/certs/ca.crt)
+- **Fix (implemented)**:
+  - Default to TLS with CA verification (`negotiation-type: TLS` + `trustCertCollection`) for service-to-service gRPC.
+  - Enforce mTLS in `prod` (`clientAuth: REQUIRE` + client/server cert/key material).
+  - Fail closed in `prod` via `EnvironmentPostProcessor`: reject plaintext negotiation (even if introduced via env/args) and prevent disabling server security.
+  - Allow plaintext only under `dev` profile.
+- **Residual risk**: Certificate issuance/rotation and DNS/SAN alignment must be managed to avoid outages.
 
 ## SAMT-SEC-008 – identity-service exposes Swagger and api-docs publicly
 - **Severity**: CRITICAL
 - **Category**: Attack Surface
 - **Components**: identity-service
-- **Description**: identity-service SecurityConfig explicitly permits Swagger and OpenAPI endpoints without authentication.
+- **Status**: RESOLVED (Swagger disabled in prod; not publicly permitted)
+- **Description**: identity-service no longer permits Swagger/OpenAPI endpoints without authentication, and production disables springdoc entirely.
 - **Why this matters**: Identity service is a high-value target. Public docs increase attacker efficiency and may expose internal endpoints/contracts.
 - **Evidence**:
-  - permitAll() for Swagger/api-docs: [identity-service/src/main/java/com/example/identityservice/config/SecurityConfig.java](identity-service/src/main/java/com/example/identityservice/config/SecurityConfig.java#L75-L82)
-  - Production profile does not disable springdoc/actuator: [identity-service/src/main/resources/application-prod.yml](identity-service/src/main/resources/application-prod.yml#L1-L19)
-- **Fix**:
-  - Disable springdoc in prod or protect it behind admin auth + network restrictions.
-  - Restrict actuator exposure in prod.
-- **Residual risk if unfixed**: Increased likelihood of auth bypass discovery and exploitation.
+  - SecurityConfig no longer permits Swagger/OpenAPI; all non-public routes require auth: [identity-service/src/main/java/com/example/identityservice/config/SecurityConfig.java](identity-service/src/main/java/com/example/identityservice/config/SecurityConfig.java#L68-L79)
+  - Production disables springdoc + restricts actuator exposure: [identity-service/src/main/resources/application-prod.yml](identity-service/src/main/resources/application-prod.yml#L23-L36)
+  - Prod hardening enforced (cannot be re-enabled via env/args): [identity-service/src/main/java/com/example/identityservice/config/ProdHardeningEnvironmentPostProcessor.java](identity-service/src/main/java/com/example/identityservice/config/ProdHardeningEnvironmentPostProcessor.java#L18-L35)
+  - Post-processor registration: [identity-service/src/main/resources/META-INF/spring/org.springframework.boot.env.EnvironmentPostProcessor](identity-service/src/main/resources/META-INF/spring/org.springframework.boot.env.EnvironmentPostProcessor#L1)
+- **Fix (implemented)**:
+  - Removed Swagger/OpenAPI matchers from `permitAll()`.
+  - Disabled springdoc in `prod`.
+  - Exposed only `health,info` actuator endpoints in `prod` and set health details to `never`.
+  - Enforced the above in `prod` via `EnvironmentPostProcessor` to prevent env/CLI overrides.
+- **Residual risk**: Ensure production deployments activate the `prod` profile (e.g., `SPRING_PROFILES_ACTIVE=prod`).
 
 ## SAMT-SEC-009 – project-config-service exposes Prometheus/metrics; prod profile doesn’t restrict
 - **Severity**: HIGH
