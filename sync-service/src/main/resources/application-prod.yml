@@ -46,3 +46,12 @@ grpc:
         trustCertCollection: file:/certs/ca.crt
     project-config-service:
       address: dns:///project-config-service:9093
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

@@ -93,8 +93,12 @@ public class SecurityConfig {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/actuator/health").authenticated()
+                .requestMatchers(
+                    "/actuator/health",
+                    "/actuator/health/**"
+                ).permitAll()
                 .requestMatchers("/actuator/info").authenticated()
+                .requestMatchers("/actuator/**").authenticated()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

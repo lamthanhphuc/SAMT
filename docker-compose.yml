@@ -212,7 +212,7 @@ services:
     image: redis:7-alpine
     container_name: redis
     env_file: .env
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD} --protected-mode yes --bind 0.0.0.0
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - create .env file} --protected-mode yes --bind 0.0.0.0
     # ❌ REMOVED: Port mapping for security (no external access)
     # ports:
     #   - "${REDIS_PORT:-6379}:6379"
@@ -239,345 +239,389 @@ services:
   # ========================================
   #   APPLICATION SERVICES
   # ========================================
-#
-#  identity-service:
-#    build:
-#      context: ./identity-service
-#      dockerfile: Dockerfile
-#      args:
-#        JAR_FILE: target/*.jar
-#    container_name: identity-service
-#    env_file: .env
-#    environment:
-#      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
-#      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-identity:5432/${DB_IDENTITY_NAME:-samt_identity}?serverTimezone=UTC
-#      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
-#      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-#      SPRING_DATA_REDIS_HOST: redis
-#      SPRING_DATA_REDIS_PORT: 6379
-#      SERVER_PORT: 8081
-#      GRPC_SERVER_PORT: 9091
-#      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
-#    ports:
-#      - "${IDENTITY_SERVICE_PORT:-8081}:8081"
-#      - "${IDENTITY_SERVICE_GRPC_PORT:-9091}:9091"
-#    depends_on:
-#      postgres-identity:
-#        condition: service_healthy
-#      redis:
-#        condition: service_healthy
-#    networks:
-#      - samt-network
-#    deploy:
-#      resources:
-#        limits:
-#          cpus: "1.0"
-#          memory: 768M
-#        reservations:
-#          cpus: "0.5"
-#          memory: 512M
-#    healthcheck:
-#      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
-#      interval: 30s
-#      timeout: 10s
-#      retries: 3
-#      start_period: 40s
-#    restart: unless-stopped
-#
-#  user-group-service:
-#    build:
-#      context: ./user-group-service
-#      dockerfile: Dockerfile
-#      args:
-#        JAR_FILE: target/*.jar
-#    container_name: user-group-service
-#    env_file: .env
-#    environment:
-#      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
-#      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-usergroup:5432/${DB_USERGROUP_NAME:-samt_usergroup}?serverTimezone=UTC
-#      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
-#      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-#      SERVER_PORT: 8082
-#      GRPC_SERVER_PORT: 9095
-#      IDENTITY_SERVICE_GRPC_HOST: identity-service
-#      IDENTITY_SERVICE_GRPC_PORT: 9091
-#      KAFKA_ENABLED: ${KAFKA_ENABLED:-true}
-#      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-#      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
-#    ports:
-#      - "${USER_GROUP_SERVICE_PORT:-8082}:8082"
-#      - "${USER_GROUP_SERVICE_GRPC_PORT:-9095}:9095"
-#    depends_on:
-#      postgres-usergroup:
-#        condition: service_healthy
-#      identity-service:
-#        condition: service_healthy
-#      kafka:
-#        condition: service_healthy
-#    networks:
-#      - samt-network
-#    deploy:
-#      resources:
-#        limits:
-#          cpus: "1.0"
-#          memory: 768M
-#        reservations:
-#          cpus: "0.5"
-#          memory: 512M
-#    healthcheck:
-#      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8082/actuator/health"]
-#      interval: 30s
-#      timeout: 10s
-#      retries: 3
-#      start_period: 60s
-#    restart: unless-stopped
 
-  # ========================================
-  #   OTHER SERVICES (commented - uncomment when needed)
-  # ========================================
+  api-gateway:
+    image: samt/api-gateway:latest
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    container_name: api-gateway
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      SERVER_PORT: 8080
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - create .env file}
+      JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+      # Internal JWT signing key (required - mounted from host)
+      GATEWAY_INTERNAL_JWT_PRIVATE_KEY_PEM_PATH: /certs/gateway-internal-jwt-private.pkcs8.pem
+      GATEWAY_INTERNAL_JWT_KID: ${GATEWAY_INTERNAL_JWT_KID:-gw-local-1}
+      # Upstream routing (aligns with the ports configured below)
+      gateway.upstream.identity: http://identity-service:${IDENTITY_SERVICE_PORT:-8081}
+      gateway.upstream.user-group: http://user-group-service:${USER_GROUP_SERVICE_PORT:-8082}
+      gateway.upstream.sync: http://sync-service:${SYNC_SERVICE_PORT:-8083}
+      gateway.upstream.project-config: http://project-config-service:${PROJECT_CONFIG_SERVICE_PORT:-8084}
+      gateway.upstream.analysis: http://analysis-service:${ANALYSIS_SERVICE_PORT:-8087}
+      gateway.upstream.report: http://report-service:${REPORT_SERVICE_PORT:-8088}
+      # External JWT validation (gateway validates user JWT via identity service JWKS)
+      JWT_JWKS_URI: http://identity-service:${IDENTITY_SERVICE_PORT:-8081}/.well-known/jwks.json
+    ports:
+      - "${API_GATEWAY_PORT:-9080}:8080"
+    volumes:
+      - ./.local-certs:/certs:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      identity-service:
+        condition: service_started
+      user-group-service:
+        condition: service_started
+      project-config-service:
+        condition: service_started
+      sync-service:
+        condition: service_started
+    networks:
+      - samt-network
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:$${SERVER_PORT}/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
 
-#  api-gateway:
-#    build:
-#      context: ./api-gateway
-#      dockerfile: Dockerfile
-#      args:
-#        JAR_FILE: target/*.jar
-#    container_name: api-gateway
-#    env_file: .env
-#    environment:
-#      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
-#      SPRING_DATA_REDIS_HOST: redis
-#      SPRING_DATA_REDIS_PORT: 6379
-#      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
-#    ports:
-#      - "${API_GATEWAY_PORT:-9080}:8080"
-#    depends_on:
-#      redis:
-#        condition: service_healthy
-#      identity-service:
-#        condition: service_healthy
-#    networks:
-#      - samt-network
-#    deploy:
-#      resources:
-#        limits:
-#          cpus: "1.0"
-#          memory: 768M
-#        reservations:
-#          cpus: "0.5"
-#          memory: 512M
-#    healthcheck:
-#      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
-#      interval: 30s
-#      timeout: 10s
-#      retries: 3
-#      start_period: 40s
-#    restart: unless-stopped
-#
-#  identity-service:
-#    build:
-#      context: ./identity-service
-#      dockerfile: Dockerfile
-#      args:
-#        JAR_FILE: target/*.jar
-#    container_name: identity-service
-#    env_file: .env
-#    environment:
-#      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
-#      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-identity:5432/${DB_IDENTITY_NAME:-samt_identity}?serverTimezone=UTC
-#      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
-#      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-#      SPRING_DATA_REDIS_HOST: redis
-#      SPRING_DATA_REDIS_PORT: 6379
-#      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
-#    ports:
-#      - "${IDENTITY_SERVICE_PORT:-8081}:8080"
-#    depends_on:
-#      postgres-identity:
-#        condition: service_healthy
-#      redis:
-#        condition: service_healthy
-#    networks:
-#      - samt-network
-#    deploy:
-#      resources:
-#        limits:
-#          cpus: "1.0"
-#          memory: 768M
-#        reservations:
-#          cpus: "0.5"
-#          memory: 512M
-#    healthcheck:
-#      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
-#      interval: 30s
-#      timeout: 10s
-#      retries: 3
-#      start_period: 40s
-#    restart: unless-stopped
-#
-#  sync-service:
-#    build:
-#      context: ./sync-service
-#      dockerfile: Dockerfile
-#      args:
-#        JAR_FILE: target/*.jar
-#    container_name: sync-service
-#    env_file: .env
-#    environment:
-#      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
-#      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-sync:5432/${DB_SYNC_NAME:-sync_db}?serverTimezone=UTC
-#      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
-#      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-#      SPRING_DATA_REDIS_HOST: redis
-#      SPRING_DATA_REDIS_PORT: 6379
-#      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
-#    ports:
-#      - "${SYNC_SERVICE_PORT:-8084}:8080"
-#    depends_on:
-#      postgres-sync:
-#        condition: service_healthy
-#      redis:
-#        condition: service_healthy
-#    networks:
-#      - samt-network
-#    deploy:
-#      resources:
-#        limits:
-#          cpus: "1.0"
-#          memory: 768M
-#        reservations:
-#          cpus: "0.5"
-#          memory: 512M
-#    healthcheck:
-#      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
-#      interval: 30s
-#      timeout: 10s
-#      retries: 3
-#      start_period: 40s
-#    restart: unless-stopped
-#
-#  analysis-service:
-#    build:
-#      context: ./analysis-service
-#      dockerfile: Dockerfile
-#      args:
-#        JAR_FILE: target/*.jar
-#    container_name: analysis-service
-#    env_file: .env
-#    environment:
-#      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
-#      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-core:5432/${DB_CORE_NAME:-samt_core}?serverTimezone=UTC
-#      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
-#      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-#      SPRING_DATA_REDIS_HOST: redis
-#      SPRING_DATA_REDIS_PORT: 6379
-#      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
-#    ports:
-#      - "${ANALYSIS_SERVICE_PORT:-8083}:8080"
-#    depends_on:
-#      postgres-core:
-#        condition: service_healthy
-#      redis:
-#        condition: service_healthy
-#    networks:
-#      - samt-network
-#    deploy:
-#      resources:
-#        limits:
-#          cpus: "1.0"
-#          memory: 768M
-#        reservations:
-#          cpus: "0.5"
-#          memory: 512M
-#    healthcheck:
-#      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
-#      interval: 30s
-#      timeout: 10s
-#      retries: 3
-#      start_period: 40s
-#    restart: unless-stopped
-#
-#  report-service:
-#    build:
-#      context: ./report-service
-#      dockerfile: Dockerfile
-#      args:
-#        JAR_FILE: target/*.jar
-#    container_name: report-service
-#    env_file: .env
-#    environment:
-#      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
-#      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-core:5432/${DB_CORE_NAME:-samt_core}?serverTimezone=UTC
-#      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
-#      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-#      SPRING_DATA_REDIS_HOST: redis
-#      SPRING_DATA_REDIS_PORT: 6379
-#      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
-#    ports:
-#      - "${REPORT_SERVICE_PORT:-8084}:8080"
-#    depends_on:
-#      postgres-core:
-#        condition: service_healthy
-#      redis:
-#        condition: service_healthy
-#    networks:
-#      - samt-network
-#    deploy:
-#      resources:
-#        limits:
-#          cpus: "1.0"
-#          memory: 768M
-#        reservations:
-#          cpus: "0.5"
-#          memory: 512M
-#    healthcheck:
-#      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
-#      interval: 30s
-#      timeout: 10s
-#      retries: 3
-#      start_period: 40s
-#    restart: unless-stopped
-#
-#  notification-service:
-#    build:
-#      context: ./notification-service
-#      dockerfile: Dockerfile
-#      args:
-#        JAR_FILE: target/*.jar
-#    container_name: notification-service
-#    env_file: .env
-#    environment:
-#      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
-#      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-core:5432/${DB_CORE_NAME:-samt_core}?serverTimezone=UTC
-#      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
-#      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-#      SPRING_DATA_REDIS_HOST: redis
-#      SPRING_DATA_REDIS_PORT: 6379
-#      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
-#    ports:
-#      - "${NOTIFICATION_SERVICE_PORT:-8085}:8080"
-#    depends_on:
-#      postgres-core:
-#        condition: service_healthy
-#      redis:
-#        condition: service_healthy
-#    networks:
-#      - samt-network
-#    deploy:
-#      resources:
-#        limits:
-#          cpus: "1.0"
-#          memory: 768M
-#        reservations:
-#          cpus: "0.5"
-#          memory: 512M
-#    healthcheck:
-#      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
-#      interval: 30s
-#      timeout: 10s
-#      retries: 3
-#      start_period: 40s
-#    restart: unless-stopped
+  identity-service:
+    image: samt/identity-service:latest
+    build:
+      context: .
+      dockerfile: identity-service/Dockerfile
+    container_name: identity-service
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      SERVER_PORT: ${IDENTITY_SERVICE_PORT:-8081}
+      GRPC_SERVER_PORT: ${IDENTITY_SERVICE_GRPC_PORT:-9091}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-identity:5432/${DB_IDENTITY_NAME:-samt_identity}?serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - create .env file}
+      JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+      # Identity JWT signing key (required - mounted from host)
+      JWT_PRIVATE_KEY_PATH: /certs/identity-jwt-private.pkcs8.pem
+      JWT_KEY_ID: ${JWT_KEY_ID:-identity-local-1}
+      # Local/dev: allow running without gRPC TLS material
+      GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-false}
+    ports:
+      - "${IDENTITY_SERVICE_PORT:-8081}:${IDENTITY_SERVICE_PORT:-8081}"
+      - "${IDENTITY_SERVICE_GRPC_PORT:-9091}:${IDENTITY_SERVICE_GRPC_PORT:-9091}"
+    volumes:
+      - ./.local-certs:/certs:ro
+    depends_on:
+      postgres-identity:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - samt-network
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:$${SERVER_PORT}/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  user-group-service:
+    image: samt/user-group-service:latest
+    build:
+      context: .
+      dockerfile: user-group-service/Dockerfile
+    container_name: user-group-service
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      SERVER_PORT: ${USER_GROUP_SERVICE_PORT:-8082}
+      GRPC_SERVER_PORT: ${USER_GROUP_SERVICE_GRPC_PORT:-9095}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-usergroup:5432/${DB_USERGROUP_NAME:-samt_usergroup}?serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      KAFKA_ENABLED: ${KAFKA_ENABLED:-true}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+      # Local/dev: allow running without gRPC TLS material
+      GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-false}
+      GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE: ${GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE:-plaintext}
+    ports:
+      - "${USER_GROUP_SERVICE_PORT:-8082}:${USER_GROUP_SERVICE_PORT:-8082}"
+      - "${USER_GROUP_SERVICE_GRPC_PORT:-9095}:${USER_GROUP_SERVICE_GRPC_PORT:-9095}"
+    depends_on:
+      postgres-usergroup:
+        condition: service_healthy
+      identity-service:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+    networks:
+      - samt-network
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:$${SERVER_PORT}/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  project-config-service:
+    image: samt/project-config-service:latest
+    build:
+      context: .
+      dockerfile: project-config-service/Dockerfile
+    container_name: project-config-service
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      SERVER_PORT: ${PROJECT_CONFIG_SERVICE_PORT:-8084}
+      GRPC_SERVER_PORT: ${PROJECT_CONFIG_SERVICE_GRPC_PORT:-9093}
+      DATABASE_URL: jdbc:postgresql://postgres-projectconfig:5432/${DB_PROJECTCONFIG_NAME:-projectconfig_db}
+      DATABASE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+      # Local/dev: allow running without gRPC TLS material
+      GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-false}
+      GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE: ${GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE:-plaintext}
+    ports:
+      - "${PROJECT_CONFIG_SERVICE_PORT:-8084}:${PROJECT_CONFIG_SERVICE_PORT:-8084}"
+    depends_on:
+      postgres-projectconfig:
+        condition: service_healthy
+      user-group-service:
+        condition: service_started
+    networks:
+      - samt-network
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:$${SERVER_PORT}/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  sync-service:
+    image: samt/sync-service:latest
+    build:
+      context: .
+      dockerfile: sync-service/Dockerfile
+    container_name: sync-service
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      SERVER_PORT: ${SYNC_SERVICE_PORT:-8083}
+      GRPC_SERVER_PORT: ${SYNC_SERVICE_GRPC_PORT:-9094}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-sync:5432/${DB_SYNC_NAME:-sync_db}?serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - create .env file}
+      JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+      # Local/dev: allow running without gRPC TLS material
+      GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-false}
+      GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE: ${GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE:-plaintext}
+    ports:
+      - "${SYNC_SERVICE_PORT:-8083}:${SYNC_SERVICE_PORT:-8083}"
+    depends_on:
+      postgres-sync:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      project-config-service:
+        condition: service_started
+      api-gateway:
+        condition: service_started
+    networks:
+      - samt-network
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:$${SERVER_PORT}/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  analysis-service:
+    image: samt/analysis-service:latest
+    build:
+      context: .
+      dockerfile: analysis-service/Dockerfile
+    container_name: analysis-service
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      SERVER_PORT: ${ANALYSIS_SERVICE_PORT:-8087}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-core:5432/${DB_CORE_NAME:-samt_core}?serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - create .env file}
+      JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    ports:
+      - "${ANALYSIS_SERVICE_PORT:-8087}:${ANALYSIS_SERVICE_PORT:-8087}"
+    depends_on:
+      postgres-core:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api-gateway:
+        condition: service_started
+    networks:
+      - samt-network
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:$${SERVER_PORT}/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  report-service:
+    image: samt/report-service:latest
+    build:
+      context: .
+      dockerfile: report-service/Dockerfile
+    container_name: report-service
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      SERVER_PORT: ${REPORT_SERVICE_PORT:-8088}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-core:5432/${DB_CORE_NAME:-samt_core}?serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - create .env file}
+      JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    ports:
+      - "${REPORT_SERVICE_PORT:-8088}:${REPORT_SERVICE_PORT:-8088}"
+    depends_on:
+      postgres-core:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api-gateway:
+        condition: service_started
+    networks:
+      - samt-network
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:$${SERVER_PORT}/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  notification-service:
+    image: samt/notification-service:latest
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    container_name: notification-service
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      SERVER_PORT: ${NOTIFICATION_SERVICE_PORT:-8085}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-core:5432/${DB_CORE_NAME:-samt_core}?serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - create .env file}
+      JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT:-8085}:${NOTIFICATION_SERVICE_PORT:-8085}"
+    depends_on:
+      postgres-core:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api-gateway:
+        condition: service_started
+    networks:
+      - samt-network
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:$${SERVER_PORT}/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
 
 # ========================================
 #   NETWORKS & VOLUMES

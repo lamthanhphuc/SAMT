@@ -55,23 +55,21 @@ cd SAMT
 cp .env.example .env
 # Edit .env với credentials thật
 
-# 3. Build tất cả services
-./mvnw clean package -DskipTests
+# 3. Dev-only: generate local JWT private keys (do NOT commit)
+mkdir -p .local-certs
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
+   -out .local-certs/identity-jwt-private.pkcs8.pem
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
+   -out .local-certs/gateway-internal-jwt-private.pkcs8.pem
 
-# 4. Start infrastructure first
-docker-compose up -d postgres-identity postgres-core redis
+# 4. Build + start full stack (Compose builds from repo root)
+docker compose up -d --build
 
-# 5. Wait for databases to be ready (30 seconds)
-Start-Sleep -Seconds 30
+# 5. Verify deployment
+docker compose ps
+docker compose logs -f
 
-# 6. Start application services
-docker-compose up -d
-
-# 7. Verify deployment
-docker-compose ps
-docker-compose logs -f
-
-# 8. Health check
+# 6. Health check
 curl http://localhost:9080/actuator/health
 curl http://localhost:8081/actuator/health
 ```
@@ -80,7 +78,7 @@ curl http://localhost:8081/actuator/health
 
 ```powershell
 # 1. Start only databases
-docker-compose up -d postgres-identity postgres-core redis
+docker compose up -d postgres-identity postgres-core redis
 
 # 2. Verify
 docker ps
@@ -100,18 +98,18 @@ docker ps
 
 ### 1. Kiểm tra containers
 ```powershell
-docker-compose ps
+docker compose ps
 # Tất cả services phải có status "Up" và "healthy"
 ```
 
 ### 2. Kiểm tra logs
 ```powershell
 # Logs tất cả services
-docker-compose logs -f
+docker compose logs -f
 
 # Logs 1 service cụ thể
-docker-compose logs -f identity-service
-docker-compose logs -f api-gateway
+docker compose logs -f identity-service
+docker compose logs -f api-gateway
 ```
 
 ### 3. Health checks
@@ -155,24 +153,24 @@ docker exec -it redis redis-cli -a ${REDIS_PASSWORD} PING
 
 ```powershell
 # Xem logs chi tiết
-docker-compose logs <service-name>
+docker compose logs <service-name>
 
 # Restart service
-docker-compose restart <service-name>
+docker compose restart <service-name>
 
 # Rebuild và restart
-docker-compose up -d --build <service-name>
+docker compose up -d --build <service-name>
 ```
 
 ### Issue: Database connection refused
 
 ```powershell
 # Kiểm tra database đã ready chưa
-docker-compose ps postgres-identity postgres-core
+docker compose ps postgres-identity postgres-core
 
 # Xem logs database
-docker-compose logs postgres-identity
-docker-compose logs postgres-core
+docker compose logs postgres-identity
+docker compose logs postgres-core
 
 # Kiểm tra network
 docker network inspect samt_samt-network
@@ -203,13 +201,13 @@ netstat -ano | findstr :6379
 ### Logs
 ```powershell
 # Real-time logs
-docker-compose logs -f
+docker compose logs -f
 
 # Logs từ 10 phút trước
-docker-compose logs --since 10m
+docker compose logs --since 10m
 
 # Logs với timestamp
-docker-compose logs -t
+docker compose logs -t
 ```
 
 ### Metrics
@@ -244,16 +242,16 @@ git pull
 ./mvnw clean package -DskipTests
 
 # 3. Rebuild Docker image
-docker-compose build <service-name>
+docker compose build <service-name>
 
 # 4. Restart service
-docker-compose up -d <service-name>
+docker compose up -d <service-name>
 ```
 
 ### Update single service
 ```powershell
 # Zero-downtime update (nếu có replica)
-docker-compose up -d --no-deps --build <service-name>
+docker compose up -d --no-deps --build <service-name>
 ```
 
 ### Database backup
@@ -276,16 +274,16 @@ docker cp redis:/data/dump.rdb ./backup_redis_$(Get-Date -Format 'yyyyMMdd').rdb
 ### Graceful shutdown
 ```powershell
 # Stop tất cả services (giữ volumes)
-docker-compose down
+docker compose down
 
 # Stop và xoá volumes (CAREFUL!)
-docker-compose down -v
+docker compose down -v
 ```
 
 ### Emergency shutdown
 ```powershell
 # Force stop
-docker-compose kill
+docker compose kill
 ```
 
 ---

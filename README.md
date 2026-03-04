@@ -41,6 +41,41 @@ cp .env.example .env
 POSTGRES_PASSWORD=your_secure_password_here
 ```
 
+## 🐳 Local Development with Docker
+
+### Vì sao build context phải là repo-root?
+Các Dockerfile của từng service là **multi-module Maven builds** và có các lệnh `COPY pom.xml` + `COPY <module>/pom.xml` từ **repo root**. Vì vậy Compose bắt buộc phải build với:
+
+- `build.context: .`
+- `build.dockerfile: <service-folder>/Dockerfile`
+
+Nếu dùng `context: ./<service>` thì Docker build sẽ **không thấy** `pom.xml` ở root và các module poms → build fail.
+
+### Local secrets bắt buộc (dev-only)
+Một số service yêu cầu private key để khởi động (Identity JWT signing key, Gateway internal JWT signing key). Tạo 2 file key PKCS#8 (KHÔNG COMMIT):
+
+```bash
+mkdir -p .local-certs
+
+# Identity Service JWT signing key (PKCS#8)
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
+	-out .local-certs/identity-jwt-private.pkcs8.pem
+
+# API Gateway internal JWT signing key (PKCS#8)
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
+	-out .local-certs/gateway-internal-jwt-private.pkcs8.pem
+```
+
+### Run (repo root)
+```bash
+docker compose up --build
+```
+
+Health check nhanh:
+```bash
+curl http://localhost:9080/actuator/health
+```
+
 ### 3️⃣ Build & Run
 
 **Option A: Docker (Recommended for Production)**
