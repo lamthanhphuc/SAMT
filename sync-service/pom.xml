@@ -75,12 +75,10 @@
 	<dependency>
 		<groupId>io.github.resilience4j</groupId>
 		<artifactId>resilience4j-spring-boot3</artifactId>
-		<version>2.2.0</version>
 	</dependency>
 	<dependency>
 		<groupId>io.github.resilience4j</groupId>
 		<artifactId>resilience4j-reactor</artifactId>
-		<version>2.2.0</version>
 	</dependency>
 
 	<!-- WebClient for non-blocking external API calls -->
@@ -178,9 +176,9 @@
 				<artifactId>protobuf-maven-plugin</artifactId>
 				<version>0.6.1</version>
 				<configuration>
-					<protocArtifact>com.google.protobuf:protoc:3.25.1:exe:${os.detected.classifier}</protocArtifact>
+					<protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
 					<pluginId>grpc-java</pluginId>
-					<pluginArtifact>io.grpc:protoc-gen-grpc-java:1.60.0:exe:${os.detected.classifier}</pluginArtifact>
+					<pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
 				</configuration>
 				<executions>
 					<execution>

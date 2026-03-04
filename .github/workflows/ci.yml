@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Maven verify (tests + enforcer + SBOM)
+        run: ./mvnw -B verify
+
+      - name: Upload SBOM (CycloneDX)
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          if-no-files-found: error
+          path: |
+            target/bom.json
+            target/bom.xml
+
+      - name: Cache OWASP Dependency-Check data
+        uses: actions/cache@v4
+        with:
+          path: .cache/dependency-check
+          key: dependency-check-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            dependency-check-${{ runner.os }}-
+
+      - name: OWASP Dependency-Check
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: >-
+          ./mvnw -B org.owasp:dependency-check-maven:12.2.0:check
+          -DfailBuildOnCVSS=7
+          -Dformat=ALL
+          -DoutputDirectory=target/dependency-check
+          -DdataDirectory=.cache/dependency-check
+          -DnvdApiKey=${NVD_API_KEY}
+
+      - name: Upload Dependency-Check report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          if-no-files-found: warn
+          path: target/dependency-check
+
+      - name: Build representative Docker image (api-gateway)
+        run: docker build -f api-gateway/Dockerfile -t samt/api-gateway:ci .
+
+      - name: Trivy scan (fail on HIGH,CRITICAL)
+        uses: aquasecurity/trivy-action@0.34.2
+        with:
+          image-ref: samt/api-gateway:ci
+          format: table
+          exit-code: '1'
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false

@@ -19,15 +19,19 @@ spring:
 
   kafka:
     enabled: false
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:8080/.well-known/jwks.json
 grpc:
   server:
     port: 0
+    security:
+      enabled: false
   client:
     identity-service:
       address: static://localhost:0
-      negotiationType: TLS
-      security:
-        trustCertCollection: ${GRPC_TRUST_CERT:file:/etc/certs/ca.crt}
-        clientCertChain: ${GRPC_CERT_CHAIN:file:/etc/certs/tls.crt}
-        clientPrivateKey: ${GRPC_PRIVATE_KEY:file:/etc/certs/tls.key}
+      negotiation-type: PLAINTEXT
 

@@ -19,9 +19,6 @@
 
     <properties>
         <java.version>21</java.version>
-        <flyway.version>10.8.1</flyway.version>
-        <grpc.version>1.60.0</grpc.version>
-        <protobuf.version>3.25.1</protobuf.version>
     </properties>
 
     <dependencies>
@@ -92,17 +89,14 @@
         <dependency>
             <groupId>io.github.resilience4j</groupId>
             <artifactId>resilience4j-spring-boot3</artifactId>
-            <version>2.1.0</version>
         </dependency>
         <dependency>
             <groupId>io.github.resilience4j</groupId>
             <artifactId>resilience4j-circuitbreaker</artifactId>
-            <version>2.1.0</version>
         </dependency>
         <dependency>
             <groupId>io.github.resilience4j</groupId>
             <artifactId>resilience4j-retry</artifactId>
-            <version>2.1.0</version>
         </dependency>
 
         <!-- Common Events Library -->
@@ -136,22 +130,18 @@
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-netty-shaded</artifactId>
-            <version>1.75.0</version>
         </dependency>
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-protobuf</artifactId>
-            <version>1.75.0</version>
         </dependency>
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-stub</artifactId>
-            <version>1.75.0</version>
         </dependency>
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
-            <version>${protobuf.version}</version>
         </dependency>
         <dependency>
             <groupId>net.devh</groupId>

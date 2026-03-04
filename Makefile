@@ -3,11 +3,12 @@
 # ==============================================
 # Shortcuts for common operations
 
-.PHONY: help build up down restart logs clean
+.PHONY: help build build-skip-tests up down restart logs clean
 
 help: ## Show this help
 	@echo "Available commands:"
 	@echo "  make build       - Build all services"
+	@echo "  make build-skip-tests - Build all services (skip tests)"
 	@echo "  make up          - Start all containers"
 	@echo "  make down        - Stop all containers"
 	@echo "  make restart     - Restart all containers"
@@ -15,8 +16,11 @@ help: ## Show this help
 	@echo "  make clean       - Clean Maven & Docker artifacts"
 	@echo "  make db-only     - Start only databases (for IDE dev)"
 
-build: ## Build all Maven projects
-	./mvnw clean package -DskipTests
+build: ## Build all Maven projects (includes tests)
+	./mvnw -B clean verify
+
+build-skip-tests: ## Build all Maven projects (skip tests)
+	./mvnw -B clean package -DskipTests
 
 up: ## Start all containers
 	docker-compose up -d

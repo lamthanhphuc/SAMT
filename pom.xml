@@ -16,6 +16,10 @@
 	<properties>
 		<java.version>21</java.version>
 		<spring-boot.version>3.2.2</spring-boot.version>
+		<grpc.version>1.61.0</grpc.version>
+		<protobuf.version>3.25.1</protobuf.version>
+		<resilience4j.version>2.2.0</resilience4j.version>
+		<flyway.version>10.8.1</flyway.version>
 	</properties>
 
 	<!-- Import Spring Boot BOM -->
@@ -29,11 +33,43 @@
 				<scope>import</scope>
 			</dependency>
 			<dependency>
-				<groupId>io.grpc</groupId>
-				<artifactId>grpc-bom</artifactId>
-				<version>1.61.0</version>
+				<groupId>io.github.resilience4j</groupId>
+				<artifactId>resilience4j-bom</artifactId>
+				<version>${resilience4j.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>io.grpc</groupId>
+				<artifactId>grpc-bom</artifactId>
+				<version>${grpc.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>com.google.protobuf</groupId>
+				<artifactId>protobuf-java</artifactId>
+				<version>${protobuf.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.google.errorprone</groupId>
+				<artifactId>error_prone_annotations</artifactId>
+				<version>2.23.0</version>
+			</dependency>
+			<dependency>
+				<groupId>com.google.guava</groupId>
+				<artifactId>guava</artifactId>
+				<version>32.1.3-jre</version>
+			</dependency>
+			<dependency>
+				<groupId>org.flywaydb</groupId>
+				<artifactId>flyway-core</artifactId>
+				<version>${flyway.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.flywaydb</groupId>
+				<artifactId>flyway-database-postgresql</artifactId>
+				<version>${flyway.version}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
@@ -63,6 +99,69 @@
 				<configuration>
 					<release>21</release>
 				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<version>3.6.2</version>
+				<executions>
+					<execution>
+						<id>enforce</id>
+						<phase>validate</phase>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+						<configuration>
+							<fail>true</fail>
+							<failFast>true</failFast>
+							<rules>
+								<requireJavaVersion>
+									<version>[21,)</version>
+								</requireJavaVersion>
+								<dependencyConvergence />
+							</rules>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.cyclonedx</groupId>
+				<artifactId>cyclonedx-maven-plugin</artifactId>
+				<version>2.9.1</version>
+				<executions>
+					<execution>
+						<id>cyclonedx-aggregate-bom-json</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>makeAggregateBom</goal>
+						</goals>
+						<configuration>
+							<schemaVersion>1.5</schemaVersion>
+							<outputFormat>json</outputFormat>
+							<outputName>bom</outputName>
+							<outputDirectory>${project.build.directory}</outputDirectory>
+							<includeBomSerialNumber>true</includeBomSerialNumber>
+							<includeLicenseText>false</includeLicenseText>
+						</configuration>
+					</execution>
+					<execution>
+						<id>cyclonedx-aggregate-bom-xml</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>makeAggregateBom</goal>
+						</goals>
+						<configuration>
+							<schemaVersion>1.5</schemaVersion>
+							<outputFormat>xml</outputFormat>
+							<outputName>bom</outputName>
+							<outputDirectory>${project.build.directory}</outputDirectory>
+							<includeBomSerialNumber>true</includeBomSerialNumber>
+							<includeLicenseText>false</includeLicenseText>
+						</configuration>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 		<pluginManagement>
