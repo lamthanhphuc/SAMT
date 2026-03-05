@@ -1,0 +1,13 @@
+title = "SAMT Gitleaks Configuration"
+
+[allowlist]
+  description = "Ignore false positives in documentation, templates, and test/example files"
+  paths = [
+    '''docs/''',
+    '''.*API_CONTRACT\.md$''',
+    '''.*TEST_CASES\.md$''',
+    '''.*SECURITY\.md$''',
+    '''.*IMPLEMENTATION\.md$''',
+    '''k8s-secrets\.template\.yml$''',
+    '''load-test\.js$''',
+  ]
