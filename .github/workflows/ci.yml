@@ -61,15 +61,65 @@ jobs:
           if-no-files-found: warn
           path: target/dependency-check
 
-      - name: Build representative Docker image (api-gateway)
-        run: docker build -f api-gateway/Dockerfile -t samt/api-gateway:ci .
+  trivy-scan:
+    runs-on: ubuntu-24.04
+    needs: build-test-security
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - api-gateway
+          - identity-service
+          - user-group-service
+          - project-config-service
+          - sync-service
+          - analysis-service
+          - report-service
+          - notification-service
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Trivy scan (fail on HIGH,CRITICAL)
+      - name: Build Docker image (${{ matrix.service }})
+        run: docker build -f ${{ matrix.service }}/Dockerfile -t samt/${{ matrix.service }}:ci .
+
+      - name: Trivy scan (${{ matrix.service }})
         uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478 # 0.34.2
         with:
-          image-ref: samt/api-gateway:ci
+          image-ref: samt/${{ matrix.service }}:ci
           format: table
           exit-code: '1'
           vuln-type: os,library
           severity: HIGH,CRITICAL
           ignore-unfixed: false
+
+  codeql-sast:
+    runs-on: ubuntu-24.04
+    needs: build-test-security
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: java
+          queries: security-and-quality
+
+      - name: Setup Java 21 (Temurin)
+        uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 # v4.2.1
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build for CodeQL
+        run: bash ./mvnw -B compile -DskipTests
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:java"

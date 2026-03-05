@@ -9,7 +9,7 @@ version: "3.9"
 
 services:
   kafka:
-    image: confluentinc/cp-kafka:7.6.0
+    image: confluentinc/cp-kafka:7.6.0@sha256:24cdd3a7fa89d2bed150560ebea81ff1943badfa61e51d66bb541a6b0d7fb047
     container_name: kafka
     # SECURITY: no host port publishing in production
     ports: []

@@ -18,7 +18,7 @@ services:
   # ========================================
 
   postgres-identity:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:fceb6f86328c36f2438fae3b851b0cc57c4a7e69a58c866d9ce24281f2cf0c9c
     container_name: postgres-identity
     env_file: .env
     environment:
@@ -47,7 +47,7 @@ services:
     restart: unless-stopped
 
   postgres-core:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:fceb6f86328c36f2438fae3b851b0cc57c4a7e69a58c866d9ce24281f2cf0c9c
     container_name: postgres-core
     env_file: .env
     environment:
@@ -76,7 +76,7 @@ services:
     restart: unless-stopped
 
   postgres-projectconfig:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:fceb6f86328c36f2438fae3b851b0cc57c4a7e69a58c866d9ce24281f2cf0c9c
     container_name: postgres-projectconfig
     env_file: .env
     environment:
@@ -105,7 +105,7 @@ services:
     restart: unless-stopped
 
   postgres-usergroup:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:fceb6f86328c36f2438fae3b851b0cc57c4a7e69a58c866d9ce24281f2cf0c9c
     container_name: postgres-usergroup
     env_file: .env
     environment:
@@ -134,7 +134,7 @@ services:
     restart: unless-stopped
 
   postgres-sync:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:fceb6f86328c36f2438fae3b851b0cc57c4a7e69a58c866d9ce24281f2cf0c9c
     container_name: postgres-sync
     env_file: .env
     environment:
@@ -163,7 +163,7 @@ services:
     restart: unless-stopped
 
   kafka:
-    image: confluentinc/cp-kafka:7.6.0
+    image: confluentinc/cp-kafka:7.6.0@sha256:24cdd3a7fa89d2bed150560ebea81ff1943badfa61e51d66bb541a6b0d7fb047
     container_name: kafka
     # SECURITY: do not publish Kafka ports to the host by default.
     # If you need host access for local tooling, use docker-compose.override.yml (see example).
@@ -212,7 +212,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:8b81dd37ff027bec4e516d41acfbe9fe2460070dc6d4a4570a2ac5b9d59df065
     container_name: redis
     env_file: .env
     # SECURITY: avoid passing secrets in process arguments. The password comes from env at runtime
@@ -397,6 +397,9 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       KAFKA_ENABLED: ${KAFKA_ENABLED:-true}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - create .env file}
       JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
       # SECURITY DEFAULTS: TLS/mTLS by default. Override explicitly for local dev if needed.
       GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-true}
@@ -406,6 +409,8 @@ services:
       - "${USER_GROUP_SERVICE_GRPC_PORT:-9095}"
     depends_on:
       postgres-usergroup:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       identity-service:
         condition: service_started

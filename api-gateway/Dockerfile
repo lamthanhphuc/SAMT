@@ -3,7 +3,7 @@
 # ==============================================
 
 # Stage 1: Builder (optional)
-FROM maven:3.9.6-eclipse-temurin-21 AS builder
+FROM maven:3.9.6-eclipse-temurin-21@sha256:8d63d4c1902cb12d9e79a70671b18ebe26358cb592561af33ca1808f00d935cb AS builder
 WORKDIR /app
 
 COPY pom.xml .
