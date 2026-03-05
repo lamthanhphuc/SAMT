@@ -36,7 +36,9 @@ spring:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:localhost}
       port: ${SPRING_DATA_REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required for security - set in .env file}
+      # In secure deployments, prefer Docker secret `redis_password` via Spring configtree.
+      # Local/dev can still provide REDIS_PASSWORD via .env.
+      password: ${redis_password:${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required for security - set in .env file}}
       timeout: 3000ms
       lettuce:
         pool:

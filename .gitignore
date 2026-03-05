@@ -53,3 +53,7 @@ docs/API_MANUAL_TEST_CASES.md
 
 # Local logs
 logs/
+
+# Local caches (never commit)
+.cache/
+dependency-check-data/

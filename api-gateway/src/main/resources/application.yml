@@ -42,7 +42,9 @@ jwt:
   # Identity Service JWKS endpoint. Production should set JWT_JWKS_URI explicitly.
   jwks-uri: ${JWT_JWKS_URI:http://identity-service:8081/.well-known/jwks.json}
 
-gateway:
+      # In secure deployments, prefer Docker secret `redis_password` via Spring configtree.
+      # Local/dev can still provide REDIS_PASSWORD via .env.
+      password: ${redis_password:${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required for security - set in .env file}}
   cors:
     allowed-origins:
       - https://app.example.com
