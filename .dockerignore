@@ -1,0 +1,24 @@
+# Keep Docker build context minimal and prevent leaking secrets/certs into daemon cache
+.env
+.env.*
+.local-certs/
+secrets/
+.git/
+.github/
+.cache/
+.tmp/
+**/target/
+target/
+**/*.log
+**/*.pem
+**/*.key
+**/*.crt
+**/*.p12
+**/*.pfx
+**/*.jks
+k8s-secrets.template.yml
+k8s-deployment-example.yaml
+docker-compose*.yml
+docs/
+CLEANUP_REPORT.md
+DEPLOYMENT.md

@@ -30,6 +30,7 @@ spec:
     metadata:
       labels:
         app: project-config-service
+        tier: app
     spec:
       terminationGracePeriodSeconds: 40  # CRITICAL: Must be >= Spring shutdown timeout
       securityContext:

@@ -43,6 +43,20 @@ services:
       SPRING_CONFIG_IMPORT: optional:configtree:/run/secrets/
       REDIS_PASSWORD: __SET_VIA_DOCKER_SECRET__
 
+  user-group-service:
+    secrets:
+      - redis_password
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configtree:/run/secrets/
+      REDIS_PASSWORD: __SET_VIA_DOCKER_SECRET__
+
+  project-config-service:
+    secrets:
+      - redis_password
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configtree:/run/secrets/
+      REDIS_PASSWORD: __SET_VIA_DOCKER_SECRET__
+
   sync-service:
     secrets:
       - redis_password

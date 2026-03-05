@@ -1,13 +1,10 @@
 title = "SAMT Gitleaks Configuration"
 
 [allowlist]
-  description = "Ignore false positives in documentation, templates, and test/example files"
-  paths = [
-    '''docs/''',
-    '''.*API_CONTRACT\.md$''',
-    '''.*TEST_CASES\.md$''',
-    '''.*SECURITY\.md$''',
-    '''.*IMPLEMENTATION\.md$''',
-    '''k8s-secrets\.template\.yml$''',
-    '''load-test\.js$''',
+  description = "Allow only known non-secret placeholders"
+  regexes = [
+    '''BASE64_ENCODED_(PASSWORD|SECRET)''',
+    '''CHANGE_ME(_[A-Z0-9_]+)?''',
+    '''REPLACE_WITH_PUBLISHED_DIGEST''',
+    '''__SET_VIA_DOCKER_SECRET__''',
   ]
