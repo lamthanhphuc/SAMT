@@ -1,26 +1,20 @@
 name: gitleaks
 
 on:
-push:
-pull_request:
+  push:
+    branches: [ main ]
+  pull_request:
 
 jobs:
-gitleaks:
-name: Secret Scan
-runs-on: ubuntu-24.04
+  scan:
+    name: Secret Scan
+    runs-on: ubuntu-24.04
 
-```
-steps:
-  - name: Checkout repository
-    uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  - name: Run Gitleaks
-    run: |
-      docker run --rm \
-      -v ${{ github.workspace }}:/repo \
-      zricethezav/gitleaks:latest \
-      detect \
-      --source="/repo" \
-      --redact \
-      --verbose
-```
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          config-path: .gitleaks.toml
