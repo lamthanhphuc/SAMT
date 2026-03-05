@@ -43,12 +43,23 @@ build/
 
 # Local-only / secret-like files (do not commit)
 Makefile.secrets
+
+# Local certificate/key material and compose secret files
+.local-certs/
+secrets/
+
+# Private keys / certs
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+*.jks
+*.keystore
+# Kubernetes secrets:
+# - Commit the template (`k8s-secrets.template.yml`)
+# - Keep the rendered secrets file local-only (`k8s-secrets.yml`)
 k8s-secrets.yml
-docker-compose.kafka-production.yml
-docker-compose.secure.yml
-security-monitoring-config.yml
-docs/JWT_CLAIM_CONTRACT.md
-docs/API_MANUAL_TEST_CASES.md
 .copilot-recovery/
 
 # Local logs

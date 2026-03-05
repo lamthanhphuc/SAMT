@@ -156,7 +156,7 @@ docker-compose up -d postgres-identity postgres-core redis
 ```bash
 # Database
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=12345
+POSTGRES_PASSWORD=CHANGE_ME_STRONG_PASSWORD_HERE
 DB_IDENTITY_NAME=samt_identity
 DB_CORE_NAME=samt_core
 
@@ -170,6 +170,11 @@ SPRING_PROFILES_ACTIVE=docker
 # Java
 JAVA_OPTS=-Xms256m -Xmx512m -XX:+UseG1GC
 ```
+
+### Password Policy (Recommended)
+- Use unique, strong passwords per environment (do not reuse local secrets in staging/prod).
+- Do not commit secrets to Git; prefer Docker/Kubernetes secrets or a managed secrets store.
+- Rotate credentials regularly and after any suspected exposure.
 
 ---
 

@@ -4,7 +4,7 @@
 **Spring Boot:** 3.2+  
 **Java:** 21  
 **Port:** 8083  
-**Management/Actuator (prod):** 9001 (internal-only; do not expose externally)
+**Management/Actuator (prod):** same as app port (internal-only; do not expose externally)
 
 ---
 

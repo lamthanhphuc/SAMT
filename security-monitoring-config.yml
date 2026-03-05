@@ -1,0 +1,374 @@
+# ==============================================
+# SECURITY MONITORING AND ALERT CONDITIONS
+# ==============================================
+# Zero-Trust security monitoring with automated response
+#
+# This file defines alert conditions, thresholds, and automated
+# responses for security events in the SAMT API Gateway.
+
+monitoring:
+  security:
+    enabled: true
+    
+    # Alert destinations
+    alerting:
+      webhook:
+        url: ${SECURITY_ALERT_WEBHOOK:#{null}}
+        timeout: 5000ms
+        retry-attempts: 3
+        
+      email:
+        enabled: ${SECURITY_EMAIL_ALERTS:false}
+        smtp-host: ${SMTP_HOST:#{null}}
+        recipients: ${ALERT_RECIPIENTS:security@company.com}
+        
+      slack:
+        webhook-url: ${SLACK_SECURITY_WEBHOOK:#{null}}
+        channel: "#security-alerts"
+        
+    # Event aggregation window
+    aggregation:
+      window-minutes: 5
+      
+    # Alert conditions and thresholds
+    alerts:
+    
+      # CRITICAL: Brute Force Attack Detection
+      - name: "brute_force_attack"
+        severity: "CRITICAL"
+        condition: "authentication_failures >= 5 in 5 minutes from same IP"
+        query: |
+          SELECT client_ip, COUNT(*) as failure_count
+          FROM security_events 
+          WHERE event_type = 'AUTHENTICATION_FAILURE' 
+            AND timestamp >= NOW() - INTERVAL 5 MINUTE
+          GROUP BY client_ip 
+          HAVING failure_count >= 5
+        actions:
+          - type: "block_ip"
+            duration: "1h"
+          - type: "alert_soc"
+            priority: "P1"
+          - type: "auto_rotate_secrets"
+            if: "failure_count >= 10"
+            
+      # CRITICAL: Mass Authentication Failures
+      - name: "mass_auth_failures"
+        severity: "CRITICAL" 
+        condition: "authentication_failures >= 50 in 5 minutes across all IPs"
+        query: |
+          SELECT COUNT(*) as total_failures
+          FROM security_events
+          WHERE event_type = 'AUTHENTICATION_FAILURE'
+            AND timestamp >= NOW() - INTERVAL 5 MINUTE
+          HAVING total_failures >= 50
+        actions:
+          - type: "enable_strict_mode"
+            duration: "30m"
+          - type: "alert_soc"
+            priority: "P0"
+          - type: "emergency_lockdown"
+            if: "total_failures >= 100"
+            
+      # HIGH: IP Spoofing Attempts
+      - name: "ip_spoofing_attempts"
+        severity: "HIGH"
+        condition: "ip_spoofing_attempts >= 3 in 10 minutes"
+        query: |
+          SELECT client_ip, COUNT(*) as spoofing_attempts
+          FROM security_events
+          WHERE event_type = 'IP_SPOOFING_ATTEMPT'
+            AND timestamp >= NOW() - INTERVAL 10 MINUTE
+          GROUP BY client_ip
+          HAVING spoofing_attempts >= 3
+        actions:
+          - type: "block_ip"
+            duration: "24h"
+          - type: "alert_netops"
+            priority: "P2"
+            
+      # CRITICAL: Configuration Drift Detection
+      - name: "configuration_drift"
+        severity: "CRITICAL"
+        condition: "any configuration_drift event"
+        query: |
+          SELECT *
+          FROM security_events
+          WHERE event_type = 'CONFIGURATION_DRIFT'
+            AND timestamp >= NOW() - INTERVAL 1 MINUTE
+        actions:
+          - type: "emergency_lockdown"
+            reason: "Configuration compromise suspected"
+          - type: "alert_soc" 
+            priority: "P0"
+          - type: "freeze_deployments"
+            
+      # HIGH: Rate Limit Abuse Pattern
+      - name: "rate_limit_abuse"
+        severity: "HIGH"
+        condition: "rate_limit_exceeded >= 100 from same source in 1 hour"
+        query: |
+          SELECT client_ip, COUNT(*) as rate_limit_hits
+          FROM security_events
+          WHERE event_type = 'RATE_LIMIT_EXCEEDED'
+            AND timestamp >= NOW() - INTERVAL 1 HOUR
+          GROUP BY client_ip
+          HAVING rate_limit_hits >= 100
+        actions:
+          - type: "progressive_penalty"
+            stages:
+              - duration: "1h"
+                multiplier: 2
+              - duration: "6h" 
+                multiplier: 10
+              - duration: "24h"
+                multiplier: 100
+          - type: "alert_netops"
+            priority: "P2"
+            
+      # CRITICAL: Suspicious Activity Patterns
+      - name: "suspicious_activity_cluster"
+        severity: "CRITICAL"
+        condition: "multiple suspicious activity types from same IP"
+        query: |
+          SELECT client_ip, 
+                 COUNT(DISTINCT JSON_EXTRACT(metadata, '$.activity_type')) as activity_types,
+                 COUNT(*) as total_events
+          FROM security_events
+          WHERE event_type = 'SUSPICIOUS_ACTIVITY'
+            AND timestamp >= NOW() - INTERVAL 15 MINUTE
+          GROUP BY client_ip
+          HAVING activity_types >= 3 OR total_events >= 10
+        actions:
+          - type: "block_ip"
+            duration: "72h"
+          - type: "alert_soc"
+            priority: "P1"
+          - type: "enhanced_monitoring"
+            duration: "7d"
+            
+      # WARN: Unusual Geographic Activity
+      - name: "geographic_anomaly"
+        severity: "WARN"
+        condition: "authentication from unusual location"
+        query: |
+          SELECT user_id, client_ip, 
+                 LAG(client_ip) OVER (PARTITION BY user_id ORDER BY timestamp) as prev_ip
+          FROM security_events
+          WHERE event_type = 'AUTHENTICATION_SUCCESS'
+            AND user_id IS NOT NULL
+            AND timestamp >= NOW() - INTERVAL 1 HOUR
+          HAVING client_ip != prev_ip 
+            AND GEOIP_DISTANCE(client_ip, prev_ip) > 1000  -- 1000km threshold
+        actions:
+          - type: "require_mfa"
+            duration: "24h"
+          - type: "alert_user"
+            method: "email"
+          - type: "enhanced_session_validation"
+            
+      # INFO: Secret Rotation Events
+      - name: "secret_rotation_monitoring"
+        severity: "INFO"
+        condition: "secret rotation success or failure"  
+        query: |
+          SELECT secret_type, 
+                 JSON_EXTRACT(metadata, '$.success') as success,
+                 COUNT(*) as rotation_count
+          FROM security_events
+          WHERE event_type = 'SECRET_ROTATION'
+            AND timestamp >= NOW() - INTERVAL 1 DAY
+          GROUP BY secret_type, success
+        actions:
+          - type: "update_dashboard"
+          - type: "compliance_log"
+          - type: "alert_ops"
+            if: "success = false"
+            priority: "P2"
+
+    # Automated response actions
+    actions:
+    
+      # IP blocking via iptables/cloud firewall
+      block_ip:
+        handler: "IpBlockingHandler"
+        config:
+          method: "cloud_firewall"  # or "iptables" for on-premise
+          rule_prefix: "SAMT_SECURITY_"
+          
+      # Emergency system lockdown
+      emergency_lockdown:
+        handler: "EmergencyLockdownHandler"
+        config:
+          disable_new_sessions: true
+          require_admin_unlock: true
+          preserve_existing_sessions: false
+          
+      # Progressive rate limiting penalties
+      progressive_penalty:
+        handler: "ProgressivePenaltyHandler"
+        config:
+          redis_key_prefix: "penalty:"
+          base_rate_limit: 10
+          
+      # Strict security mode
+      enable_strict_mode:
+        handler: "StrictModeHandler"  
+        config:
+          require_mfa: true
+          short_session_timeout: "15m"
+          enhanced_validation: true
+          
+      # Alert handlers
+      alert_soc:
+        handler: "SocAlertHandler"
+        config:
+          soc_endpoint: ${SOC_ALERT_ENDPOINT}
+          escalation_matrix:
+            P0: "immediate"
+            P1: "5m"
+            P2: "15m"
+            P3: "1h"
+            
+      alert_netops:
+        handler: "NetworkOpsAlertHandler"
+        config:
+          netops_webhook: ${NETOPS_WEBHOOK}
+          include_network_context: true
+          
+      # Secret management
+      auto_rotate_secrets:
+        handler: "AutoSecretRotationHandler"
+        config:
+          rotation_targets:
+            - "jwt_secret"
+            - "gateway_internal_jwt_private_key"
+          emergency_rotation: true
+          
+    # Threat intelligence integration
+    threat_intelligence:
+      enabled: true
+      
+      feeds:
+        - name: "abuse_ip_db"
+          url: "https://api.abuseipdb.com/api/v2/check"
+          api_key: ${ABUSE_IP_DB_KEY}
+          cache_ttl: "1h"
+          confidence_threshold: 75
+          
+        - name: "threat_crowd"
+          url: "https://www.threatcrowd.org/searchApi/v2/ip/report/"
+          cache_ttl: "6h"
+          
+      # Automatic IP reputation checking
+      auto_check:
+        on_events:
+          - "AUTHENTICATION_FAILURE"
+          - "SUSPICIOUS_ACTIVITY"
+          - "BRUTE_FORCE_DETECTED"
+        action_threshold: 50  # Reply score
+        
+    # Security metrics and KPIs
+    metrics:
+      enabled: true
+      
+      collection_interval: "1m"
+      retention_period: "90d"
+      
+      kpis:
+        - name: "authentication_failure_rate"
+          query: "AUTH_FAILURES / TOTAL_AUTH_ATTEMPTS * 100"
+          threshold: 5  # 5% failure rate alert
+          
+        - name: "unique_attacking_ips"
+          query: "COUNT(DISTINCT client_ip) WHERE event_type LIKE '%ATTACK%'"
+          threshold: 10  # 10+ unique attacking IPs
+          
+        - name: "security_events_per_minute"
+          query: "COUNT(*) / INTERVAL_MINUTES"
+          threshold: 100  # 100+ events/minute
+          
+        - name: "suspicious_activity_trend"
+          query: "MOVING_AVERAGE(SUSPICIOUS_EVENTS, 24h)"
+          threshold_change: 200  # 200% increase alert
+          
+      # Dashboard configuration
+      dashboard:
+        refresh_interval: "30s"
+        charts:
+          - type: "timeseries"
+            title: "Security Events by Type"
+            metrics: ["auth_failures", "rate_limits", "suspicious_activity"]
+            
+          - type: "heatmap"
+            title: "Attack Sources (Geographic)"
+            metric: "client_ip"
+            geo_mapping: true
+            
+          - type: "gauge"
+            title: "System Threat Level"
+            calculation: "WEIGHTED_SCORE(all_security_metrics)"
+            thresholds:
+              low: [0, 30]
+              medium: [30, 70] 
+              high: [70, 90]
+              critical: [90, 100]
+
+# ==============================================
+# INCIDENT RESPONSE PLAYBOOKS
+# ==============================================
+incident_response:
+  
+  playbooks:
+  
+    # Brute Force Attack Response
+    brute_force_attack:
+      trigger: "brute_force_attack alert"
+      steps:
+        1. "Block offending IP immediately"
+        2. "Check for distributed attack pattern"
+        3. "Reset affected user passwords"
+        4. "Enable enhanced monitoring for 24h"
+        5. "Generate incident report"
+        
+    # Configuration Drift Response  
+    configuration_drift:
+      trigger: "configuration_drift alert"
+      steps:
+        1. "EMERGENCY: Halt all deployments"
+        2. "Isolate affected systems"
+        3. "Audit configuration changes"
+        4. "Rollback to last known good state"
+        5. "Investigate compromise vector"
+        6. "Update security policies"
+        
+    # Mass Authentication Failure
+    mass_auth_failure:
+      trigger: "mass_auth_failures alert" 
+      steps:
+        1. "Enable emergency strict mode"
+        2. "Check authentication service health"
+        3. "Analyze attack pattern and source"
+        4. "Consider service degradation vs security"
+        5. "Coordinate with infrastructure team"
+        
+  # Escalation matrix
+  escalation:
+    levels:
+      L1: "SOC Analyst"
+      L2: "Security Engineer" 
+      L3: "Security Architect"
+      L4: "CISO / Emergency Response Team"
+      
+    triggers:
+      - event: "P0 Alert"
+        level: "L3"
+        sla: "immediate"
+        
+      - event: "Multiple P1 Alerts"
+        level: "L4"
+        sla: "15m"
+        
+      - event: "System Compromise Suspected"
+        level: "L4" 
+        sla: "immediate"

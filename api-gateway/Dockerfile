@@ -3,7 +3,7 @@
 # ==============================================
 
 # Stage 1: Builder (optional)
-FROM maven:3.9-eclipse-temurin-21 AS builder
+FROM maven:3.9.6-eclipse-temurin-21 AS builder
 WORKDIR /app
 
 COPY pom.xml .
@@ -31,7 +31,18 @@ COPY user-group-service/src user-group-service/src
 
 RUN mvn -B clean package -DskipTests -pl api-gateway -am
 
+# Stage 2: Runtime (hardened)
 FROM eclipse-temurin:21-jre-alpine
+
+# Create an unprivileged user/group for the runtime container
+RUN addgroup -S app && adduser -S -G app -h /app app
+
 WORKDIR /app
-COPY --from=builder /app/api-gateway/target/*.jar /app/app.jar
-ENTRYPOINT ["java","-jar","/app/app.jar"]
+COPY --from=builder --chown=app:app /app/api-gateway/target/*.jar /app/app.jar
+
+# Minimal container-level healthcheck (can be replaced by orchestration probes)
+HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
+	CMD wget -q --spider http://127.0.0.1:8080/actuator/health || exit 1
+
+USER app
+ENTRYPOINT ["java","-Djava.security.egd=file:/dev/./urandom","-jar","/app/app.jar"]

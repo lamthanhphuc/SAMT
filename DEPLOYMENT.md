@@ -12,6 +12,10 @@
 - [ ] Review exposed ports
 - [ ] Kiểm tra firewall rules
 
+⚠️ **SECRETS FILES (DO NOT COMMIT):**
+- Kubernetes: use `k8s-secrets.template.yml` as a base, copy to `k8s-secrets.yml`, replace placeholders, and apply the rendered file. Keep `k8s-secrets.yml` local-only.
+- Docker Compose: `docker-compose.secure.yml` uses Docker secret files under `./secrets/` (create them locally or in CI/CD); do not commit rendered secret files.
+
 ⚠️ **gRPC mTLS REQUIREMENT (NO PLAINTEXT):**
 - Internal gRPC calls require TLS with mutual authentication.
 - Do NOT commit certificates/keys into the repository.

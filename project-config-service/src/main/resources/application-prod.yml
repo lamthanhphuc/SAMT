@@ -57,7 +57,6 @@ management:
       prometheus:
         enabled: false
   server:
-    port: 9001
     add-application-context-header: false
 
 grpc:

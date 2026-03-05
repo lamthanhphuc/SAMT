@@ -52,25 +52,50 @@
     <!-- Root logger configuration -->
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE"/>
     </root>
     
-    <!-- Service-specific logger (inherits from application.yml) -->
-    <logger name="com.samt.projectconfig" level="DEBUG" additivity="false">
+    <!-- Service-specific logger -->
+    <logger name="com.samt.projectconfig" level="INFO" additivity="false">
         <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE"/>
     </logger>
     
     <!-- Spring Framework logger -->
-    <logger name="org.springframework.security" level="DEBUG" additivity="false">
+    <logger name="org.springframework.security" level="WARN" additivity="false">
         <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE"/>
     </logger>
     
     <!-- Hibernate SQL logger (controlled by application.yml) -->
     <logger name="org.hibernate.SQL" level="WARN" additivity="false">
         <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE"/>
     </logger>
+
+    <!-- Optional: enable DEBUG logging explicitly via Spring profile -->
+    <springProfile name="debug-logging">
+        <logger name="com.samt.projectconfig" level="DEBUG"/>
+        <logger name="org.springframework.security" level="INFO"/>
+    </springProfile>
+
+    <!-- Optional: enable rolling file logging explicitly via Spring profile -->
+    <springProfile name="file-logging">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </root>
+
+        <logger name="com.samt.projectconfig" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </logger>
+
+        <logger name="org.springframework.security" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </logger>
+
+        <logger name="org.hibernate.SQL" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </logger>
+    </springProfile>
     
 </configuration>

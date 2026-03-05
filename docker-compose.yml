@@ -26,8 +26,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?⚠️ POSTGRES_USER is required - create .env file}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?⚠️ POSTGRES_PASSWORD is required - create .env file}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
-    ports:
-      - "${POSTGRES_IDENTITY_PORT:-5432}:5432"
     volumes:
       - identity_data:/var/lib/postgresql/data
     networks:
@@ -57,8 +55,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?⚠️ POSTGRES_USER is required}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?⚠️ POSTGRES_PASSWORD is required}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
-    ports:
-      - "${POSTGRES_CORE_PORT:-5433}:5432"
     volumes:
       - core_data:/var/lib/postgresql/data
     networks:
@@ -88,8 +84,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?⚠️ POSTGRES_USER is required}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?⚠️ POSTGRES_PASSWORD is required}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
-    ports:
-      - "${POSTGRES_PROJECTCONFIG_PORT:-5434}:5432"
     volumes:
       - projectconfig_data:/var/lib/postgresql/data
     networks:
@@ -119,8 +113,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?⚠️ POSTGRES_USER is required}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?⚠️ POSTGRES_PASSWORD is required}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
-    ports:
-      - "${POSTGRES_USERGROUP_PORT:-5435}:5432"
     volumes:
       - usergroup_data:/var/lib/postgresql/data
     networks:
@@ -150,8 +142,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?⚠️ POSTGRES_USER is required}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?⚠️ POSTGRES_PASSWORD is required}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
-    ports:
-      - "${POSTGRES_SYNC_PORT:-5436}:5432"
     volumes:
       - sync_data:/var/lib/postgresql/data
     networks:
@@ -175,19 +165,32 @@ services:
   kafka:
     image: confluentinc/cp-kafka:7.6.0
     container_name: kafka
-    ports:
-      - "9092:9092"
+    # SECURITY: do not publish Kafka ports to the host by default.
+    # If you need host access for local tooling, use docker-compose.override.yml (see example).
     environment:
+      ENV: ${ENV:-local}
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092,CONTROLLER://0.0.0.0:29093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:29093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+
+    command:
+      - bash
+      - -ec
+      - |
+        if [[ "${ENV:-}" == "production" ]]; then
+          if echo "${KAFKA_LISTENERS:-}" | grep -qi 'PLAINTEXT://' || echo "${KAFKA_LISTENER_SECURITY_PROTOCOL_MAP:-}" | grep -qi 'PLAINTEXT'; then
+            echo "FATAL: ENV=production but Kafka is configured with PLAINTEXT listeners. Use docker-compose.kafka-production.yml instead."
+            exit 1
+          fi
+        fi
+        exec /etc/confluent/docker/run
     volumes:
       - kafka_data:/var/lib/kafka/data
     networks:
@@ -201,7 +204,7 @@ services:
           cpus: "0.5"
           memory: 512M
     healthcheck:
-      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1"]
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:29092 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -212,7 +215,21 @@ services:
     image: redis:7-alpine
     container_name: redis
     env_file: .env
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - create .env file} --protected-mode yes --bind 0.0.0.0
+    # SECURITY: avoid passing secrets in process arguments. The password comes from env at runtime
+    # and is written into a restrictive config file before starting redis-server.
+    command:
+      - sh
+      - -ec
+      - |
+        umask 077
+        : "${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - create .env file}"
+        printf 'requirepass %s\n' "$${REDIS_PASSWORD}" > /tmp/redis.conf
+        exec redis-server /tmp/redis.conf \
+          --appendonly yes \
+          --maxmemory 256mb \
+          --maxmemory-policy allkeys-lru \
+          --protected-mode yes \
+          --bind 0.0.0.0
     # ❌ REMOVED: Port mapping for security (no external access)
     # ports:
     #   - "${REDIS_PORT:-6379}:6379"
@@ -229,7 +246,7 @@ services:
           cpus: "0.25"
           memory: 128M
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$${REDIS_PASSWORD}\" redis-cli ping | grep -q PONG"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -321,7 +338,7 @@ services:
       JWT_PRIVATE_KEY_PATH: /certs/identity-jwt-private.pkcs8.pem
       JWT_KEY_ID: ${JWT_KEY_ID:-identity-local-1}
       # Local/dev: allow running without gRPC TLS material
-      GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-false}
+      GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-true}
     ports:
       - "${IDENTITY_SERVICE_PORT:-8081}:${IDENTITY_SERVICE_PORT:-8081}"
       - "${IDENTITY_SERVICE_GRPC_PORT:-9091}:${IDENTITY_SERVICE_GRPC_PORT:-9091}"
@@ -367,9 +384,9 @@ services:
       KAFKA_ENABLED: ${KAFKA_ENABLED:-true}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
-      # Local/dev: allow running without gRPC TLS material
-      GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-false}
-      GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE: ${GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE:-plaintext}
+      # SECURITY DEFAULTS: TLS/mTLS by default. Override explicitly for local dev if needed.
+      GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-true}
+      GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE: ${GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE:-TLS}
     ports:
       - "${USER_GROUP_SERVICE_PORT:-8082}:${USER_GROUP_SERVICE_PORT:-8082}"
       - "${USER_GROUP_SERVICE_GRPC_PORT:-9095}:${USER_GROUP_SERVICE_GRPC_PORT:-9095}"
@@ -413,9 +430,9 @@ services:
       DATABASE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
-      # Local/dev: allow running without gRPC TLS material
-      GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-false}
-      GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE: ${GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE:-plaintext}
+      # SECURITY DEFAULTS: TLS/mTLS by default. Override explicitly for local dev if needed.
+      GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-true}
+      GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE: ${GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE:-TLS}
     ports:
       - "${PROJECT_CONFIG_SERVICE_PORT:-8084}:${PROJECT_CONFIG_SERVICE_PORT:-8084}"
     depends_on:
@@ -459,9 +476,9 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - create .env file}
       JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
-      # Local/dev: allow running without gRPC TLS material
-      GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-false}
-      GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE: ${GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE:-plaintext}
+      # SECURITY DEFAULTS: TLS/mTLS by default. Override explicitly for local dev if needed.
+      GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-true}
+      GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE: ${GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE:-TLS}
     ports:
       - "${SYNC_SERVICE_PORT:-8083}:${SYNC_SERVICE_PORT:-8083}"
     depends_on:
