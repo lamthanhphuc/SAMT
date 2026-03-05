@@ -2,6 +2,10 @@
 # SAMT MICROSERVICES PROJECT
 # ===================================================
 
+## Developer onboarding
+
+See the local run + architecture quickstart in [docs/DEVELOPER_ONBOARDING.md](docs/DEVELOPER_ONBOARDING.md).
+
 ## 📖 Giới thiệu
 
 Dự án **SAMT** (Spring Boot Microservices Architecture) bao gồm:
