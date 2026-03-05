@@ -32,7 +32,7 @@ COPY user-group-service/src user-group-service/src
 RUN mvn -B clean package -DskipTests -pl api-gateway -am
 
 # Stage 2: Runtime (hardened)
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:21.0.6_7-jre-alpine
 
 # Create an unprivileged user/group for the runtime container
 RUN addgroup -S app && adduser -S -G app -h /app app

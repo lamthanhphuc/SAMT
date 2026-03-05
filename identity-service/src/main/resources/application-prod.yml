@@ -41,3 +41,9 @@ grpc:
       enabled: true
       trustCertCollection: file:/certs/ca.crt
       clientAuth: REQUIRE
+
+logging:
+  level:
+    root: INFO
+    com.example: INFO
+    org.hibernate.SQL: WARN

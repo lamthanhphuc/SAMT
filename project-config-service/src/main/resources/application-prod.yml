@@ -76,3 +76,10 @@ grpc:
         trustCertCollection: file:/certs/ca.crt
     user-group-service:
       address: dns:///user-group-service:9095
+
+logging:
+  level:
+    root: INFO
+    com.samt.projectconfig: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN

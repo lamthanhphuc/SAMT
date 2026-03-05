@@ -244,8 +244,8 @@ management:
 logging:
   level:
     root: ${LOG_LEVEL:INFO}
-    com.samt.projectconfig: ${LOG_LEVEL:DEBUG}
-    org.springframework.security: DEBUG
+    com.samt.projectconfig: ${LOG_LEVEL:INFO}
+    org.springframework.security: WARN
     org.hibernate.SQL: ${SQL_LOG_LEVEL:WARN}
   pattern:
     console: "%d{HH:mm:ss.SSS} [%X{correlationId}] [%thread] %-5level %logger{36} - %msg%n"

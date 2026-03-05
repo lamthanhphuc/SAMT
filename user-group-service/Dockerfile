@@ -3,7 +3,7 @@
 # ==============================================
 
 # Stage 1: Builder
-FROM maven:3.9-eclipse-temurin-21 AS builder
+FROM maven:3.9.6-eclipse-temurin-21 AS builder
 WORKDIR /app
 
 COPY pom.xml .
@@ -31,7 +31,11 @@ COPY user-group-service/src user-group-service/src
 
 RUN mvn -B clean package -DskipTests -pl user-group-service -am
 
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:21.0.6_7-jre-alpine
+RUN addgroup -S app && adduser -S -G app -h /app app
 WORKDIR /app
-COPY --from=builder /app/user-group-service/target/*.jar /app/app.jar
+COPY --from=builder --chown=app:app /app/user-group-service/target/*.jar /app/app.jar
+HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
+	CMD wget -q --spider http://127.0.0.1:8082/actuator/health || exit 1
+USER app
 ENTRYPOINT ["java","-jar","/app/app.jar"]

@@ -42,3 +42,11 @@ grpc:
         trustCertCollection: file:/certs/ca.crt
     identity-service:
       address: dns:///identity-service:9091
+
+logging:
+  level:
+    root: INFO
+    com.example.user_groupservice: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql: WARN
+    io.grpc: WARN

@@ -74,7 +74,7 @@ management:
 logging:
   level:
     root: ${LOG_LEVEL:INFO}
-    com.example: ${LOG_LEVEL:DEBUG}
+    com.example: ${LOG_LEVEL:INFO}
     org.hibernate.SQL: ${SQL_LOG_LEVEL:WARN}
 
 # ==============================================
