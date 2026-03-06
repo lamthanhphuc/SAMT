@@ -55,6 +55,8 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health/**").permitAll()
+                .requestMatchers("/actuator/info").permitAll()
+                .requestMatchers("/.well-known/jwks.json").permitAll()
                 .requestMatchers("/actuator/**").authenticated()
                 // Swagger UI
                 .requestMatchers("/swagger-ui/**").permitAll()
@@ -82,6 +84,11 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health/**").permitAll()
+                .requestMatchers("/actuator/info").permitAll()
+                .requestMatchers("/.well-known/jwks.json").permitAll()
+                .requestMatchers("/swagger-ui/**").permitAll()
+                .requestMatchers("/swagger-ui.html").permitAll()
+                .requestMatchers("/v3/api-docs/**").permitAll()
                 .requestMatchers("/actuator/**").authenticated()
                 .requestMatchers("/api/**").authenticated()
                 .requestMatchers("/internal/**").authenticated()

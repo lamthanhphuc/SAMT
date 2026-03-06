@@ -107,25 +107,25 @@ public class JwtAuthenticationFilter implements WebFilter, Ordered {
             return true;
         }
 
-        // Internal JWKS for downstream internal JWT verification.
-        if ("/.well-known/internal-jwks.json".equals(path)) {
+        if ("/.well-known/internal-jwks.json".equals(path)
+                || "/.well-known/jwks.json".equals(path)) {
             return true;
         }
 
-        if ("/actuator/health".equals(path) || path.startsWith("/actuator/health/")) {
+        if ("/actuator/health".equals(path)
+                || path.startsWith("/actuator/health/")
+                || "/actuator/info".equals(path)) {
             return true;
         }
 
-        if (prodProfile) {
-            return false;
-        }
-
-        return path.startsWith("/actuator/")
-                || "/actuator".equals(path)
-                || path.startsWith("/swagger-ui/")
+        return path.startsWith("/swagger-ui/")
                 || "/swagger-ui.html".equals(path)
                 || path.startsWith("/v3/api-docs/")
-                || "/v3/api-docs".equals(path);
+                || "/v3/api-docs".equals(path)
+                || path.contains("/v3/api-docs")
+                || path.contains("/swagger-ui")
+                || path.startsWith("/webjars/")
+                || (!prodProfile && (path.startsWith("/actuator/") || "/actuator".equals(path)));
     }
 
     private Mono<Void> unauthorized(ServerWebExchange exchange) {

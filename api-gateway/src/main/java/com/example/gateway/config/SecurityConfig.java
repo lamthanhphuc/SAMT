@@ -24,21 +24,29 @@ public class SecurityConfig {
                 .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .pathMatchers("/.well-known/jwks.json").permitAll()
                         .pathMatchers("/.well-known/internal-jwks.json").permitAll()
                         .pathMatchers(
                                 "/api/identity/register",
                                 "/api/identity/login",
                                 "/api/identity/refresh-token",
                                 "/actuator/health",
-                                "/actuator/health/**"
+                                "/actuator/health/**",
+                                "/actuator/info"
                         ).permitAll()
                         .pathMatchers(
-                                "/actuator/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
-                                "/webjars/**"
-                        ).denyAll()
+                                "/webjars/**",
+                                "/identity/swagger-ui/**", "/identity/v3/api-docs/**",
+                                "/user-group/swagger-ui/**", "/user-group/v3/api-docs/**",
+                                "/project-config/swagger-ui/**", "/project-config/v3/api-docs/**",
+                                "/sync/swagger-ui/**", "/sync/v3/api-docs/**",
+                                "/analysis/swagger-ui/**", "/analysis/v3/api-docs/**",
+                                "/report/swagger-ui/**", "/report/v3/api-docs/**",
+                                "/notification/swagger-ui/**", "/notification/v3/api-docs/**"
+                        ).permitAll()
                         .anyExchange().authenticated())
                 .build();
     }
@@ -54,12 +62,15 @@ public class SecurityConfig {
                 .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .pathMatchers("/.well-known/jwks.json").permitAll()
                         .pathMatchers("/.well-known/internal-jwks.json").permitAll()
                         .pathMatchers(
                                 "/api/identity/register",
                                 "/api/identity/login",
                                 "/api/identity/refresh-token",
-                                "/actuator/**",
+                                "/actuator/health",
+                                "/actuator/health/**",
+                                "/actuator/info",
                                 // Gateway's own Swagger UI
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
