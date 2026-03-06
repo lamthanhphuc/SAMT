@@ -15,62 +15,62 @@ public class GatewayRoutesConfig {
                                      RedisRateLimitGatewayFilter rateLimitGatewayFilter,
                                      @Value("${gateway.upstream.identity:http://identity-service:8081}") String identityServiceUri,
                                      @Value("${gateway.upstream.user-group:http://user-group-service:8082}") String userGroupServiceUri,
-                                     @Value("${gateway.upstream.project-config:http://project-config-service:8083}") String projectConfigServiceUri,
-                                     @Value("${gateway.upstream.sync:http://sync-service:8084}") String syncServiceUri,
-                                     @Value("${gateway.upstream.analysis:http://analysis-service:8085}") String analysisServiceUri,
-                                     @Value("${gateway.upstream.report:http://report-service:8086}") String reportServiceUri,
+                                                                         @Value("${gateway.upstream.project-config:http://project-config-service:8084}") String projectConfigServiceUri,
+                                                                         @Value("${gateway.upstream.sync:http://sync-service:8083}") String syncServiceUri,
+                                                                         @Value("${gateway.upstream.analysis:http://analysis-service:8087}") String analysisServiceUri,
+                                                                         @Value("${gateway.upstream.report:http://report-service:8088}") String reportServiceUri,
                                      @Value("${gateway.upstream.notification:http://notification-service:8085}") String notificationServiceUri
     ) {
         return builder.routes()
 
                 // ========================================
-                //   SWAGGER UI PROXY ROUTES (no auth)
+                //   OPENAPI DOCS PROXY ROUTES (no auth)
                 // ========================================
 
                 .route("identity-swagger", r -> r
-                        .path("/identity/swagger-ui/**", "/identity/swagger-ui.html", "/identity/v3/api-docs/**", "/identity/v3/api-docs")
+                        .path("/identity/v3/api-docs/**", "/identity/v3/api-docs")
                         .filters(f -> f
                                 .stripPrefix(1)
                                 .addRequestHeader("X-Forwarded-Prefix", "/identity"))
                         .uri(identityServiceUri))
 
                 .route("user-group-swagger", r -> r
-                        .path("/user-group/swagger-ui/**", "/user-group/swagger-ui.html", "/user-group/v3/api-docs/**", "/user-group/v3/api-docs")
+                        .path("/user-group/v3/api-docs/**", "/user-group/v3/api-docs")
                         .filters(f -> f
                                 .stripPrefix(1)
                                 .addRequestHeader("X-Forwarded-Prefix", "/user-group"))
                         .uri(userGroupServiceUri))
 
                 .route("project-config-swagger", r -> r
-                        .path("/project-config/swagger-ui/**", "/project-config/swagger-ui.html", "/project-config/v3/api-docs/**", "/project-config/v3/api-docs")
+                        .path("/project-config/v3/api-docs/**", "/project-config/v3/api-docs")
                         .filters(f -> f
                                 .stripPrefix(1)
                                 .addRequestHeader("X-Forwarded-Prefix", "/project-config"))
                         .uri(projectConfigServiceUri))
 
                 .route("sync-swagger", r -> r
-                        .path("/sync/swagger-ui/**", "/sync/swagger-ui.html", "/sync/v3/api-docs/**", "/sync/v3/api-docs")
+                        .path("/sync/v3/api-docs/**", "/sync/v3/api-docs")
                         .filters(f -> f
                                 .stripPrefix(1)
                                 .addRequestHeader("X-Forwarded-Prefix", "/sync"))
                         .uri(syncServiceUri))
 
                 .route("analysis-swagger", r -> r
-                        .path("/analysis/swagger-ui/**", "/analysis/swagger-ui.html", "/analysis/v3/api-docs/**", "/analysis/v3/api-docs")
+                        .path("/analysis/v3/api-docs/**", "/analysis/v3/api-docs")
                         .filters(f -> f
                                 .stripPrefix(1)
                                 .addRequestHeader("X-Forwarded-Prefix", "/analysis"))
                         .uri(analysisServiceUri))
 
                 .route("report-swagger", r -> r
-                        .path("/report/swagger-ui/**", "/report/swagger-ui.html", "/report/v3/api-docs/**", "/report/v3/api-docs")
+                        .path("/report/v3/api-docs/**", "/report/v3/api-docs")
                         .filters(f -> f
                                 .stripPrefix(1)
                                 .addRequestHeader("X-Forwarded-Prefix", "/report"))
                         .uri(reportServiceUri))
 
                 .route("notification-swagger", r -> r
-                        .path("/notification/swagger-ui/**", "/notification/swagger-ui.html", "/notification/v3/api-docs/**", "/notification/v3/api-docs")
+                        .path("/notification/v3/api-docs/**", "/notification/v3/api-docs")
                         .filters(f -> f
                                 .stripPrefix(1)
                                 .addRequestHeader("X-Forwarded-Prefix", "/notification"))

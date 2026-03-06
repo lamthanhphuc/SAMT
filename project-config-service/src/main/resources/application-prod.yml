@@ -31,7 +31,7 @@ springdoc:
   api-docs:
     enabled: true
   swagger-ui:
-    enabled: true
+    enabled: false
 
 # ============================================
 #   ACTUATOR (HARDENED FOR PRODUCTION)

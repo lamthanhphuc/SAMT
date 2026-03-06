@@ -78,6 +78,7 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**").permitAll()
                         .requestMatchers("/swagger-ui.html").permitAll()
                         .requestMatchers("/v3/api-docs/**").permitAll()
+                        .requestMatchers("/webjars/**").permitAll()
                         // All other requests require authentication (including /api/auth/logout)
                         .anyRequest().authenticated()
                 )

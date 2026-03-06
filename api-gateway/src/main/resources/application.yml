@@ -154,20 +154,21 @@ springdoc:
   swagger-ui:
     enabled: true
     path: /swagger-ui.html
+    disable-swagger-default-url: true
     urls:
-      - name: Identity Service
+      - name: identity-service
         url: /identity/v3/api-docs
-      - name: User-Group Service
+      - name: user-group-service
         url: /user-group/v3/api-docs
-      - name: Project Config Service
+      - name: project-config-service
         url: /project-config/v3/api-docs
-      - name: Sync Service
+      - name: sync-service
         url: /sync/v3/api-docs
-      - name: Analysis Service
+      - name: analysis-service
         url: /analysis/v3/api-docs
-      - name: Report Service
+      - name: report-service
         url: /report/v3/api-docs
-      - name: Notification Service
+      - name: notification-service
         url: /notification/v3/api-docs
   api-docs:
     enabled: true
