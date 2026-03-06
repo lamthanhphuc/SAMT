@@ -7,6 +7,7 @@ FROM maven:3.9.6-eclipse-temurin-21@sha256:8d63d4c1902cb12d9e79a70671b18ebe26358
 WORKDIR /app
 
 COPY pom.xml .
+COPY common-contracts/pom.xml common-contracts/pom.xml
 COPY analysis-service/pom.xml analysis-service/pom.xml
 COPY api-gateway/pom.xml api-gateway/pom.xml
 COPY common-events/pom.xml common-events/pom.xml
@@ -19,15 +20,7 @@ COPY user-group-service/pom.xml user-group-service/pom.xml
 
 RUN mvn -B -q -e -DskipTests dependency:go-offline -pl api-gateway -am
 
-COPY analysis-service/src analysis-service/src
-COPY api-gateway/src api-gateway/src
-COPY common-events/src common-events/src
-COPY identity-service/src identity-service/src
-COPY notification-service/src notification-service/src
-COPY project-config-service/src project-config-service/src
-COPY report-service/src report-service/src
-COPY sync-service/src sync-service/src
-COPY user-group-service/src user-group-service/src
+COPY . .
 
 RUN mvn -B clean package -DskipTests -pl api-gateway -am
 

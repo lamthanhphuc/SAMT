@@ -281,6 +281,7 @@ services:
       gateway.upstream.project-config: http://project-config-service:${PROJECT_CONFIG_SERVICE_PORT:-8084}
       gateway.upstream.analysis: http://analysis-service:${ANALYSIS_SERVICE_PORT:-8087}
       gateway.upstream.report: http://report-service:${REPORT_SERVICE_PORT:-8088}
+      gateway.upstream.notification: http://notification-service:${NOTIFICATION_SERVICE_PORT:-8085}
       # External JWT validation (gateway validates user JWT via identity service JWKS)
       JWT_JWKS_URI: http://identity-service:${IDENTITY_SERVICE_PORT:-8081}/.well-known/jwks.json
     ports:
@@ -521,8 +522,6 @@ services:
         condition: service_healthy
       project-config-service:
         condition: service_started
-      api-gateway:
-        condition: service_started
     networks:
       - samt-network
     deploy:
@@ -572,8 +571,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      api-gateway:
-        condition: service_started
     networks:
       - samt-network
     deploy:
@@ -623,8 +620,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      api-gateway:
-        condition: service_started
     networks:
       - samt-network
     deploy:
@@ -674,8 +669,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      api-gateway:
-        condition: service_started
     networks:
       - samt-network
     deploy:

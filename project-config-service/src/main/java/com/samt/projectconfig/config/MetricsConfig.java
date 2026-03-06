@@ -4,9 +4,9 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
@@ -48,13 +48,20 @@ import java.util.concurrent.Executor;
  * @author Production Team
  */
 @Configuration
-@RequiredArgsConstructor
 @Slf4j
 public class MetricsConfig {
     
     private final MeterRegistry meterRegistry;
     private final Executor verificationExecutor;
     private final PoolingHttpClientConnectionManager poolingConnectionManager;
+    
+    public MetricsConfig(MeterRegistry meterRegistry,
+                         @Qualifier("verificationExecutor") Executor verificationExecutor,
+                         PoolingHttpClientConnectionManager poolingConnectionManager) {
+        this.meterRegistry = meterRegistry;
+        this.verificationExecutor = verificationExecutor;
+        this.poolingConnectionManager = poolingConnectionManager;
+    }
     
     /**
      * Bind executor and HTTP client metrics after bean initialization.

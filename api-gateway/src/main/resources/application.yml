@@ -47,9 +47,14 @@ spring:
             allowedMethods:
               - GET
               - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
             allowedHeaders:
               - Authorization
               - Content-Type
+              - Accept
 
 jwt:
   # Identity Service JWKS endpoint. Production should set JWT_JWKS_URI explicitly.
@@ -101,13 +106,19 @@ springdoc:
     path: /swagger-ui.html
     urls:
       - name: Identity Service
-        url: ${IDENTITY_SERVICE_URL:http://identity-service:8081}/v3/api-docs
+        url: /identity/v3/api-docs
       - name: User-Group Service
-        url: ${USER_GROUP_SERVICE_URL:http://user-group-service:8082}/v3/api-docs
+        url: /user-group/v3/api-docs
       - name: Project Config Service
-        url: ${PROJECT_CONFIG_SERVICE_URL:http://project-config-service:8084}/v3/api-docs
+        url: /project-config/v3/api-docs
       - name: Sync Service
-        url: ${SYNC_SERVICE_URL:http://sync-service:8083}/v3/api-docs
+        url: /sync/v3/api-docs
+      - name: Analysis Service
+        url: /analysis/v3/api-docs
+      - name: Report Service
+        url: /report/v3/api-docs
+      - name: Notification Service
+        url: /notification/v3/api-docs
   api-docs:
     enabled: true
 

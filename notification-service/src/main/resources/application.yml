@@ -5,6 +5,7 @@
 server:
   port: ${SERVER_PORT:8085}
   shutdown: graceful
+  forward-headers-strategy: framework
 
 spring:
   application:
@@ -83,6 +84,13 @@ logging:
     root: ${LOG_LEVEL:INFO}
     com.example: ${LOG_LEVEL:INFO}
     org.hibernate.SQL: ${SQL_LOG_LEVEL:WARN}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
 
 ---
 # ==============================================

@@ -117,11 +117,11 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
-        <!-- Remove Redis dependency - not needed for ProjectConfig -->
-        <!-- <dependency>
+        <!-- Redis support for StringRedisTemplate (JWT JTI replay protection) -->
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
-        </dependency> -->
+        </dependency>
 
         <!-- PostgreSQL -->
         <dependency>

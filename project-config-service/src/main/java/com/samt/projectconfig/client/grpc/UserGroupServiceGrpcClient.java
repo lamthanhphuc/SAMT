@@ -8,8 +8,8 @@ import io.grpc.Deadline;
 import io.grpc.Metadata;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.MetadataUtils;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 
@@ -43,12 +43,17 @@ import java.util.concurrent.TimeUnit;
  * @version 2.0 (Async refactored)
  */
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class UserGroupServiceGrpcClient {
     
-    private final UserGroupGrpcServiceGrpc.UserGroupGrpcServiceFutureStub futureStub;
+    @GrpcClient("user-group-service")
+    private UserGroupGrpcServiceGrpc.UserGroupGrpcServiceFutureStub futureStub;
+    
     private final GrpcExceptionMapper exceptionMapper;
+    
+    public UserGroupServiceGrpcClient(GrpcExceptionMapper exceptionMapper) {
+        this.exceptionMapper = exceptionMapper;
+    }
     
     private static final long GRPC_DEADLINE_MS = 800;
     

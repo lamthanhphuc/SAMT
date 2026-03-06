@@ -5,6 +5,7 @@ import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
 import org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.util.StringUtils;
 import reactor.core.publisher.Mono;
 
@@ -37,6 +38,7 @@ public class RateLimitConfig {
     }
 
     @Bean("globalRedisRateLimiter")
+    @Primary
     public RedisRateLimiter globalRedisRateLimiter(
             @Value("${rate.limit.global.requests-per-second:100}") int requestsPerSecond,
             @Value("${rate.limit.global.burst-capacity:200}") int burstCapacity

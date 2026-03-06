@@ -54,6 +54,10 @@
 		<artifactId>flyway-core</artifactId>
 	</dependency>
 	<dependency>
+		<groupId>org.flywaydb</groupId>
+		<artifactId>flyway-database-postgresql</artifactId>
+	</dependency>
+	<dependency>
 		<groupId>org.postgresql</groupId>
 		<artifactId>postgresql</artifactId>
 		<!-- Compile scope needed for PSQLException in SyncDataService -->
@@ -98,6 +102,13 @@
 	<dependency>
 		<groupId>io.micrometer</groupId>
 		<artifactId>micrometer-registry-prometheus</artifactId>
+	</dependency>
+
+	<!-- Springdoc OpenAPI (Swagger UI) -->
+	<dependency>
+		<groupId>org.springdoc</groupId>
+		<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+		<version>2.3.0</version>
 	</dependency>
 
 	<!-- Common Events Library -->

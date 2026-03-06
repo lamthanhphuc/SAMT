@@ -60,10 +60,19 @@ public class SecurityConfig {
                                 "/api/identity/login",
                                 "/api/identity/refresh-token",
                                 "/actuator/**",
+                                // Gateway's own Swagger UI
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
                                 "/webjars/**",
+                                // Per-service Swagger UI proxy paths
+                                "/identity/swagger-ui/**", "/identity/v3/api-docs/**",
+                                "/user-group/swagger-ui/**", "/user-group/v3/api-docs/**",
+                                "/project-config/swagger-ui/**", "/project-config/v3/api-docs/**",
+                                "/sync/swagger-ui/**", "/sync/v3/api-docs/**",
+                                "/analysis/swagger-ui/**", "/analysis/v3/api-docs/**",
+                                "/report/swagger-ui/**", "/report/v3/api-docs/**",
+                                "/notification/swagger-ui/**", "/notification/v3/api-docs/**",
                                 "/test/**"
                         ).permitAll()
                         .anyExchange().authenticated())

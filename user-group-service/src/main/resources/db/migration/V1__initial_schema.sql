@@ -88,7 +88,7 @@ CREATE INDEX idx_usm_deleted_at ON user_semester_membership(deleted_at);
 COMMENT ON TABLE user_semester_membership IS 'Membership của user trong group theo semester';
 COMMENT ON COLUMN user_semester_membership.user_id IS 'User ID (logical reference, NO FK)';
 COMMENT ON COLUMN user_semester_membership.group_role IS 'Vai trò trong nhóm: LEADER hoặc MEMBER';
-COMMENT ON CONSTRAINT idx_usm_group_leader_unique ON user_semester_membership IS 'Enforce: Chỉ 1 LEADER per group';
+COMMENT ON INDEX idx_usm_group_leader_unique IS 'Enforce: Chỉ 1 LEADER per group';
 
 -- ============================================
 -- AUDIT LOG TABLE (Optional) - REMOVED IN V4

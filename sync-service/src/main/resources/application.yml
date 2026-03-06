@@ -5,6 +5,7 @@
 server:
   port: ${SERVER_PORT:8084}
   shutdown: graceful
+  forward-headers-strategy: framework
 
 spring:
   application:
@@ -209,6 +210,13 @@ logging:
     org.hibernate.SQL: ${SQL_LOG_LEVEL:WARN}
     net.javacrumbs.shedlock: INFO
     io.grpc: INFO
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
 
 ---
 # ==============================================

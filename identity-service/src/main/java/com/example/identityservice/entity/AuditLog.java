@@ -58,10 +58,10 @@ public class AuditLog {
     private String userAgent;
 
     // Change details (JSON)
-    @Column(name = "old_value", columnDefinition = "TEXT")
+    @Column(name = "old_value", columnDefinition = "JSONB")
     private String oldValue;
 
-    @Column(name = "new_value", columnDefinition = "TEXT")
+    @Column(name = "new_value", columnDefinition = "JSONB")
     private String newValue;
 
     // Outcome
