@@ -12,6 +12,8 @@ import org.springframework.core.io.buffer.DataBufferLimitException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerCodecConfigurer;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.RequestPredicates;
 import org.springframework.web.reactive.function.server.RouterFunction;
@@ -25,7 +27,6 @@ import reactor.core.publisher.Mono;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * Global Error Handler for API Gateway
@@ -66,19 +67,14 @@ public class GlobalErrorWebExceptionHandler extends AbstractErrorWebExceptionHan
         Throwable ex = getError(request);
         HttpStatus status = resolveStatus(ex);
         String genericMessage = genericMessage(status);
-        String errorId = UUID.randomUUID().toString().substring(0, 8);
 
         // ✅ PRODUCTION-SAFE: Log only generic info with correlation ID
-        logger.warn("Gateway error handled. ErrorId={}, Status={}, Path={}", 
-                   errorId, status.value(), request.path());
-
-        // Create error object according to documented schema
-        Map<String, Object> error = new LinkedHashMap<>();
-        error.put("code", status.value());
-        error.put("message", genericMessage);
+        logger.warn("Gateway error handled. Status={}, Path={}", status.value(), request.path());
 
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("error", error);
+        body.put("statusCode", status.value());
+        body.put("error", status.getReasonPhrase());
+        body.put("message", genericMessage);
         body.put("timestamp", Instant.now().toString());
 
         return ServerResponse.status(status)
@@ -107,6 +103,12 @@ public class GlobalErrorWebExceptionHandler extends AbstractErrorWebExceptionHan
         if (ex instanceof ServerWebInputException) {
             return HttpStatus.BAD_REQUEST;
         }
+        if (ex instanceof AuthenticationException) {
+            return HttpStatus.UNAUTHORIZED;
+        }
+        if (ex instanceof AccessDeniedException) {
+            return HttpStatus.FORBIDDEN;
+        }
         if (ex instanceof ResponseStatusException) {
             ResponseStatusException responseStatusException = (ResponseStatusException) ex;
             HttpStatus resolved = HttpStatus.resolve(responseStatusException.getStatusCode().value());
@@ -125,7 +127,7 @@ public class GlobalErrorWebExceptionHandler extends AbstractErrorWebExceptionHan
     private String genericMessage(HttpStatus status) {
         switch (status) {
             case BAD_REQUEST:
-                return "Bad request";
+                return "Invalid request input";
             case UNAUTHORIZED:
                 return "Unauthorized";
             case FORBIDDEN:

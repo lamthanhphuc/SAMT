@@ -26,6 +26,10 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .pathMatchers("/.well-known/jwks.json").permitAll()
                         .pathMatchers("/.well-known/internal-jwks.json").permitAll()
+                        .pathMatchers("/identity/v3/api-docs/**", "/identity/v3/api-docs").permitAll()
+                        .pathMatchers("/user-group/v3/api-docs/**", "/user-group/v3/api-docs").permitAll()
+                        .pathMatchers("/project-config/v3/api-docs/**", "/project-config/v3/api-docs").permitAll()
+                        .pathMatchers("/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .pathMatchers(
                                 "/api/auth/register",
                                 "/api/auth/login",
@@ -49,6 +53,10 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .pathMatchers("/.well-known/jwks.json").permitAll()
                         .pathMatchers("/.well-known/internal-jwks.json").permitAll()
+                        .pathMatchers("/identity/v3/api-docs/**", "/identity/v3/api-docs").permitAll()
+                        .pathMatchers("/user-group/v3/api-docs/**", "/user-group/v3/api-docs").permitAll()
+                        .pathMatchers("/project-config/v3/api-docs/**", "/project-config/v3/api-docs").permitAll()
+                        .pathMatchers("/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .pathMatchers(
                                 "/api/auth/register",
                                 "/api/auth/login",

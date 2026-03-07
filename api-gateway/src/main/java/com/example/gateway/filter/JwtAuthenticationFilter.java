@@ -107,6 +107,18 @@ public class JwtAuthenticationFilter implements WebFilter, Ordered {
             return true;
         }
 
+        if (path.startsWith("/identity/v3/api-docs")
+                || path.startsWith("/user-group/v3/api-docs")
+                || path.startsWith("/project-config/v3/api-docs")
+                || path.startsWith("/sync/v3/api-docs")
+                || path.startsWith("/analysis/v3/api-docs")
+                || path.startsWith("/report/v3/api-docs")
+                || path.startsWith("/notification/v3/api-docs")
+                || "/swagger-ui.html".equals(path)
+                || path.startsWith("/swagger-ui/")) {
+            return true;
+        }
+
         if ("/.well-known/internal-jwks.json".equals(path)
                 || "/.well-known/jwks.json".equals(path)) {
             return true;
@@ -128,7 +140,7 @@ public class JwtAuthenticationFilter implements WebFilter, Ordered {
         }
 
         private static String unauthorized() {
-            return "{\"error\":{\"code\":401,\"message\":\"Unauthorized\"},\"timestamp\":\""
+            return "{\"statusCode\":401,\"error\":\"Unauthorized\",\"message\":\"Unauthorized\",\"timestamp\":\""
                     + Instant.now().toString()
                     + "\"}";
         }
