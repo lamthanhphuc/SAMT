@@ -100,10 +100,10 @@ public class JwtAuthenticationFilter implements WebFilter, Ordered {
     }
 
     private boolean isPublicEndpoint(String path) {
-        if ("/api/identity/register".equals(path)
-                || "/api/identity/login".equals(path)
-                || "/api/identity/refresh-token".equals(path)
-                || path.startsWith("/api/public/")) {
+        if ("/api/auth/register".equals(path)
+                || "/api/auth/login".equals(path)
+                || "/api/auth/refresh".equals(path)
+                || "/actuator/health".equals(path)) {
             return true;
         }
 
@@ -112,20 +112,7 @@ public class JwtAuthenticationFilter implements WebFilter, Ordered {
             return true;
         }
 
-        if ("/actuator/health".equals(path)
-                || path.startsWith("/actuator/health/")
-                || "/actuator/info".equals(path)) {
-            return true;
-        }
-
-        return path.startsWith("/swagger-ui/")
-                || "/swagger-ui.html".equals(path)
-                || path.startsWith("/v3/api-docs/")
-                || "/v3/api-docs".equals(path)
-                || path.contains("/v3/api-docs")
-                || path.contains("/swagger-ui")
-                || path.startsWith("/webjars/")
-                || (!prodProfile && (path.startsWith("/actuator/") || "/actuator".equals(path)));
+        return false;
     }
 
     private Mono<Void> unauthorized(ServerWebExchange exchange) {

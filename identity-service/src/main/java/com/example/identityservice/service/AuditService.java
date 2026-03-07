@@ -7,6 +7,7 @@ import com.example.identityservice.entity.User;
 import com.example.identityservice.repository.AuditLogRepository;
 import com.example.identityservice.security.SecurityContextHelper;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -84,7 +85,7 @@ public class AuditService {
                 email,
                 AuditLog.AuditOutcome.FAILURE,
                 null,
-                reason
+                toJson(java.util.Map.of("reason", reason != null ? reason : "Invalid credentials"))
         );
     }
 
@@ -312,8 +313,8 @@ public class AuditService {
                     .actorId(actorId)
                     .actorEmail(actorEmail)
                     .outcome(outcome)
-                    .oldValue(oldValue)
-                    .newValue(newValue);
+                    .oldValue(parseJsonValue(oldValue))
+                    .newValue(parseJsonValue(newValue));
 
             // Add request context if available
             addRequestContext(builder);
@@ -367,6 +368,19 @@ public class AuditService {
         } catch (JsonProcessingException e) {
             log.warn("Failed to serialize object to JSON", e);
             return null;
+        }
+    }
+
+    private JsonNode parseJsonValue(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        try {
+            return objectMapper.readTree(value);
+        } catch (JsonProcessingException ex) {
+            // Ensure JSONB columns always receive valid JSON.
+            return objectMapper.createObjectNode().put("value", value);
         }
     }
 }

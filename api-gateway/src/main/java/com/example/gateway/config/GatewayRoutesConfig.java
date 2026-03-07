@@ -91,6 +91,26 @@ public class GatewayRoutesConfig {
                                         .setFallbackUri("forward:/__gateway/fallback/identity")))
                         .uri(identityServiceUri))
 
+                .route("identity-auth-login", r -> r
+                        .path("/api/auth/login")
+                        .filters(f -> f
+                                .filter(rateLimitGatewayFilter.loginRateLimit("identity-auth-login"))
+                                .addRequestHeader("X-Forwarded-Host", "gateway")
+                                .circuitBreaker(c -> c
+                                        .setName("identityServiceCircuitBreaker")
+                                        .setFallbackUri("forward:/__gateway/fallback/identity")))
+                        .uri(identityServiceUri))
+
+                .route("identity-auth-api", r -> r
+                        .path("/api/auth/**", "/api/admin/**")
+                        .filters(f -> f
+                                .filter(rateLimitGatewayFilter.globalRateLimit("identity-auth-api"))
+                                .addRequestHeader("X-Forwarded-Host", "gateway")
+                                .circuitBreaker(c -> c
+                                        .setName("identityServiceCircuitBreaker")
+                                        .setFallbackUri("forward:/__gateway/fallback/identity")))
+                        .uri(identityServiceUri))
+
                 .route("identity-service-api", r -> r
                         .path("/api/identity/**")
                         .filters(f -> f
@@ -103,10 +123,9 @@ public class GatewayRoutesConfig {
                         .uri(identityServiceUri))
 
                 .route("user-group-service-api", r -> r
-                        .path("/api/groups/**", "/api/users/**")
+                        .path("/api/groups/**", "/api/users/**", "/api/semesters/**")
                         .filters(f -> f
                                 .filter(rateLimitGatewayFilter.globalRateLimit("user-group-service"))
-                                .stripPrefix(1)
                                 .addRequestHeader("X-Forwarded-Host", "gateway")
                                 .circuitBreaker(c -> c
                                         .setName("userGroupServiceCircuitBreaker")
@@ -117,7 +136,6 @@ public class GatewayRoutesConfig {
                         .path("/api/project-configs/**")
                         .filters(f -> f
                                 .filter(rateLimitGatewayFilter.globalRateLimit("project-config-service"))
-                                .stripPrefix(1)
                                 .addRequestHeader("X-Forwarded-Host", "gateway")
                                 .circuitBreaker(c -> c
                                         .setName("projectConfigServiceCircuitBreaker")

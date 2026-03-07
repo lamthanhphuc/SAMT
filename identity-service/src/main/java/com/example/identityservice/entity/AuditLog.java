@@ -1,6 +1,9 @@
 package com.example.identityservice.entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
 
 /**
@@ -58,11 +61,13 @@ public class AuditLog {
     private String userAgent;
 
     // Change details (JSON)
-    @Column(name = "old_value", columnDefinition = "JSONB")
-    private String oldValue;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "old_value", columnDefinition = "jsonb")
+    private JsonNode oldValue;
 
-    @Column(name = "new_value", columnDefinition = "JSONB")
-    private String newValue;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "new_value", columnDefinition = "jsonb")
+    private JsonNode newValue;
 
     // Outcome
     @Column(nullable = false, length = 20)
@@ -112,8 +117,8 @@ public class AuditLog {
         private String actorEmail;
         private String ipAddress;
         private String userAgent;
-        private String oldValue;
-        private String newValue;
+        private JsonNode oldValue;
+        private JsonNode newValue;
         private AuditOutcome outcome = AuditOutcome.SUCCESS;
 
         public Builder entityType(String entityType) {
@@ -151,12 +156,12 @@ public class AuditLog {
             return this;
         }
 
-        public Builder oldValue(String oldValue) {
+        public Builder oldValue(JsonNode oldValue) {
             this.oldValue = oldValue;
             return this;
         }
 
-        public Builder newValue(String newValue) {
+        public Builder newValue(JsonNode newValue) {
             this.newValue = newValue;
             return this;
         }
@@ -196,7 +201,7 @@ public class AuditLog {
     public LocalDateTime getTimestamp() { return timestamp; }
     public String getIpAddress() { return ipAddress; }
     public String getUserAgent() { return userAgent; }
-    public String getOldValue() { return oldValue; }
-    public String getNewValue() { return newValue; }
+    public JsonNode getOldValue() { return oldValue; }
+    public JsonNode getNewValue() { return newValue; }
     public AuditOutcome getOutcome() { return outcome; }
 }

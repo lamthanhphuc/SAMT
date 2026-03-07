@@ -27,27 +27,10 @@ public class SecurityConfig {
                         .pathMatchers("/.well-known/jwks.json").permitAll()
                         .pathMatchers("/.well-known/internal-jwks.json").permitAll()
                         .pathMatchers(
-                                "/api/identity/register",
-                                "/api/identity/login",
-                                "/api/identity/refresh-token",
-                                "/actuator/health",
-                                "/actuator/health/**",
-                                "/actuator/info"
-                        ).permitAll()
-                        .pathMatchers(
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/swagger-ui/index.html",
-                                "/v3/api-docs/**",
-                                "/webjars/**",
-                                "/identity/v3/api-docs/**",
-                                "/user-group/v3/api-docs/**",
-                                "/project-config/v3/api-docs/**",
-                                "/sync/v3/api-docs/**",
-                                "/analysis/v3/api-docs/**",
-                                "/report/v3/api-docs/**",
-                                "/notification/v3/api-docs/**",
-                                "/actuator/**"
+                                "/api/auth/register",
+                                "/api/auth/login",
+                                "/api/auth/refresh",
+                                "/actuator/health"
                         ).permitAll()
                         .anyExchange().authenticated())
                 .build();
@@ -67,26 +50,10 @@ public class SecurityConfig {
                         .pathMatchers("/.well-known/jwks.json").permitAll()
                         .pathMatchers("/.well-known/internal-jwks.json").permitAll()
                         .pathMatchers(
-                                "/api/identity/register",
-                                "/api/identity/login",
-                                "/api/identity/refresh-token",
-                                "/actuator/health",
-                                "/actuator/health/**",
-                                "/actuator/info",
-                                // Gateway's own Swagger UI
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/swagger-ui/index.html",
-                                "/v3/api-docs/**",
-                                "/webjars/**",
-                                "/identity/v3/api-docs/**",
-                                "/user-group/v3/api-docs/**",
-                                "/project-config/v3/api-docs/**",
-                                "/sync/v3/api-docs/**",
-                                "/analysis/v3/api-docs/**",
-                                "/report/v3/api-docs/**",
-                                "/notification/v3/api-docs/**",
-                                "/test/**"
+                                "/api/auth/register",
+                                "/api/auth/login",
+                                "/api/auth/refresh",
+                                "/actuator/health"
                         ).permitAll()
                         .anyExchange().authenticated())
                 .build();

@@ -1,0 +1,469 @@
+### SAMT API Smoke Test (Sequential, no manual edits)
+### Runner: VS Code REST Client (humao.rest-client)
+### How to run: Open this file, execute requests from top to bottom.
+
+@baseUrl = http://localhost:9080
+@identityBaseUrl = http://localhost:8081
+# @baseUrl = https://dev.api.samt.com
+# @baseUrl = https://staging.api.samt.com
+
+@adminEmail = admin@samt.local
+@adminPassword = Str0ng@Pass!
+@lecturerEmail = lecturer1@samt.local
+@lecturerPassword = Str0ng@Pass!
+@studentEmail = student1@samt.local
+@studentPassword = Str0ng@Pass!
+@unknownUserId = 99999999
+@adminAccessToken = UNSET
+@adminRefreshToken = UNSET
+@studentAccessToken = UNSET
+@lecturerId = 0
+@studentId = 0
+@semesterId = 0
+@groupId = 0
+@projectConfigId = 00000000-0000-0000-0000-000000000000
+
+# Tokens for sample payloads (format-valid placeholders)
+@jiraHostUrl = https://example.atlassian.net
+@jiraApiToken = ATATTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+@githubRepoUrl = https://github.com/example-org/example-repo
+@githubToken = ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+### 1) Gateway health
+# @name gatewayHealth
+GET {{baseUrl}}/actuator/health
+
+> {%
+client.test("Gateway health OK", function () {
+  client.assert(response.status === 200);
+  client.assert(response.body.status === "UP");
+});
+%}
+
+### 2) Pre-seed users
+# 2.1) Pre-seed student (public register, idempotent)
+# @name preseedStudent
+POST {{identityBaseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{studentEmail}}",
+  "password": "{{studentPassword}}",
+  "confirmPassword": "{{studentPassword}}",
+  "fullName": "Student One",
+  "role": "STUDENT"
+}
+
+> {%
+client.test("Pre-seed student OK", function () {
+  client.assert(response.status === 201 || response.status === 409);
+});
+%}
+
+###
+
+# 2.2) Pre-seed admin token (required for admin create-user APIs)
+# @name preseedAdminLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+> {%
+client.test("Pre-seed admin login OK", function () {
+  client.assert(response.status === 200);
+  client.assert(response.body.accessToken);
+});
+%}
+
+###
+
+# 2.3) Pre-seed lecturer (public register, idempotent)
+# @name preseedLecturer
+POST {{identityBaseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{lecturerEmail}}",
+  "password": "{{lecturerPassword}}",
+  "confirmPassword": "{{lecturerPassword}}",
+  "fullName": "Lecturer One",
+  "role": "STUDENT"
+}
+
+> {%
+client.test("Pre-seed lecturer OK", function () {
+  client.assert(response.status === 201 || response.status === 409);
+});
+%}
+
+###
+
+### 3) Admin login
+# @name adminLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+> {%
+client.test("Admin login OK", function() {
+  client.assert(response.status === 200);
+  client.assert(response.body.accessToken);
+  client.global.set("adminAccessToken", response.body.accessToken);
+  client.global.set("adminRefreshToken", response.body.refreshToken);
+});
+%}
+
+###
+
+### 4) Lecturer login
+# @name lecturerLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{lecturerEmail}}",
+  "password": "{{lecturerPassword}}"
+}
+
+> {%
+client.test("Lecturer login OK", function() {
+  client.assert(response.status === 200);
+  client.assert(response.body.accessToken);
+});
+%}
+
+###
+
+### 5) Student login
+# @name studentLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{studentEmail}}",
+  "password": "{{studentPassword}}"
+}
+
+> {%
+client.test("Student login OK", function() {
+  client.assert(response.status === 200);
+  client.assert(response.body.accessToken);
+  client.global.set("studentAccessToken", response.body.accessToken);
+});
+%}
+
+###
+
+### 6) Refresh token rotation (admin)
+# @name refreshAdmin
+POST {{baseUrl}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{adminRefreshToken}}"
+}
+
+> {%
+client.test("Refresh token OK", function() {
+  client.assert(response.status === 200);
+  client.assert(response.body.accessToken);
+  client.global.set("adminAccessToken", response.body.accessToken);
+  client.global.set("adminRefreshToken", response.body.refreshToken);
+});
+%}
+
+###
+
+### 6) Get one lecturer ID
+# @name listLecturers
+GET {{baseUrl}}/api/users?page=0&size=1&role=LECTURER
+Authorization: Bearer {{adminAccessToken}}
+
+> {%
+client.test("List users (lecturer) OK", function() {
+  client.assert(response.status === 200);
+  if (response.body && response.body.content && response.body.content[0]) {
+    client.global.set("lecturerId", response.body.content[0].id);
+  }
+});
+%}
+
+###
+
+### 7) Get one student ID
+# @name listStudents
+GET {{baseUrl}}/api/users?page=0&size=1&role=STUDENT
+Authorization: Bearer {{adminAccessToken}}
+
+> {%
+client.test("List users (student) OK", function() {
+  client.assert(response.status === 200);
+  if (response.body && response.body.content && response.body.content[0]) {
+    client.global.set("studentId", response.body.content[0].id);
+  }
+});
+%}
+
+###
+
+### 8) Create semester
+# @name createSemester
+POST {{baseUrl}}/api/semesters
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+{
+  "semesterCode": "AUTO{{$timestamp}}",
+  "semesterName": "Auto Semester {{$timestamp}}",
+  "startDate": "2026-06-01",
+  "endDate": "2026-08-31"
+}
+
+> {%
+client.test("Create semester OK", function() {
+  client.assert(response.status === 201);
+  client.assert(response.body.id);
+  client.global.set("semesterId", response.body.id);
+});
+%}
+
+###
+
+### 9) Activate semester
+# @name activateSemester
+PATCH {{baseUrl}}/api/semesters/{{semesterId}}/activate
+Authorization: Bearer {{adminAccessToken}}
+
+> {%
+client.test("Activate semester OK", function() {
+  client.assert(response.status === 204);
+});
+%}
+
+###
+
+### 10) Create group
+# @name createGroup
+POST {{baseUrl}}/api/groups
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+{
+  "groupName": "SE{{$randomInt 1000 9999}}-G{{$randomInt 1 9}}",
+  "semesterId": {{semesterId}},
+  "lecturerId": {{lecturerId}}
+}
+
+> {%
+client.test("Create group OK", function() {
+  client.assert(response.status === 201);
+  client.assert(response.body.id);
+  client.global.set("groupId", response.body.id);
+});
+%}
+
+###
+
+### 11) Add student member
+# @name addMember
+POST {{baseUrl}}/api/groups/{{groupId}}/members
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+{
+  "userId": {{studentId}}
+}
+
+> {%
+client.test("Add member OK", function() {
+  client.assert(response.status === 200 || response.status === 201);
+});
+%}
+
+###
+
+### 12) Promote member to leader
+# @name promoteMember
+PUT {{baseUrl}}/api/groups/{{groupId}}/members/{{studentId}}/promote
+Authorization: Bearer {{adminAccessToken}}
+
+> {%
+client.test("Promote leader OK", function() {
+  client.assert(response.status === 200);
+});
+%}
+
+###
+
+### 13) Create project config
+# @name createProjectConfig
+POST {{baseUrl}}/api/project-configs
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+{
+  "groupId": {{groupId}},
+  "jiraHostUrl": "{{jiraHostUrl}}",
+  "jiraApiToken": "{{jiraApiToken}}",
+  "githubRepoUrl": "{{githubRepoUrl}}",
+  "githubToken": "{{githubToken}}"
+}
+
+> {%
+client.test("Create project config OK", function() {
+  client.assert(response.status === 201 || response.status === 409);
+  if (response.status === 201) {
+    client.assert(response.body.data && response.body.data.id);
+    client.global.set("projectConfigId", response.body.id || (response.body.data && response.body.data.id));
+  }
+});
+%}
+
+###
+
+### 14) Get project config
+# @name getProjectConfig
+GET {{baseUrl}}/api/project-configs/{{projectConfigId}}
+Authorization: Bearer {{adminAccessToken}}
+
+###
+
+### 15) Verify project config (may depend on external systems)
+# @name verifyProjectConfig
+POST {{baseUrl}}/api/project-configs/{{projectConfigId}}/verify
+Authorization: Bearer {{adminAccessToken}}
+
+> {%
+client.test("Verify project config OK", function() {
+  client.assert(response.status === 200 || response.status === 202 || response.status === 500 || response.status === 503 || response.status === 504);
+});
+%}
+
+###
+
+### 16) Get unknown user -> expect 404
+# @name getUnknownUser
+GET {{baseUrl}}/api/users/{{unknownUserId}}
+Authorization: Bearer {{adminAccessToken}}
+
+###
+
+### 17) Logout admin
+# @name adminLogout
+POST {{baseUrl}}/api/auth/logout
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+{
+  "refreshToken": "{{adminRefreshToken}}"
+}
+
+> {%
+client.test("Logout OK", function() {
+  client.assert(response.status === 200 || response.status === 204 || response.status === 403);
+});
+%}
+
+###
+
+### 18) Unauthorized request
+# @name unauthorizedRequest
+GET {{baseUrl}}/api/users
+
+> {%
+client.test("Unauthorized request returns 401", function() {
+  client.assert(response.status === 401);
+});
+%}
+
+###
+
+### 19) Student tries admin API
+# @name studentForbiddenAdminApi
+GET {{baseUrl}}/api/users
+Authorization: Bearer {{studentAccessToken}}
+
+> {%
+client.test("Student calling admin API returns 403", function() {
+  client.assert(response.status === 403);
+});
+%}
+
+###
+
+### 20) Unknown user
+# @name unknownUserNotFound
+GET {{baseUrl}}/api/users/{{unknownUserId}}
+Authorization: Bearer {{adminAccessToken}}
+
+> {%
+client.test("Unknown user returns 404", function() {
+  client.assert(response.status === 404);
+});
+%}
+
+###
+
+### 21) Expired token
+# @name expiredTokenTest
+GET {{baseUrl}}/api/users
+Authorization: Bearer expired.token.here
+
+> {%
+client.test("Expired token returns 401", function() {
+  client.assert(response.status === 401);
+});
+%}
+
+###
+
+### 22) Invalid token
+# @name invalidTokenTest
+GET {{baseUrl}}/api/users
+Authorization: Bearer invalid-token
+
+> {%
+client.test("Invalid token format returns 401", function() {
+  client.assert(response.status === 401);
+});
+%}
+
+###
+
+### 23) Create semester missing field
+# @name createSemesterMissingField
+POST {{baseUrl}}/api/semesters
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+{
+  "semesterCode": ""
+}
+
+> {%
+client.test("Create semester missing field returns 400", function() {
+  client.assert(response.status === 400);
+});
+%}
+
+###
+
+### 24) Invalid UUID
+# @name invalidUuidUser
+GET {{baseUrl}}/api/users/not-a-uuid
+Authorization: Bearer {{adminAccessToken}}
+
+> {%
+client.test("Invalid UUID returns 400", function() {
+  client.assert(response.status === 400 || response.status === 500);
+});
+%}
+

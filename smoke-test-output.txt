@@ -1,0 +1,232 @@
+
+---------------------
+
+=== SAMT API Smoke Test (Sequential, no manual edits) ===
+
+
+---------------------
+
+=== Runner: VS Code REST Client (humao.rest-client) ===
+
+
+---------------------
+
+=== How to run: Open this file, execute requests from top to bottom. ===
+
+
+---------------------
+
+=== 1) Gateway health ===
+
+GET http://localhost:9080/actuator/health
+=> 200 (14 ms, 259 B)
+[x] Gateway health OK
+
+---------------------
+
+=== 2) Pre-seed users ===
+
+POST http://localhost:8081/api/auth/register
+=> 409 (67 ms, 332 B)
+[x] Pre-seed student OK
+
+---------------------
+
+=== preseedAdminLogin ===
+
+POST http://localhost:9080/api/auth/login
+=> 200 (82 ms, 1.24 kB)
+[x] Pre-seed admin login OK
+
+---------------------
+
+=== preseedLecturer ===
+
+POST http://localhost:8081/api/auth/register
+=> 409 (68 ms, 332 B)
+[x] Pre-seed lecturer OK
+
+---------------------
+
+=== 3) Admin login ===
+
+POST http://localhost:9080/api/auth/login
+=> 200 (80 ms, 1.24 kB)
+[x] Admin login OK
+
+---------------------
+
+=== 4) Lecturer login ===
+
+POST http://localhost:9080/api/auth/login
+=> 200 (78 ms, 1.25 kB)
+[x] Lecturer login OK
+
+---------------------
+
+=== 5) Student login ===
+
+POST http://localhost:9080/api/auth/login
+=> 200 (86 ms, 1.25 kB)
+[x] Student login OK
+
+---------------------
+
+=== 6) Refresh token rotation (admin) ===
+
+POST http://localhost:9080/api/auth/refresh
+=> 200 (19 ms, 1.24 kB)
+[x] Refresh token OK
+
+---------------------
+
+=== 6) Get one lecturer ID ===
+
+GET http://localhost:9080/api/users?page=0&size=1&role=LECTURER
+=> 200 (26 ms, 614 B)
+[x] List users (lecturer) OK
+
+---------------------
+
+=== 7) Get one student ID ===
+
+GET http://localhost:9080/api/users?page=0&size=1&role=STUDENT
+=> 200 (22 ms, 611 B)
+[x] List users (student) OK
+
+---------------------
+
+=== 8) Create semester ===
+
+POST http://localhost:9080/api/semesters
+=> 201 (21 ms, 689 B)
+[x] Create semester OK
+
+---------------------
+
+=== 9) Activate semester ===
+
+PATCH http://localhost:9080/api/semesters/20/activate
+=> 204 (20 ms, 393 B)
+[x] Activate semester OK
+
+---------------------
+
+=== 10) Create group ===
+
+POST http://localhost:9080/api/groups
+=> 201 (38 ms, 574 B)
+[x] Create group OK
+
+---------------------
+
+=== 11) Add student member ===
+
+POST http://localhost:9080/api/groups/10/members
+=> 201 (59 ms, 596 B)
+[x] Add member OK
+
+---------------------
+
+=== 12) Promote member to leader ===
+
+PUT http://localhost:9080/api/groups/10/members/1/promote
+=> 200 (23 ms, 593 B)
+[x] Promote leader OK
+
+---------------------
+
+=== 13) Create project config ===
+
+POST http://localhost:9080/api/project-configs
+=> 409 (30 ms, 663 B)
+[x] Create project config OK
+
+---------------------
+
+=== 14) Get project config ===
+
+GET http://localhost:9080/api/project-configs/00000000-0000-0000-0000-000000000000
+=> 500 (14 ms, 649 B)
+
+---------------------
+
+=== 15) Verify project config (may depend on external systems) ===
+
+POST http://localhost:9080/api/project-configs/00000000-0000-0000-0000-000000000000/verify
+=> 500 (16 ms, 649 B)
+[x] Verify project config OK
+
+---------------------
+
+=== 16) Get unknown user -> expect 404 ===
+
+GET http://localhost:9080/api/users/99999999
+=> 404 (18 ms, 593 B)
+
+---------------------
+
+=== 17) Logout admin ===
+
+POST http://localhost:9080/api/auth/logout
+=> 403 (13 ms, 408 B)
+[x] Logout OK
+
+---------------------
+
+=== 18) Unauthorized request ===
+
+GET http://localhost:9080/api/users
+=> 401 (2 ms, 136 B)
+[x] Unauthorized request returns 401
+
+---------------------
+
+=== 19) Student tries admin API ===
+
+GET http://localhost:9080/api/users
+=> 403 (15 ms, 586 B)
+[x] Student calling admin API returns 403
+
+---------------------
+
+=== 20) Unknown user ===
+
+GET http://localhost:9080/api/users/99999999
+=> 404 (18 ms, 593 B)
+[x] Unknown user returns 404
+
+---------------------
+
+=== 21) Expired token ===
+
+GET http://localhost:9080/api/users
+=> 401 (2 ms, 136 B)
+[x] Expired token returns 401
+
+---------------------
+
+=== 22) Invalid token ===
+
+GET http://localhost:9080/api/users
+=> 401 (2 ms, 136 B)
+[x] Invalid token format returns 401
+
+---------------------
+
+=== 23) Create semester missing field ===
+
+POST http://localhost:9080/api/semesters
+=> 400 (14 ms, 714 B)
+[x] Create semester missing field returns 400
+
+---------------------
+
+=== 24) Invalid UUID ===
+
+GET http://localhost:9080/api/users/not-a-uuid
+=> 500 (14 ms, 577 B)
+[x] Invalid UUID returns 400
+
+30 requests processed (30 succeeded)
+

@@ -154,12 +154,9 @@ grpc:
   server:
     port: 9095  # Keep consistent gRPC port
   client:
-    default:
-      negotiation-type: TLS
-      security:
-        trustCertCollection: file:/certs/ca.crt
     identity-service:
       address: dns:///identity-service:9091
+      negotiation-type: PLAINTEXT
 
 server:
   port: 8082  # Keep consistent REST API port
