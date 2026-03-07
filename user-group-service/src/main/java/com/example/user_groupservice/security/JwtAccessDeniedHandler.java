@@ -30,7 +30,8 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         
         ErrorResponse errorResponse = ErrorResponse.of(
-                "FORBIDDEN",
+            HttpServletResponse.SC_FORBIDDEN,
+            "Forbidden",
                 "You do not have permission to perform this action"
         );
         

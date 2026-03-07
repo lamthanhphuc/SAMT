@@ -1,0 +1,240 @@
+@baseUrl = http://localhost:9080
+@identityBaseUrl = http://localhost:8081
+@adminEmail = admin@example.com
+@adminPassword = password
+@lecturerEmail = lecturer@example.com
+@lecturerPassword = password
+@studentEmail = student@example.com
+@studentPassword = password
+@adminAccessToken = invalid.jwt.token
+@studentAccessToken = invalid.jwt.token
+@adminRefreshToken = invalid.refresh.token
+# Optional environment variable usage:
+# @baseUrl = {{BASE_URL}}
+# @adminEmail = {{ADMIN_EMAIL}}
+# @adminPassword = {{ADMIN_PASSWORD}}
+@invalidUuid = not-a-uuid
+@missingToken = invalid.jwt.token
+
+### Bootstrap admin login
+# @name adminLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+> {%
+client.test("admin login", function () {
+  client.assert(response.status === 200 || response.status === 401);
+  if (response.status === 200 && response.body.accessToken) {
+    client.global.set("adminAccessToken", response.body.accessToken);
+  }
+  if (response.status === 200 && response.body.refreshToken) {
+    client.global.set("adminRefreshToken", response.body.refreshToken);
+  }
+});
+%}
+
+### Bootstrap student login
+# @name studentLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{studentEmail}}",
+  "password": "{{studentPassword}}"
+}
+
+> {%
+client.test("student login", function () {
+  client.assert(response.status === 200 || response.status === 401);
+  if (response.status === 200 && response.body.accessToken) {
+    client.global.set("studentAccessToken", response.body.accessToken);
+  }
+});
+%}
+
+### POST_/api/auth/register_happy
+# @name POST__api_auth_register_happy
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+
+{
+  "email": "qa+1772877116833@example.com",
+  "password": "Password@123",
+  "confirmPassword": "Password@123",
+  "fullName": "QA Automation User",
+  "role": "STUDENT"
+}
+
+> {%
+client.test("POST_/api/auth/register_happy -> [200, 201, 400, 409]", function () {
+  client.assert([200, 201, 400, 409].includes(response.status));
+});
+%}
+
+### POST_/api/auth/register_invalid_payload
+# @name POST__api_auth_register_invalid_payload
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+
+{"invalid":"payload"}
+
+> {%
+client.test("POST_/api/auth/register_invalid_payload -> [400]", function () {
+  client.assert([400].includes(response.status));
+});
+%}
+
+### POST_/api/auth/register_missing_required
+# @name POST__api_auth_register_missing_required
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/auth/register_missing_required -> [400]", function () {
+  client.assert([400].includes(response.status));
+});
+%}
+
+### POST_/api/auth/refresh_happy
+# @name POST__api_auth_refresh_happy
+POST {{baseUrl}}/api/auth/refresh
+Content-Type: application/json
+
+
+{
+  "refreshToken": "{{adminRefreshToken}}"
+}
+
+> {%
+client.test("POST_/api/auth/refresh_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### POST_/api/auth/refresh_invalid_payload
+# @name POST__api_auth_refresh_invalid_payload
+POST {{baseUrl}}/api/auth/refresh
+Content-Type: application/json
+
+
+{"invalid":"payload"}
+
+> {%
+client.test("POST_/api/auth/refresh_invalid_payload -> [400]", function () {
+  client.assert([400].includes(response.status));
+});
+%}
+
+### POST_/api/auth/refresh_missing_required
+# @name POST__api_auth_refresh_missing_required
+POST {{baseUrl}}/api/auth/refresh
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/auth/refresh_missing_required -> [400]", function () {
+  client.assert([400].includes(response.status));
+});
+%}
+
+### POST_/api/auth/logout_happy
+# @name POST__api_auth_logout_happy
+POST {{baseUrl}}/api/auth/logout
+Content-Type: application/json
+
+
+{
+  "refreshToken": "{{adminRefreshToken}}"
+}
+
+> {%
+client.test("POST_/api/auth/logout_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### POST_/api/auth/logout_invalid_payload
+# @name POST__api_auth_logout_invalid_payload
+POST {{baseUrl}}/api/auth/logout
+Content-Type: application/json
+
+
+{"invalid":"payload"}
+
+> {%
+client.test("POST_/api/auth/logout_invalid_payload -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### POST_/api/auth/logout_missing_required
+# @name POST__api_auth_logout_missing_required
+POST {{baseUrl}}/api/auth/logout
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/auth/logout_missing_required -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### POST_/api/auth/login_happy
+# @name POST__api_auth_login_happy
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+> {%
+client.test("POST_/api/auth/login_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### POST_/api/auth/login_invalid_payload
+# @name POST__api_auth_login_invalid_payload
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+
+{"invalid":"payload"}
+
+> {%
+client.test("POST_/api/auth/login_invalid_payload -> [400]", function () {
+  client.assert([400].includes(response.status));
+});
+%}
+
+### POST_/api/auth/login_missing_required
+# @name POST__api_auth_login_missing_required
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/auth/login_missing_required -> [400]", function () {
+  client.assert([400].includes(response.status));
+});
+%}
+

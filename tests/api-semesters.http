@@ -1,0 +1,587 @@
+@baseUrl = http://localhost:9080
+@identityBaseUrl = http://localhost:8081
+@adminEmail = admin@example.com
+@adminPassword = password
+@lecturerEmail = lecturer@example.com
+@lecturerPassword = password
+@studentEmail = student@example.com
+@studentPassword = password
+@adminAccessToken = invalid.jwt.token
+@studentAccessToken = invalid.jwt.token
+@adminRefreshToken = invalid.refresh.token
+# Optional environment variable usage:
+# @baseUrl = {{BASE_URL}}
+# @adminEmail = {{ADMIN_EMAIL}}
+# @adminPassword = {{ADMIN_PASSWORD}}
+@invalidUuid = not-a-uuid
+@missingToken = invalid.jwt.token
+
+### Bootstrap admin login
+# @name adminLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+> {%
+client.test("admin login", function () {
+  client.assert(response.status === 200 || response.status === 401);
+  if (response.status === 200 && response.body.accessToken) {
+    client.global.set("adminAccessToken", response.body.accessToken);
+  }
+  if (response.status === 200 && response.body.refreshToken) {
+    client.global.set("adminRefreshToken", response.body.refreshToken);
+  }
+});
+%}
+
+### Bootstrap student login
+# @name studentLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{studentEmail}}",
+  "password": "{{studentPassword}}"
+}
+
+> {%
+client.test("student login", function () {
+  client.assert(response.status === 200 || response.status === 401);
+  if (response.status === 200 && response.body.accessToken) {
+    client.global.set("studentAccessToken", response.body.accessToken);
+  }
+});
+%}
+
+### GET_/api/semesters/{id}_happy
+# @name GET__api_semesters__id__happy
+GET {{baseUrl}}/api/semesters/1
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/semesters/{id}_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### GET_/api/semesters/{id}_unauthorized
+# @name GET__api_semesters__id__unauthorized
+GET {{baseUrl}}/api/semesters/1
+Authorization: Bearer {{missingToken}}
+
+
+
+> {%
+client.test("GET_/api/semesters/{id}_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### GET_/api/semesters/{id}_forbidden_role
+# @name GET__api_semesters__id__forbidden_role
+GET {{baseUrl}}/api/semesters/1
+Authorization: Bearer {{studentAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/semesters/{id}_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### GET_/api/semesters/{id}_invalid_uuid
+# @name GET__api_semesters__id__invalid_uuid
+GET {{baseUrl}}/api/semesters/{{invalidUuid}}
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/semesters/{id}_invalid_uuid -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### GET_/api/semesters/{id}_not_found
+# @name GET__api_semesters__id__not_found
+GET {{baseUrl}}/api/semesters/999999999
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/semesters/{id}_not_found -> [404, 401]", function () {
+  client.assert([404, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/semesters/{id}_happy
+# @name PUT__api_semesters__id__happy
+PUT {{baseUrl}}/api/semesters/1
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{
+  "semesterName": "semesterName-sample",
+  "startDate": "startDate-sample",
+  "endDate": "endDate-sample"
+}
+
+> {%
+client.test("PUT_/api/semesters/{id}_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/semesters/{id}_unauthorized
+# @name PUT__api_semesters__id__unauthorized
+PUT {{baseUrl}}/api/semesters/1
+Authorization: Bearer {{missingToken}}
+Content-Type: application/json
+
+
+{
+  "semesterName": "semesterName-sample",
+  "startDate": "startDate-sample",
+  "endDate": "endDate-sample"
+}
+
+> {%
+client.test("PUT_/api/semesters/{id}_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### PUT_/api/semesters/{id}_forbidden_role
+# @name PUT__api_semesters__id__forbidden_role
+PUT {{baseUrl}}/api/semesters/1
+Authorization: Bearer {{studentAccessToken}}
+Content-Type: application/json
+
+
+{
+  "semesterName": "semesterName-sample",
+  "startDate": "startDate-sample",
+  "endDate": "endDate-sample"
+}
+
+> {%
+client.test("PUT_/api/semesters/{id}_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/semesters/{id}_invalid_payload
+# @name PUT__api_semesters__id__invalid_payload
+PUT {{baseUrl}}/api/semesters/1
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{"invalid":"payload"}
+
+> {%
+client.test("PUT_/api/semesters/{id}_invalid_payload -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/semesters/{id}_missing_required
+# @name PUT__api_semesters__id__missing_required
+PUT {{baseUrl}}/api/semesters/1
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("PUT_/api/semesters/{id}_missing_required -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/semesters/{id}_invalid_uuid
+# @name PUT__api_semesters__id__invalid_uuid
+PUT {{baseUrl}}/api/semesters/{{invalidUuid}}
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{
+  "semesterName": "semesterName-sample",
+  "startDate": "startDate-sample",
+  "endDate": "endDate-sample"
+}
+
+> {%
+client.test("PUT_/api/semesters/{id}_invalid_uuid -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/semesters/{id}_not_found
+# @name PUT__api_semesters__id__not_found
+PUT {{baseUrl}}/api/semesters/999999999
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{
+  "semesterName": "semesterName-sample",
+  "startDate": "startDate-sample",
+  "endDate": "endDate-sample"
+}
+
+> {%
+client.test("PUT_/api/semesters/{id}_not_found -> [404, 401]", function () {
+  client.assert([404, 401].includes(response.status));
+});
+%}
+
+### GET_/api/semesters_happy
+# @name GET__api_semesters_happy
+GET {{baseUrl}}/api/semesters
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/semesters_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### GET_/api/semesters_unauthorized
+# @name GET__api_semesters_unauthorized
+GET {{baseUrl}}/api/semesters
+Authorization: Bearer {{missingToken}}
+
+
+
+> {%
+client.test("GET_/api/semesters_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### GET_/api/semesters_forbidden_role
+# @name GET__api_semesters_forbidden_role
+GET {{baseUrl}}/api/semesters
+Authorization: Bearer {{studentAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/semesters_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### POST_/api/semesters_happy
+# @name POST__api_semesters_happy
+POST {{baseUrl}}/api/semesters
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{
+  "semesterCode": "semesterCode-sample",
+  "semesterName": "semesterName-sample",
+  "startDate": "startDate-sample",
+  "endDate": "endDate-sample"
+}
+
+> {%
+client.test("POST_/api/semesters_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### POST_/api/semesters_unauthorized
+# @name POST__api_semesters_unauthorized
+POST {{baseUrl}}/api/semesters
+Authorization: Bearer {{missingToken}}
+Content-Type: application/json
+
+
+{
+  "semesterCode": "semesterCode-sample",
+  "semesterName": "semesterName-sample",
+  "startDate": "startDate-sample",
+  "endDate": "endDate-sample"
+}
+
+> {%
+client.test("POST_/api/semesters_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### POST_/api/semesters_forbidden_role
+# @name POST__api_semesters_forbidden_role
+POST {{baseUrl}}/api/semesters
+Authorization: Bearer {{studentAccessToken}}
+Content-Type: application/json
+
+
+{
+  "semesterCode": "semesterCode-sample",
+  "semesterName": "semesterName-sample",
+  "startDate": "startDate-sample",
+  "endDate": "endDate-sample"
+}
+
+> {%
+client.test("POST_/api/semesters_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### POST_/api/semesters_invalid_payload
+# @name POST__api_semesters_invalid_payload
+POST {{baseUrl}}/api/semesters
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{"invalid":"payload"}
+
+> {%
+client.test("POST_/api/semesters_invalid_payload -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### POST_/api/semesters_missing_required
+# @name POST__api_semesters_missing_required
+POST {{baseUrl}}/api/semesters
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/semesters_missing_required -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### PATCH_/api/semesters/{id}/activate_happy
+# @name PATCH__api_semesters__id__activate_happy
+PATCH {{baseUrl}}/api/semesters/1/activate
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("PATCH_/api/semesters/{id}/activate_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### PATCH_/api/semesters/{id}/activate_unauthorized
+# @name PATCH__api_semesters__id__activate_unauthorized
+PATCH {{baseUrl}}/api/semesters/1/activate
+Authorization: Bearer {{missingToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("PATCH_/api/semesters/{id}/activate_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### PATCH_/api/semesters/{id}/activate_forbidden_role
+# @name PATCH__api_semesters__id__activate_forbidden_role
+PATCH {{baseUrl}}/api/semesters/1/activate
+Authorization: Bearer {{studentAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("PATCH_/api/semesters/{id}/activate_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### PATCH_/api/semesters/{id}/activate_invalid_payload
+# @name PATCH__api_semesters__id__activate_invalid_payload
+PATCH {{baseUrl}}/api/semesters/1/activate
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{"invalid":"payload"}
+
+> {%
+client.test("PATCH_/api/semesters/{id}/activate_invalid_payload -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### PATCH_/api/semesters/{id}/activate_missing_required
+# @name PATCH__api_semesters__id__activate_missing_required
+PATCH {{baseUrl}}/api/semesters/1/activate
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("PATCH_/api/semesters/{id}/activate_missing_required -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### PATCH_/api/semesters/{id}/activate_invalid_uuid
+# @name PATCH__api_semesters__id__activate_invalid_uuid
+PATCH {{baseUrl}}/api/semesters/{{invalidUuid}}/activate
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("PATCH_/api/semesters/{id}/activate_invalid_uuid -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### PATCH_/api/semesters/{id}/activate_not_found
+# @name PATCH__api_semesters__id__activate_not_found
+PATCH {{baseUrl}}/api/semesters/999999999/activate
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("PATCH_/api/semesters/{id}/activate_not_found -> [404, 401]", function () {
+  client.assert([404, 401].includes(response.status));
+});
+%}
+
+### GET_/api/semesters/code/{code}_happy
+# @name GET__api_semesters_code__code__happy
+GET {{baseUrl}}/api/semesters/code/1
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/semesters/code/{code}_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### GET_/api/semesters/code/{code}_unauthorized
+# @name GET__api_semesters_code__code__unauthorized
+GET {{baseUrl}}/api/semesters/code/1
+Authorization: Bearer {{missingToken}}
+
+
+
+> {%
+client.test("GET_/api/semesters/code/{code}_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### GET_/api/semesters/code/{code}_forbidden_role
+# @name GET__api_semesters_code__code__forbidden_role
+GET {{baseUrl}}/api/semesters/code/1
+Authorization: Bearer {{studentAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/semesters/code/{code}_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### GET_/api/semesters/code/{code}_invalid_uuid
+# @name GET__api_semesters_code__code__invalid_uuid
+GET {{baseUrl}}/api/semesters/code/{{invalidUuid}}
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/semesters/code/{code}_invalid_uuid -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### GET_/api/semesters/code/{code}_not_found
+# @name GET__api_semesters_code__code__not_found
+GET {{baseUrl}}/api/semesters/code/999999999
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/semesters/code/{code}_not_found -> [404, 401]", function () {
+  client.assert([404, 401].includes(response.status));
+});
+%}
+
+### GET_/api/semesters/active_happy
+# @name GET__api_semesters_active_happy
+GET {{baseUrl}}/api/semesters/active
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/semesters/active_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### GET_/api/semesters/active_unauthorized
+# @name GET__api_semesters_active_unauthorized
+GET {{baseUrl}}/api/semesters/active
+Authorization: Bearer {{missingToken}}
+
+
+
+> {%
+client.test("GET_/api/semesters/active_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### GET_/api/semesters/active_forbidden_role
+# @name GET__api_semesters_active_forbidden_role
+GET {{baseUrl}}/api/semesters/active
+Authorization: Bearer {{studentAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/semesters/active_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+

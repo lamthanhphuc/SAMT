@@ -8,15 +8,10 @@ import lombok.Builder;
  */
 @Builder
 public record ErrorResponse(
-    Error error,
+    int statusCode,
+    String error,
+    String message,
+    Object details,
     String timestamp
 ) {
-    
-    @Builder
-    public record Error(
-        String code,
-        String message,
-        String field,
-        Object details
-    ) {}
 }

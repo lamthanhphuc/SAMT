@@ -5,8 +5,10 @@ import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.oauth2.jwt.JwtException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -233,8 +235,32 @@ public class GlobalExceptionHandler {
         log.warn("Constraint violation: {}", ex.getMessage());
         return buildErrorResponse(
             HttpStatus.BAD_REQUEST,
-            "VALIDATION_ERROR",
-            ex.getMessage(),
+            HttpStatus.BAD_REQUEST.getReasonPhrase(),
+            "Validation failed",
+            null
+        );
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        String message = "Invalid value for parameter '" + ex.getName() + "'";
+        if (java.util.UUID.class.equals(ex.getRequiredType())) {
+            message = "Invalid UUID";
+        }
+        return buildErrorResponse(
+            HttpStatus.BAD_REQUEST,
+            HttpStatus.BAD_REQUEST.getReasonPhrase(),
+            message,
+            ex.getName()
+        );
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadableBody(HttpMessageNotReadableException ex) {
+        return buildErrorResponse(
+            HttpStatus.BAD_REQUEST,
+            HttpStatus.BAD_REQUEST.getReasonPhrase(),
+            "Malformed request body",
             null
         );
     }
@@ -278,12 +304,10 @@ public class GlobalExceptionHandler {
         Object details
     ) {
         ErrorResponse response = ErrorResponse.builder()
-            .error(ErrorResponse.Error.builder()
-                .code(code)
-                .message(message)
-                .field(field)
-                .details(details)
-                .build())
+            .statusCode(status.value())
+            .error(status.getReasonPhrase())
+            .message(message)
+            .details(details != null ? details : field)
             .timestamp(Instant.now().toString())
             .build();
         

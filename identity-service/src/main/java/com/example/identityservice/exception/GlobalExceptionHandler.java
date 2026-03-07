@@ -1,9 +1,12 @@
 package com.example.identityservice.exception;
 
 import com.example.identityservice.dto.ErrorResponse;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -25,7 +28,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleEmailAlreadyExists(EmailAlreadyExistsException ex) {
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
-                .body(ErrorResponse.of("EMAIL_EXISTS", ex.getMessage()));
+                .body(ErrorResponse.of(HttpStatus.CONFLICT.value(), HttpStatus.CONFLICT.getReasonPhrase(), ex.getMessage()));
     }
 
     /**
@@ -35,7 +38,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handlePasswordMismatch(PasswordMismatchException ex) {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ErrorResponse.of("PASSWORD_MISMATCH", ex.getMessage()));
+                .body(ErrorResponse.of(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), ex.getMessage()));
     }
 
     /**
@@ -45,7 +48,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleInvalidCredentials(InvalidCredentialsException ex) {
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
-                .body(ErrorResponse.of("INVALID_CREDENTIALS", ex.getMessage()));
+                .body(ErrorResponse.of(HttpStatus.UNAUTHORIZED.value(), HttpStatus.UNAUTHORIZED.getReasonPhrase(), ex.getMessage()));
     }
 
     /**
@@ -55,7 +58,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleAccountLocked(AccountLockedException ex) {
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
-                .body(ErrorResponse.of("ACCOUNT_LOCKED", ex.getMessage()));
+                .body(ErrorResponse.of(HttpStatus.FORBIDDEN.value(), HttpStatus.FORBIDDEN.getReasonPhrase(), ex.getMessage()));
     }
 
     /**
@@ -65,7 +68,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleTokenExpired(TokenExpiredException ex) {
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
-                .body(ErrorResponse.of("TOKEN_EXPIRED", ex.getMessage()));
+                .body(ErrorResponse.of(HttpStatus.UNAUTHORIZED.value(), HttpStatus.UNAUTHORIZED.getReasonPhrase(), ex.getMessage()));
     }
 
     /**
@@ -75,7 +78,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleTokenInvalid(TokenInvalidException ex) {
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
-                .body(ErrorResponse.of("TOKEN_INVALID", ex.getMessage()));
+                .body(ErrorResponse.of(HttpStatus.UNAUTHORIZED.value(), HttpStatus.UNAUTHORIZED.getReasonPhrase(), ex.getMessage()));
     }
 
     /**
@@ -85,7 +88,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUserNotFound(UserNotFoundException ex) {
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
-                .body(ErrorResponse.of("USER_NOT_FOUND", ex.getMessage()));
+                .body(ErrorResponse.of(HttpStatus.NOT_FOUND.value(), HttpStatus.NOT_FOUND.getReasonPhrase(), ex.getMessage()));
     }
 
     /**
@@ -95,7 +98,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleInvalidUserState(InvalidUserStateException ex) {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ErrorResponse.of("INVALID_STATE", ex.getMessage()));
+                .body(ErrorResponse.of(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), ex.getMessage()));
     }
 
     /**
@@ -105,7 +108,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleSelfAction(SelfActionException ex) {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ErrorResponse.of("SELF_ACTION_DENIED", ex.getMessage()));
+                .body(ErrorResponse.of(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), ex.getMessage()));
     }
 
     /**
@@ -115,7 +118,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex) {
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
-                .body(ErrorResponse.of("CONFLICT", ex.getMessage()));
+                .body(ErrorResponse.of(HttpStatus.CONFLICT.value(), HttpStatus.CONFLICT.getReasonPhrase(), ex.getMessage()));
     }
 
     /**
@@ -134,6 +137,35 @@ public class GlobalExceptionHandler {
         
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ErrorResponse.of("VALIDATION_ERROR", message));
+                .body(ErrorResponse.of(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), message));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        String message = "Invalid value for parameter '" + ex.getName() + "'";
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.of(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), message));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadableBody(HttpMessageNotReadableException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.of(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST.getReasonPhrase(), "Malformed request body"));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex) {
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of(HttpStatus.CONFLICT.value(), HttpStatus.CONFLICT.getReasonPhrase(), "Resource conflict"));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex) {
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ErrorResponse.of(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), "Unexpected internal server error"));
     }
 }

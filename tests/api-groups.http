@@ -1,0 +1,1005 @@
+@baseUrl = http://localhost:9080
+@identityBaseUrl = http://localhost:8081
+@adminEmail = admin@example.com
+@adminPassword = password
+@lecturerEmail = lecturer@example.com
+@lecturerPassword = password
+@studentEmail = student@example.com
+@studentPassword = password
+@adminAccessToken = invalid.jwt.token
+@studentAccessToken = invalid.jwt.token
+@adminRefreshToken = invalid.refresh.token
+# Optional environment variable usage:
+# @baseUrl = {{BASE_URL}}
+# @adminEmail = {{ADMIN_EMAIL}}
+# @adminPassword = {{ADMIN_PASSWORD}}
+@invalidUuid = not-a-uuid
+@missingToken = invalid.jwt.token
+
+### Bootstrap admin login
+# @name adminLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+> {%
+client.test("admin login", function () {
+  client.assert(response.status === 200 || response.status === 401);
+  if (response.status === 200 && response.body.accessToken) {
+    client.global.set("adminAccessToken", response.body.accessToken);
+  }
+  if (response.status === 200 && response.body.refreshToken) {
+    client.global.set("adminRefreshToken", response.body.refreshToken);
+  }
+});
+%}
+
+### Bootstrap student login
+# @name studentLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{studentEmail}}",
+  "password": "{{studentPassword}}"
+}
+
+> {%
+client.test("student login", function () {
+  client.assert(response.status === 200 || response.status === 401);
+  if (response.status === 200 && response.body.accessToken) {
+    client.global.set("studentAccessToken", response.body.accessToken);
+  }
+});
+%}
+
+### GET_/api/groups/{groupId}_happy
+# @name GET__api_groups__groupId__happy
+GET {{baseUrl}}/api/groups/1
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/groups/{groupId}_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### GET_/api/groups/{groupId}_unauthorized
+# @name GET__api_groups__groupId__unauthorized
+GET {{baseUrl}}/api/groups/1
+Authorization: Bearer {{missingToken}}
+
+
+
+> {%
+client.test("GET_/api/groups/{groupId}_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### GET_/api/groups/{groupId}_forbidden_role
+# @name GET__api_groups__groupId__forbidden_role
+GET {{baseUrl}}/api/groups/1
+Authorization: Bearer {{studentAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/groups/{groupId}_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### GET_/api/groups/{groupId}_invalid_uuid
+# @name GET__api_groups__groupId__invalid_uuid
+GET {{baseUrl}}/api/groups/{{invalidUuid}}
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/groups/{groupId}_invalid_uuid -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### GET_/api/groups/{groupId}_not_found
+# @name GET__api_groups__groupId__not_found
+GET {{baseUrl}}/api/groups/999999999
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/groups/{groupId}_not_found -> [404, 401]", function () {
+  client.assert([404, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/groups/{groupId}_happy
+# @name PUT__api_groups__groupId__happy
+PUT {{baseUrl}}/api/groups/1
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{
+  "groupName": "groupName-sample",
+  "lecturerId": 1
+}
+
+> {%
+client.test("PUT_/api/groups/{groupId}_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/groups/{groupId}_unauthorized
+# @name PUT__api_groups__groupId__unauthorized
+PUT {{baseUrl}}/api/groups/1
+Authorization: Bearer {{missingToken}}
+Content-Type: application/json
+
+
+{
+  "groupName": "groupName-sample",
+  "lecturerId": 1
+}
+
+> {%
+client.test("PUT_/api/groups/{groupId}_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### PUT_/api/groups/{groupId}_forbidden_role
+# @name PUT__api_groups__groupId__forbidden_role
+PUT {{baseUrl}}/api/groups/1
+Authorization: Bearer {{studentAccessToken}}
+Content-Type: application/json
+
+
+{
+  "groupName": "groupName-sample",
+  "lecturerId": 1
+}
+
+> {%
+client.test("PUT_/api/groups/{groupId}_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/groups/{groupId}_invalid_payload
+# @name PUT__api_groups__groupId__invalid_payload
+PUT {{baseUrl}}/api/groups/1
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{"invalid":"payload"}
+
+> {%
+client.test("PUT_/api/groups/{groupId}_invalid_payload -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/groups/{groupId}_missing_required
+# @name PUT__api_groups__groupId__missing_required
+PUT {{baseUrl}}/api/groups/1
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("PUT_/api/groups/{groupId}_missing_required -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/groups/{groupId}_invalid_uuid
+# @name PUT__api_groups__groupId__invalid_uuid
+PUT {{baseUrl}}/api/groups/{{invalidUuid}}
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{
+  "groupName": "groupName-sample",
+  "lecturerId": 1
+}
+
+> {%
+client.test("PUT_/api/groups/{groupId}_invalid_uuid -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/groups/{groupId}_not_found
+# @name PUT__api_groups__groupId__not_found
+PUT {{baseUrl}}/api/groups/999999999
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{
+  "groupName": "groupName-sample",
+  "lecturerId": 1
+}
+
+> {%
+client.test("PUT_/api/groups/{groupId}_not_found -> [404, 401]", function () {
+  client.assert([404, 401].includes(response.status));
+});
+%}
+
+### DELETE_/api/groups/{groupId}_happy
+# @name DELETE__api_groups__groupId__happy
+DELETE {{baseUrl}}/api/groups/1
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("DELETE_/api/groups/{groupId}_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### DELETE_/api/groups/{groupId}_unauthorized
+# @name DELETE__api_groups__groupId__unauthorized
+DELETE {{baseUrl}}/api/groups/1
+Authorization: Bearer {{missingToken}}
+
+
+
+> {%
+client.test("DELETE_/api/groups/{groupId}_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### DELETE_/api/groups/{groupId}_forbidden_role
+# @name DELETE__api_groups__groupId__forbidden_role
+DELETE {{baseUrl}}/api/groups/1
+Authorization: Bearer {{studentAccessToken}}
+
+
+
+> {%
+client.test("DELETE_/api/groups/{groupId}_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### DELETE_/api/groups/{groupId}_invalid_uuid
+# @name DELETE__api_groups__groupId__invalid_uuid
+DELETE {{baseUrl}}/api/groups/{{invalidUuid}}
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("DELETE_/api/groups/{groupId}_invalid_uuid -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### DELETE_/api/groups/{groupId}_not_found
+# @name DELETE__api_groups__groupId__not_found
+DELETE {{baseUrl}}/api/groups/999999999
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("DELETE_/api/groups/{groupId}_not_found -> [404, 401]", function () {
+  client.assert([404, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/groups/{groupId}/members/{userId}/promote_happy
+# @name PUT__api_groups__groupId__members__userId__promote_happy
+PUT {{baseUrl}}/api/groups/1/members/1/promote
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("PUT_/api/groups/{groupId}/members/{userId}/promote_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/groups/{groupId}/members/{userId}/promote_unauthorized
+# @name PUT__api_groups__groupId__members__userId__promote_unauthorized
+PUT {{baseUrl}}/api/groups/1/members/1/promote
+Authorization: Bearer {{missingToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("PUT_/api/groups/{groupId}/members/{userId}/promote_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### PUT_/api/groups/{groupId}/members/{userId}/promote_forbidden_role
+# @name PUT__api_groups__groupId__members__userId__promote_forbidden_role
+PUT {{baseUrl}}/api/groups/1/members/1/promote
+Authorization: Bearer {{studentAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("PUT_/api/groups/{groupId}/members/{userId}/promote_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/groups/{groupId}/members/{userId}/promote_invalid_payload
+# @name PUT__api_groups__groupId__members__userId__promote_invalid_payload
+PUT {{baseUrl}}/api/groups/1/members/1/promote
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{"invalid":"payload"}
+
+> {%
+client.test("PUT_/api/groups/{groupId}/members/{userId}/promote_invalid_payload -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/groups/{groupId}/members/{userId}/promote_missing_required
+# @name PUT__api_groups__groupId__members__userId__promote_missing_required
+PUT {{baseUrl}}/api/groups/1/members/1/promote
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("PUT_/api/groups/{groupId}/members/{userId}/promote_missing_required -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/groups/{groupId}/members/{userId}/promote_invalid_uuid
+# @name PUT__api_groups__groupId__members__userId__promote_invalid_uuid
+PUT {{baseUrl}}/api/groups/{{invalidUuid}}/members/{{invalidUuid}}/promote
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("PUT_/api/groups/{groupId}/members/{userId}/promote_invalid_uuid -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/groups/{groupId}/members/{userId}/promote_not_found
+# @name PUT__api_groups__groupId__members__userId__promote_not_found
+PUT {{baseUrl}}/api/groups/999999999/members/999999999/promote
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("PUT_/api/groups/{groupId}/members/{userId}/promote_not_found -> [404, 401]", function () {
+  client.assert([404, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/groups/{groupId}/members/{userId}/demote_happy
+# @name PUT__api_groups__groupId__members__userId__demote_happy
+PUT {{baseUrl}}/api/groups/1/members/1/demote
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("PUT_/api/groups/{groupId}/members/{userId}/demote_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/groups/{groupId}/members/{userId}/demote_unauthorized
+# @name PUT__api_groups__groupId__members__userId__demote_unauthorized
+PUT {{baseUrl}}/api/groups/1/members/1/demote
+Authorization: Bearer {{missingToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("PUT_/api/groups/{groupId}/members/{userId}/demote_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### PUT_/api/groups/{groupId}/members/{userId}/demote_forbidden_role
+# @name PUT__api_groups__groupId__members__userId__demote_forbidden_role
+PUT {{baseUrl}}/api/groups/1/members/1/demote
+Authorization: Bearer {{studentAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("PUT_/api/groups/{groupId}/members/{userId}/demote_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/groups/{groupId}/members/{userId}/demote_invalid_payload
+# @name PUT__api_groups__groupId__members__userId__demote_invalid_payload
+PUT {{baseUrl}}/api/groups/1/members/1/demote
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{"invalid":"payload"}
+
+> {%
+client.test("PUT_/api/groups/{groupId}/members/{userId}/demote_invalid_payload -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/groups/{groupId}/members/{userId}/demote_missing_required
+# @name PUT__api_groups__groupId__members__userId__demote_missing_required
+PUT {{baseUrl}}/api/groups/1/members/1/demote
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("PUT_/api/groups/{groupId}/members/{userId}/demote_missing_required -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/groups/{groupId}/members/{userId}/demote_invalid_uuid
+# @name PUT__api_groups__groupId__members__userId__demote_invalid_uuid
+PUT {{baseUrl}}/api/groups/{{invalidUuid}}/members/{{invalidUuid}}/demote
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("PUT_/api/groups/{groupId}/members/{userId}/demote_invalid_uuid -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/groups/{groupId}/members/{userId}/demote_not_found
+# @name PUT__api_groups__groupId__members__userId__demote_not_found
+PUT {{baseUrl}}/api/groups/999999999/members/999999999/demote
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("PUT_/api/groups/{groupId}/members/{userId}/demote_not_found -> [404, 401]", function () {
+  client.assert([404, 401].includes(response.status));
+});
+%}
+
+### GET_/api/groups_happy
+# @name GET__api_groups_happy
+GET {{baseUrl}}/api/groups
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/groups_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### GET_/api/groups_unauthorized
+# @name GET__api_groups_unauthorized
+GET {{baseUrl}}/api/groups
+Authorization: Bearer {{missingToken}}
+
+
+
+> {%
+client.test("GET_/api/groups_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### GET_/api/groups_forbidden_role
+# @name GET__api_groups_forbidden_role
+GET {{baseUrl}}/api/groups
+Authorization: Bearer {{studentAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/groups_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### POST_/api/groups_happy
+# @name POST__api_groups_happy
+POST {{baseUrl}}/api/groups
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{
+  "groupName": "groupName-sample",
+  "semesterId": 1,
+  "lecturerId": 1
+}
+
+> {%
+client.test("POST_/api/groups_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### POST_/api/groups_unauthorized
+# @name POST__api_groups_unauthorized
+POST {{baseUrl}}/api/groups
+Authorization: Bearer {{missingToken}}
+Content-Type: application/json
+
+
+{
+  "groupName": "groupName-sample",
+  "semesterId": 1,
+  "lecturerId": 1
+}
+
+> {%
+client.test("POST_/api/groups_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### POST_/api/groups_forbidden_role
+# @name POST__api_groups_forbidden_role
+POST {{baseUrl}}/api/groups
+Authorization: Bearer {{studentAccessToken}}
+Content-Type: application/json
+
+
+{
+  "groupName": "groupName-sample",
+  "semesterId": 1,
+  "lecturerId": 1
+}
+
+> {%
+client.test("POST_/api/groups_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### POST_/api/groups_invalid_payload
+# @name POST__api_groups_invalid_payload
+POST {{baseUrl}}/api/groups
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{"invalid":"payload"}
+
+> {%
+client.test("POST_/api/groups_invalid_payload -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### POST_/api/groups_missing_required
+# @name POST__api_groups_missing_required
+POST {{baseUrl}}/api/groups
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/groups_missing_required -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### GET_/api/groups/{groupId}/members_happy
+# @name GET__api_groups__groupId__members_happy
+GET {{baseUrl}}/api/groups/1/members
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/groups/{groupId}/members_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### GET_/api/groups/{groupId}/members_unauthorized
+# @name GET__api_groups__groupId__members_unauthorized
+GET {{baseUrl}}/api/groups/1/members
+Authorization: Bearer {{missingToken}}
+
+
+
+> {%
+client.test("GET_/api/groups/{groupId}/members_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### GET_/api/groups/{groupId}/members_forbidden_role
+# @name GET__api_groups__groupId__members_forbidden_role
+GET {{baseUrl}}/api/groups/1/members
+Authorization: Bearer {{studentAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/groups/{groupId}/members_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### GET_/api/groups/{groupId}/members_invalid_uuid
+# @name GET__api_groups__groupId__members_invalid_uuid
+GET {{baseUrl}}/api/groups/{{invalidUuid}}/members
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/groups/{groupId}/members_invalid_uuid -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### GET_/api/groups/{groupId}/members_not_found
+# @name GET__api_groups__groupId__members_not_found
+GET {{baseUrl}}/api/groups/999999999/members
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/groups/{groupId}/members_not_found -> [404, 401]", function () {
+  client.assert([404, 401].includes(response.status));
+});
+%}
+
+### POST_/api/groups/{groupId}/members_happy
+# @name POST__api_groups__groupId__members_happy
+POST {{baseUrl}}/api/groups/1/members
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{
+  "userId": 1
+}
+
+> {%
+client.test("POST_/api/groups/{groupId}/members_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### POST_/api/groups/{groupId}/members_unauthorized
+# @name POST__api_groups__groupId__members_unauthorized
+POST {{baseUrl}}/api/groups/1/members
+Authorization: Bearer {{missingToken}}
+Content-Type: application/json
+
+
+{
+  "userId": 1
+}
+
+> {%
+client.test("POST_/api/groups/{groupId}/members_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### POST_/api/groups/{groupId}/members_forbidden_role
+# @name POST__api_groups__groupId__members_forbidden_role
+POST {{baseUrl}}/api/groups/1/members
+Authorization: Bearer {{studentAccessToken}}
+Content-Type: application/json
+
+
+{
+  "userId": 1
+}
+
+> {%
+client.test("POST_/api/groups/{groupId}/members_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### POST_/api/groups/{groupId}/members_invalid_payload
+# @name POST__api_groups__groupId__members_invalid_payload
+POST {{baseUrl}}/api/groups/1/members
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{"invalid":"payload"}
+
+> {%
+client.test("POST_/api/groups/{groupId}/members_invalid_payload -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### POST_/api/groups/{groupId}/members_missing_required
+# @name POST__api_groups__groupId__members_missing_required
+POST {{baseUrl}}/api/groups/1/members
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/groups/{groupId}/members_missing_required -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### POST_/api/groups/{groupId}/members_invalid_uuid
+# @name POST__api_groups__groupId__members_invalid_uuid
+POST {{baseUrl}}/api/groups/{{invalidUuid}}/members
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{
+  "userId": 1
+}
+
+> {%
+client.test("POST_/api/groups/{groupId}/members_invalid_uuid -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### POST_/api/groups/{groupId}/members_not_found
+# @name POST__api_groups__groupId__members_not_found
+POST {{baseUrl}}/api/groups/999999999/members
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{
+  "userId": 1
+}
+
+> {%
+client.test("POST_/api/groups/{groupId}/members_not_found -> [404, 401]", function () {
+  client.assert([404, 401].includes(response.status));
+});
+%}
+
+### PATCH_/api/groups/{groupId}/lecturer_happy
+# @name PATCH__api_groups__groupId__lecturer_happy
+PATCH {{baseUrl}}/api/groups/1/lecturer
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{
+  "lecturerId": 1
+}
+
+> {%
+client.test("PATCH_/api/groups/{groupId}/lecturer_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### PATCH_/api/groups/{groupId}/lecturer_unauthorized
+# @name PATCH__api_groups__groupId__lecturer_unauthorized
+PATCH {{baseUrl}}/api/groups/1/lecturer
+Authorization: Bearer {{missingToken}}
+Content-Type: application/json
+
+
+{
+  "lecturerId": 1
+}
+
+> {%
+client.test("PATCH_/api/groups/{groupId}/lecturer_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### PATCH_/api/groups/{groupId}/lecturer_forbidden_role
+# @name PATCH__api_groups__groupId__lecturer_forbidden_role
+PATCH {{baseUrl}}/api/groups/1/lecturer
+Authorization: Bearer {{studentAccessToken}}
+Content-Type: application/json
+
+
+{
+  "lecturerId": 1
+}
+
+> {%
+client.test("PATCH_/api/groups/{groupId}/lecturer_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### PATCH_/api/groups/{groupId}/lecturer_invalid_payload
+# @name PATCH__api_groups__groupId__lecturer_invalid_payload
+PATCH {{baseUrl}}/api/groups/1/lecturer
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{"invalid":"payload"}
+
+> {%
+client.test("PATCH_/api/groups/{groupId}/lecturer_invalid_payload -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### PATCH_/api/groups/{groupId}/lecturer_missing_required
+# @name PATCH__api_groups__groupId__lecturer_missing_required
+PATCH {{baseUrl}}/api/groups/1/lecturer
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("PATCH_/api/groups/{groupId}/lecturer_missing_required -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### PATCH_/api/groups/{groupId}/lecturer_invalid_uuid
+# @name PATCH__api_groups__groupId__lecturer_invalid_uuid
+PATCH {{baseUrl}}/api/groups/{{invalidUuid}}/lecturer
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{
+  "lecturerId": 1
+}
+
+> {%
+client.test("PATCH_/api/groups/{groupId}/lecturer_invalid_uuid -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### PATCH_/api/groups/{groupId}/lecturer_not_found
+# @name PATCH__api_groups__groupId__lecturer_not_found
+PATCH {{baseUrl}}/api/groups/999999999/lecturer
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{
+  "lecturerId": 1
+}
+
+> {%
+client.test("PATCH_/api/groups/{groupId}/lecturer_not_found -> [404, 401]", function () {
+  client.assert([404, 401].includes(response.status));
+});
+%}
+
+### DELETE_/api/groups/{groupId}/members/{userId}_happy
+# @name DELETE__api_groups__groupId__members__userId__happy
+DELETE {{baseUrl}}/api/groups/1/members/1
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("DELETE_/api/groups/{groupId}/members/{userId}_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### DELETE_/api/groups/{groupId}/members/{userId}_unauthorized
+# @name DELETE__api_groups__groupId__members__userId__unauthorized
+DELETE {{baseUrl}}/api/groups/1/members/1
+Authorization: Bearer {{missingToken}}
+
+
+
+> {%
+client.test("DELETE_/api/groups/{groupId}/members/{userId}_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### DELETE_/api/groups/{groupId}/members/{userId}_forbidden_role
+# @name DELETE__api_groups__groupId__members__userId__forbidden_role
+DELETE {{baseUrl}}/api/groups/1/members/1
+Authorization: Bearer {{studentAccessToken}}
+
+
+
+> {%
+client.test("DELETE_/api/groups/{groupId}/members/{userId}_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### DELETE_/api/groups/{groupId}/members/{userId}_invalid_uuid
+# @name DELETE__api_groups__groupId__members__userId__invalid_uuid
+DELETE {{baseUrl}}/api/groups/{{invalidUuid}}/members/{{invalidUuid}}
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("DELETE_/api/groups/{groupId}/members/{userId}_invalid_uuid -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### DELETE_/api/groups/{groupId}/members/{userId}_not_found
+# @name DELETE__api_groups__groupId__members__userId__not_found
+DELETE {{baseUrl}}/api/groups/999999999/members/999999999
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("DELETE_/api/groups/{groupId}/members/{userId}_not_found -> [404, 401]", function () {
+  client.assert([404, 401].includes(response.status));
+});
+%}
+

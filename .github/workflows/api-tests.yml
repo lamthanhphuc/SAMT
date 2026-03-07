@@ -1,0 +1,90 @@
+name: API Tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  api-tests:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Prepare test environment
+        run: |
+          cp .env.test .env.runtime.test
+          echo "BASE_URL=http://localhost:9080" >> .env.runtime.test
+
+      - name: Start backend stack
+        run: docker compose up -d
+
+      - name: Wait for gateway health
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://localhost:9080/actuator/health >/dev/null; then
+              echo "Gateway is up"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Gateway did not become healthy in time"
+          docker compose ps
+          exit 1
+
+      - name: Generate OpenAPI from running services
+        env:
+          BASE_URL: http://localhost:9080
+        run: npm run openapi:generate
+
+      - name: Generate httpyac suite from OpenAPI
+        run: npm run tests:generate
+
+      - name: Run smoke tests
+        env:
+          BASE_URL: http://localhost:9080
+        run: npx httpyac tests/api-smoke.http --all
+
+      - name: Run full regression tests
+        env:
+          BASE_URL: http://localhost:9080
+        run: npx httpyac tests --all
+
+      - name: Contract test with Schemathesis
+        run: |
+          python -m pip install --upgrade pip
+          pip install schemathesis
+          schemathesis run openapi.yaml --url=http://localhost:9080 --checks=status_code_conformance,content_type_conformance,response_schema_conformance,not_a_server_error --exclude-checks=unsupported_method,ignored_auth,positive_data_acceptance,negative_data_rejection --exclude-path-regex="^/api/auth/(login|refresh|register)$"
+
+      - name: Upload API artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-artifacts
+          path: |
+            openapi.yaml
+            tests/
+            postman-collection.json
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

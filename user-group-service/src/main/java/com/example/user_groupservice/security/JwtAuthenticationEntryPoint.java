@@ -30,7 +30,8 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         
         ErrorResponse errorResponse = ErrorResponse.of(
-                "UNAUTHORIZED",
+                HttpServletResponse.SC_UNAUTHORIZED,
+            "Unauthorized",
             "Authentication required. Request must come via API Gateway."
         );
         

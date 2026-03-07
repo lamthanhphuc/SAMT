@@ -46,6 +46,9 @@ import java.util.Objects;
 @EnableConfigurationProperties(InternalJwtValidationProperties.class)
 public class SecurityConfig {
 
+    private final RestAuthenticationEntryPoint authenticationEntryPoint;
+    private final RestAccessDeniedHandler accessDeniedHandler;
+
     @Bean
     @Profile("!prod")
     public SecurityFilterChain filterChain(HttpSecurity http, JwtDecoder jwtDecoder) throws Exception {
@@ -72,6 +75,10 @@ public class SecurityConfig {
                     .decoder(jwtDecoder)
                     .jwtAuthenticationConverter(jwtAuthenticationConverter())
                 )
+            )
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(authenticationEntryPoint)
+                .accessDeniedHandler(accessDeniedHandler)
             );
         
         return http.build();
@@ -101,6 +108,10 @@ public class SecurityConfig {
                     .decoder(jwtDecoder)
                     .jwtAuthenticationConverter(jwtAuthenticationConverter())
                 )
+            )
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(authenticationEntryPoint)
+                .accessDeniedHandler(accessDeniedHandler)
             );
 
         return http.build();

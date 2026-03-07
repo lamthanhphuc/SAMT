@@ -1,0 +1,622 @@
+@baseUrl = http://localhost:9080
+@identityBaseUrl = http://localhost:8081
+@adminEmail = admin@example.com
+@adminPassword = password
+@lecturerEmail = lecturer@example.com
+@lecturerPassword = password
+@studentEmail = student@example.com
+@studentPassword = password
+@adminAccessToken = invalid.jwt.token
+@studentAccessToken = invalid.jwt.token
+@adminRefreshToken = invalid.refresh.token
+# Optional environment variable usage:
+# @baseUrl = {{BASE_URL}}
+# @adminEmail = {{ADMIN_EMAIL}}
+# @adminPassword = {{ADMIN_PASSWORD}}
+@invalidUuid = not-a-uuid
+@missingToken = invalid.jwt.token
+
+### Bootstrap admin login
+# @name adminLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+> {%
+client.test("admin login", function () {
+  client.assert(response.status === 200 || response.status === 401);
+  if (response.status === 200 && response.body.accessToken) {
+    client.global.set("adminAccessToken", response.body.accessToken);
+  }
+  if (response.status === 200 && response.body.refreshToken) {
+    client.global.set("adminRefreshToken", response.body.refreshToken);
+  }
+});
+%}
+
+### Bootstrap student login
+# @name studentLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{studentEmail}}",
+  "password": "{{studentPassword}}"
+}
+
+> {%
+client.test("student login", function () {
+  client.assert(response.status === 200 || response.status === 401);
+  if (response.status === 200 && response.body.accessToken) {
+    client.global.set("studentAccessToken", response.body.accessToken);
+  }
+});
+%}
+
+### GET_/api/project-configs/{id}_happy
+# @name GET__api_project_configs__id__happy
+GET {{baseUrl}}/api/project-configs/1
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/project-configs/{id}_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### GET_/api/project-configs/{id}_unauthorized
+# @name GET__api_project_configs__id__unauthorized
+GET {{baseUrl}}/api/project-configs/1
+Authorization: Bearer {{missingToken}}
+
+
+
+> {%
+client.test("GET_/api/project-configs/{id}_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### GET_/api/project-configs/{id}_forbidden_role
+# @name GET__api_project_configs__id__forbidden_role
+GET {{baseUrl}}/api/project-configs/1
+Authorization: Bearer {{studentAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/project-configs/{id}_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### GET_/api/project-configs/{id}_invalid_uuid
+# @name GET__api_project_configs__id__invalid_uuid
+GET {{baseUrl}}/api/project-configs/{{invalidUuid}}
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/project-configs/{id}_invalid_uuid -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### GET_/api/project-configs/{id}_not_found
+# @name GET__api_project_configs__id__not_found
+GET {{baseUrl}}/api/project-configs/999999999
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/project-configs/{id}_not_found -> [404, 401]", function () {
+  client.assert([404, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/project-configs/{id}_happy
+# @name PUT__api_project_configs__id__happy
+PUT {{baseUrl}}/api/project-configs/1
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{
+  "jiraHostUrl": "jiraHostUrl-sample",
+  "jiraApiToken": "jiraApiToken-sample",
+  "githubRepoUrl": "githubRepoUrl-sample",
+  "githubToken": "githubToken-sample"
+}
+
+> {%
+client.test("PUT_/api/project-configs/{id}_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/project-configs/{id}_unauthorized
+# @name PUT__api_project_configs__id__unauthorized
+PUT {{baseUrl}}/api/project-configs/1
+Authorization: Bearer {{missingToken}}
+Content-Type: application/json
+
+
+{
+  "jiraHostUrl": "jiraHostUrl-sample",
+  "jiraApiToken": "jiraApiToken-sample",
+  "githubRepoUrl": "githubRepoUrl-sample",
+  "githubToken": "githubToken-sample"
+}
+
+> {%
+client.test("PUT_/api/project-configs/{id}_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### PUT_/api/project-configs/{id}_forbidden_role
+# @name PUT__api_project_configs__id__forbidden_role
+PUT {{baseUrl}}/api/project-configs/1
+Authorization: Bearer {{studentAccessToken}}
+Content-Type: application/json
+
+
+{
+  "jiraHostUrl": "jiraHostUrl-sample",
+  "jiraApiToken": "jiraApiToken-sample",
+  "githubRepoUrl": "githubRepoUrl-sample",
+  "githubToken": "githubToken-sample"
+}
+
+> {%
+client.test("PUT_/api/project-configs/{id}_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/project-configs/{id}_invalid_payload
+# @name PUT__api_project_configs__id__invalid_payload
+PUT {{baseUrl}}/api/project-configs/1
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{"invalid":"payload"}
+
+> {%
+client.test("PUT_/api/project-configs/{id}_invalid_payload -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/project-configs/{id}_missing_required
+# @name PUT__api_project_configs__id__missing_required
+PUT {{baseUrl}}/api/project-configs/1
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("PUT_/api/project-configs/{id}_missing_required -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/project-configs/{id}_invalid_uuid
+# @name PUT__api_project_configs__id__invalid_uuid
+PUT {{baseUrl}}/api/project-configs/{{invalidUuid}}
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{
+  "jiraHostUrl": "jiraHostUrl-sample",
+  "jiraApiToken": "jiraApiToken-sample",
+  "githubRepoUrl": "githubRepoUrl-sample",
+  "githubToken": "githubToken-sample"
+}
+
+> {%
+client.test("PUT_/api/project-configs/{id}_invalid_uuid -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### PUT_/api/project-configs/{id}_not_found
+# @name PUT__api_project_configs__id__not_found
+PUT {{baseUrl}}/api/project-configs/999999999
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{
+  "jiraHostUrl": "jiraHostUrl-sample",
+  "jiraApiToken": "jiraApiToken-sample",
+  "githubRepoUrl": "githubRepoUrl-sample",
+  "githubToken": "githubToken-sample"
+}
+
+> {%
+client.test("PUT_/api/project-configs/{id}_not_found -> [404, 401]", function () {
+  client.assert([404, 401].includes(response.status));
+});
+%}
+
+### DELETE_/api/project-configs/{id}_happy
+# @name DELETE__api_project_configs__id__happy
+DELETE {{baseUrl}}/api/project-configs/1
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("DELETE_/api/project-configs/{id}_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### DELETE_/api/project-configs/{id}_unauthorized
+# @name DELETE__api_project_configs__id__unauthorized
+DELETE {{baseUrl}}/api/project-configs/1
+Authorization: Bearer {{missingToken}}
+
+
+
+> {%
+client.test("DELETE_/api/project-configs/{id}_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### DELETE_/api/project-configs/{id}_forbidden_role
+# @name DELETE__api_project_configs__id__forbidden_role
+DELETE {{baseUrl}}/api/project-configs/1
+Authorization: Bearer {{studentAccessToken}}
+
+
+
+> {%
+client.test("DELETE_/api/project-configs/{id}_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### DELETE_/api/project-configs/{id}_invalid_uuid
+# @name DELETE__api_project_configs__id__invalid_uuid
+DELETE {{baseUrl}}/api/project-configs/{{invalidUuid}}
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("DELETE_/api/project-configs/{id}_invalid_uuid -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### DELETE_/api/project-configs/{id}_not_found
+# @name DELETE__api_project_configs__id__not_found
+DELETE {{baseUrl}}/api/project-configs/999999999
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("DELETE_/api/project-configs/{id}_not_found -> [404, 401]", function () {
+  client.assert([404, 401].includes(response.status));
+});
+%}
+
+### POST_/api/project-configs_happy
+# @name POST__api_project_configs_happy
+POST {{baseUrl}}/api/project-configs
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{
+  "groupId": 1,
+  "jiraHostUrl": "jiraHostUrl-sample",
+  "jiraApiToken": "jiraApiToken-sample",
+  "githubRepoUrl": "githubRepoUrl-sample",
+  "githubToken": "githubToken-sample"
+}
+
+> {%
+client.test("POST_/api/project-configs_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### POST_/api/project-configs_unauthorized
+# @name POST__api_project_configs_unauthorized
+POST {{baseUrl}}/api/project-configs
+Authorization: Bearer {{missingToken}}
+Content-Type: application/json
+
+
+{
+  "groupId": 1,
+  "jiraHostUrl": "jiraHostUrl-sample",
+  "jiraApiToken": "jiraApiToken-sample",
+  "githubRepoUrl": "githubRepoUrl-sample",
+  "githubToken": "githubToken-sample"
+}
+
+> {%
+client.test("POST_/api/project-configs_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### POST_/api/project-configs_forbidden_role
+# @name POST__api_project_configs_forbidden_role
+POST {{baseUrl}}/api/project-configs
+Authorization: Bearer {{studentAccessToken}}
+Content-Type: application/json
+
+
+{
+  "groupId": 1,
+  "jiraHostUrl": "jiraHostUrl-sample",
+  "jiraApiToken": "jiraApiToken-sample",
+  "githubRepoUrl": "githubRepoUrl-sample",
+  "githubToken": "githubToken-sample"
+}
+
+> {%
+client.test("POST_/api/project-configs_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### POST_/api/project-configs_invalid_payload
+# @name POST__api_project_configs_invalid_payload
+POST {{baseUrl}}/api/project-configs
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{"invalid":"payload"}
+
+> {%
+client.test("POST_/api/project-configs_invalid_payload -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### POST_/api/project-configs_missing_required
+# @name POST__api_project_configs_missing_required
+POST {{baseUrl}}/api/project-configs
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/project-configs_missing_required -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### POST_/api/project-configs/{id}/verify_happy
+# @name POST__api_project_configs__id__verify_happy
+POST {{baseUrl}}/api/project-configs/1/verify
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/project-configs/{id}/verify_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### POST_/api/project-configs/{id}/verify_unauthorized
+# @name POST__api_project_configs__id__verify_unauthorized
+POST {{baseUrl}}/api/project-configs/1/verify
+Authorization: Bearer {{missingToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/project-configs/{id}/verify_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### POST_/api/project-configs/{id}/verify_forbidden_role
+# @name POST__api_project_configs__id__verify_forbidden_role
+POST {{baseUrl}}/api/project-configs/1/verify
+Authorization: Bearer {{studentAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/project-configs/{id}/verify_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### POST_/api/project-configs/{id}/verify_invalid_payload
+# @name POST__api_project_configs__id__verify_invalid_payload
+POST {{baseUrl}}/api/project-configs/1/verify
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{"invalid":"payload"}
+
+> {%
+client.test("POST_/api/project-configs/{id}/verify_invalid_payload -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### POST_/api/project-configs/{id}/verify_missing_required
+# @name POST__api_project_configs__id__verify_missing_required
+POST {{baseUrl}}/api/project-configs/1/verify
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/project-configs/{id}/verify_missing_required -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### POST_/api/project-configs/{id}/verify_invalid_uuid
+# @name POST__api_project_configs__id__verify_invalid_uuid
+POST {{baseUrl}}/api/project-configs/{{invalidUuid}}/verify
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/project-configs/{id}/verify_invalid_uuid -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### POST_/api/project-configs/{id}/verify_not_found
+# @name POST__api_project_configs__id__verify_not_found
+POST {{baseUrl}}/api/project-configs/999999999/verify
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/project-configs/{id}/verify_not_found -> [404, 401]", function () {
+  client.assert([404, 401].includes(response.status));
+});
+%}
+
+### POST_/api/project-configs/admin/{id}/restore_happy
+# @name POST__api_project_configs_admin__id__restore_happy
+POST {{baseUrl}}/api/project-configs/admin/1/restore
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/project-configs/admin/{id}/restore_happy -> [200, 401]", function () {
+  client.assert([200, 401].includes(response.status));
+});
+%}
+
+### POST_/api/project-configs/admin/{id}/restore_unauthorized
+# @name POST__api_project_configs_admin__id__restore_unauthorized
+POST {{baseUrl}}/api/project-configs/admin/1/restore
+Authorization: Bearer {{missingToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/project-configs/admin/{id}/restore_unauthorized -> [401]", function () {
+  client.assert([401].includes(response.status));
+});
+%}
+
+### POST_/api/project-configs/admin/{id}/restore_forbidden_role
+# @name POST__api_project_configs_admin__id__restore_forbidden_role
+POST {{baseUrl}}/api/project-configs/admin/1/restore
+Authorization: Bearer {{studentAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/project-configs/admin/{id}/restore_forbidden_role -> [403, 401]", function () {
+  client.assert([403, 401].includes(response.status));
+});
+%}
+
+### POST_/api/project-configs/admin/{id}/restore_invalid_payload
+# @name POST__api_project_configs_admin__id__restore_invalid_payload
+POST {{baseUrl}}/api/project-configs/admin/1/restore
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{"invalid":"payload"}
+
+> {%
+client.test("POST_/api/project-configs/admin/{id}/restore_invalid_payload -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### POST_/api/project-configs/admin/{id}/restore_missing_required
+# @name POST__api_project_configs_admin__id__restore_missing_required
+POST {{baseUrl}}/api/project-configs/admin/1/restore
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/project-configs/admin/{id}/restore_missing_required -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### POST_/api/project-configs/admin/{id}/restore_invalid_uuid
+# @name POST__api_project_configs_admin__id__restore_invalid_uuid
+POST {{baseUrl}}/api/project-configs/admin/{{invalidUuid}}/restore
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/project-configs/admin/{id}/restore_invalid_uuid -> [400, 401]", function () {
+  client.assert([400, 401].includes(response.status));
+});
+%}
+
+### POST_/api/project-configs/admin/{id}/restore_not_found
+# @name POST__api_project_configs_admin__id__restore_not_found
+POST {{baseUrl}}/api/project-configs/admin/999999999/restore
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/project-configs/admin/{id}/restore_not_found -> [404, 401]", function () {
+  client.assert([404, 401].includes(response.status));
+});
+%}
+

@@ -5,10 +5,12 @@ import jakarta.persistence.OptimisticLockException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -31,7 +33,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleBaseException(BaseException ex) {
         log.warn("Business exception: {} - {}", ex.getCode(), ex.getMessage());
         
-        ErrorResponse response = ErrorResponse.of(ex.getCode(), ex.getMessage());
+        ErrorResponse response = ErrorResponse.of(
+            ex.getStatus().value(),
+            ex.getStatus().getReasonPhrase(),
+            ex.getMessage()
+        );
         return ResponseEntity.status(ex.getStatus()).body(response);
     }
     
@@ -52,7 +58,8 @@ public class GlobalExceptionHandler {
         log.warn("Validation failed: {}", errors);
         
         ErrorResponse response = ErrorResponse.of(
-            "VALIDATION_ERROR",
+            HttpStatus.BAD_REQUEST.value(),
+            HttpStatus.BAD_REQUEST.getReasonPhrase(),
             "Validation failed",
             errors
         );
@@ -69,7 +76,8 @@ public class GlobalExceptionHandler {
         log.warn("Authentication failed: {}", ex.getMessage());
         
         ErrorResponse response = ErrorResponse.of(
-            "UNAUTHORIZED",
+            HttpStatus.UNAUTHORIZED.value(),
+            HttpStatus.UNAUTHORIZED.getReasonPhrase(),
             "Authentication failed"
         );
         
@@ -85,7 +93,8 @@ public class GlobalExceptionHandler {
         log.warn("Access denied: {}", ex.getMessage());
         
         ErrorResponse response = ErrorResponse.of(
-            "FORBIDDEN",
+            HttpStatus.FORBIDDEN.value(),
+            HttpStatus.FORBIDDEN.getReasonPhrase(),
             "You do not have permission to perform this action"
         );
         
@@ -101,7 +110,8 @@ public class GlobalExceptionHandler {
         log.warn("Invalid argument: {}", ex.getMessage());
         
         ErrorResponse response = ErrorResponse.of(
-            "BAD_REQUEST",
+            HttpStatus.BAD_REQUEST.value(),
+            HttpStatus.BAD_REQUEST.getReasonPhrase(),
             ex.getMessage()
         );
         
@@ -117,7 +127,11 @@ public class GlobalExceptionHandler {
             ServiceUnavailableException ex) {
         log.error("Service unavailable: {} - {}", ex.getCode(), ex.getMessage());
         
-        ErrorResponse response = ErrorResponse.of(ex.getCode(), ex.getMessage());
+        ErrorResponse response = ErrorResponse.of(
+            HttpStatus.SERVICE_UNAVAILABLE.value(),
+            HttpStatus.SERVICE_UNAVAILABLE.getReasonPhrase(),
+            ex.getMessage()
+        );
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
     }
     
@@ -130,7 +144,11 @@ public class GlobalExceptionHandler {
             GatewayTimeoutException ex) {
         log.error("Gateway timeout: {} - {}", ex.getCode(), ex.getMessage());
         
-        ErrorResponse response = ErrorResponse.of(ex.getCode(), ex.getMessage());
+        ErrorResponse response = ErrorResponse.of(
+            HttpStatus.GATEWAY_TIMEOUT.value(),
+            HttpStatus.GATEWAY_TIMEOUT.getReasonPhrase(),
+            ex.getMessage()
+        );
         return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT).body(response);
     }
     
@@ -147,13 +165,34 @@ public class GlobalExceptionHandler {
         log.warn("Optimistic lock failure: {}", ex.getMessage());
         
         ErrorResponse response = ErrorResponse.of(
-            "CONFLICT",
+            HttpStatus.CONFLICT.value(),
+            HttpStatus.CONFLICT.getReasonPhrase(),
             "Resource has been modified by another user. Please refresh and retry."
         );
         
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
     
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        ErrorResponse response = ErrorResponse.of(
+            HttpStatus.BAD_REQUEST.value(),
+            HttpStatus.BAD_REQUEST.getReasonPhrase(),
+            "Invalid value for parameter '" + ex.getName() + "'"
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadableBody(HttpMessageNotReadableException ex) {
+        ErrorResponse response = ErrorResponse.of(
+            HttpStatus.BAD_REQUEST.value(),
+            HttpStatus.BAD_REQUEST.getReasonPhrase(),
+            "Malformed request body"
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
     /**
      * Handle all other exceptions.
      */
@@ -162,7 +201,8 @@ public class GlobalExceptionHandler {
         log.error("Unexpected error occurred", ex);
         
         ErrorResponse response = ErrorResponse.of(
-            "INTERNAL_SERVER_ERROR",
+            HttpStatus.INTERNAL_SERVER_ERROR.value(),
+            HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
             "An unexpected error occurred"
         );
         

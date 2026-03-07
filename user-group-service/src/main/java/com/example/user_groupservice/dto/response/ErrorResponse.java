@@ -17,7 +17,8 @@ import java.util.Map;
 @AllArgsConstructor
 public class ErrorResponse {
     
-    private String code;
+    private int statusCode;
+    private String error;
     private String message;
     private Instant timestamp;
     private Map<String, String> errors;
@@ -25,9 +26,10 @@ public class ErrorResponse {
     /**
      * Create error response without field errors.
      */
-    public static ErrorResponse of(String code, String message) {
+    public static ErrorResponse of(int statusCode, String error, String message) {
         return ErrorResponse.builder()
-                .code(code)
+                .statusCode(statusCode)
+                .error(error)
                 .message(message)
                 .timestamp(Instant.now())
                 .build();
@@ -36,9 +38,10 @@ public class ErrorResponse {
     /**
      * Create error response with field errors (for validation).
      */
-    public static ErrorResponse of(String code, String message, Map<String, String> errors) {
+    public static ErrorResponse of(int statusCode, String error, String message, Map<String, String> errors) {
         return ErrorResponse.builder()
-                .code(code)
+                .statusCode(statusCode)
+                .error(error)
                 .message(message)
                 .timestamp(Instant.now())
                 .errors(errors)
