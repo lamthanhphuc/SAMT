@@ -68,3 +68,4 @@ logs/
 # Local caches (never commit)
 .cache/
 dependency-check-data/
+node_modules/
