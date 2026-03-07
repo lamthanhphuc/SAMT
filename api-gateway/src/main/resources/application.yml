@@ -1,13 +1,6 @@
 server:
   port: ${SERVER_PORT:8080}
   shutdown: graceful
-  error:
-    whitelabel:
-      enabled: false
-    include-stacktrace: never
-    include-message: never
-    include-binding-errors: never
-    include-exception: false
 
 spring:
   application:
@@ -16,124 +9,119 @@ spring:
   lifecycle:
     timeout-per-shutdown-phase: 30s
 
-  codec:
-    max-in-memory-size: 10MB
+  http:
+    codecs:
+      max-in-memory-size: 10MB
 
   data:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:redis}
       port: ${SPRING_DATA_REDIS_PORT:6379}
-      # In secure deployments, prefer Docker secret `redis_password` via Spring configtree.
-      # Local/dev can still provide REDIS_PASSWORD via .env.
-      password: ${redis_password:${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required for security - set in .env file}}
+      password: ${REDIS_PASSWORD:redis}
       timeout: 3000ms
 
   cloud:
     gateway:
-      routes:
+      server:
+        webflux:
 
-        - id: identity-service
-          uri: http://identity-service:8081
-          predicates:
-            - Path=/identity/**
-          filters:
-            - StripPrefix=1
+          routes:
 
-        - id: user-group-service
-          uri: http://user-group-service:8082
-          predicates:
-            - Path=/user-group/**
-          filters:
-            - StripPrefix=1
+            - id: identity-service
+              uri: http://identity-service:8081
+              predicates:
+                - Path=/identity/**
+              filters:
+                - StripPrefix=1
 
-        - id: project-config-service
-          uri: http://project-config-service:8084
-          predicates:
-            - Path=/project-config/**
-          filters:
-            - StripPrefix=1
+            - id: user-group-service
+              uri: http://user-group-service:8082
+              predicates:
+                - Path=/user-group/**
+              filters:
+                - StripPrefix=1
 
-        - id: sync-service
-          uri: http://sync-service:8083
-          predicates:
-            - Path=/sync/**
-          filters:
-            - StripPrefix=1
+            - id: sync-service
+              uri: http://sync-service:8083
+              predicates:
+                - Path=/sync/**
+              filters:
+                - StripPrefix=1
 
-        - id: analysis-service
-          uri: http://analysis-service:8087
-          predicates:
-            - Path=/analysis/**
-          filters:
-            - StripPrefix=1
+            - id: project-config-service
+              uri: http://project-config-service:8084
+              predicates:
+                - Path=/project-config/**
+              filters:
+                - StripPrefix=1
 
-        - id: report-service
-          uri: http://report-service:8088
-          predicates:
-            - Path=/report/**
-          filters:
-            - StripPrefix=1
+            - id: notification-service
+              uri: http://notification-service:8085
+              predicates:
+                - Path=/notification/**
+              filters:
+                - StripPrefix=1
 
-        - id: notification-service
-          uri: http://notification-service:8085
-          predicates:
-            - Path=/notification/**
-          filters:
-            - StripPrefix=1
-      default-filters:
-        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
-      httpclient:
-        connect-timeout: 3000
-        response-timeout: 30s
-        pool:
-          max-connections: 500
-          max-idle-time: 20s
-          acquire-timeout: 45000
-      globalcors:
-        corsConfigurations:
-          '[/**]':
-            allowedOrigins:
-              - https://app.example.com
-            allowedMethods:
-              - GET
-              - POST
-              - PUT
-              - DELETE
-              - PATCH
-              - OPTIONS
-            allowedHeaders:
-              - Authorization
-              - Content-Type
-              - Accept
+            - id: analysis-service
+              uri: http://analysis-service:8087
+              predicates:
+                - Path=/analysis/**
+              filters:
+                - StripPrefix=1
+
+            - id: report-service
+              uri: http://report-service:8088
+              predicates:
+                - Path=/report/**
+              filters:
+                - StripPrefix=1
+
+          default-filters:
+            - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+
+          httpclient:
+            connect-timeout: 3000
+            response-timeout: 30s
+            pool:
+              max-connections: 500
+              max-idle-time: 20s
+              acquire-timeout: 45000
+
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOrigins:
+                  - "*"
+                allowedMethods:
+                  - GET
+                  - POST
+                  - PUT
+                  - DELETE
+                  - PATCH
+                  - OPTIONS
+                allowedHeaders:
+                  - "*"
 
 jwt:
-  # Identity Service JWKS endpoint. Production should set JWT_JWKS_URI explicitly.
   jwks-uri: ${JWT_JWKS_URI:http://identity-service:8081/.well-known/jwks.json}
 
 gateway:
   internal-jwt:
-    # RSA private key used to sign internal JWTs (PKCS#8 PEM)
-    private-key-pem-path: ${GATEWAY_INTERNAL_JWT_PRIVATE_KEY_PEM_PATH:/certs/gateway-private.pkcs8.pem}
-    # kid for rotation support
+    private-key-pem-path: ${GATEWAY_INTERNAL_JWT_PRIVATE_KEY_PEM_PATH:../.local-certs/gateway-internal-jwt-private.pkcs8.pem}
     key-id: ${GATEWAY_INTERNAL_JWT_KID:gw-2026-01}
-    # token lifetime 15-30s
     ttl-seconds: ${GATEWAY_INTERNAL_JWT_TTL_SECONDS:20}
-    # downstream should use the same skew
     clock-skew-seconds: ${GATEWAY_INTERNAL_JWT_CLOCK_SKEW_SECONDS:30}
     issuer: ${GATEWAY_INTERNAL_JWT_ISSUER:samt-gateway}
     service-name: api-gateway
-    # Optional: publish additional public keys for rotation overlap.
-    # Format: JWKS JSON file containing "keys": [...] with public RSA keys.
-    additional-public-jwks-json-path: ${GATEWAY_INTERNAL_JWT_ADDITIONAL_PUBLIC_JWKS_JSON_PATH:}
 
 rate:
   limit:
     global:
-      requests-per-second: ${RATE_LIMIT_GLOBAL_RPS:100}
-      burst-capacity: ${RATE_LIMIT_GLOBAL_BURST:200}
+      requests-per-second: 100
+      burst-capacity: 200
     login:
-      requests-per-minute: ${RATE_LIMIT_LOGIN_RPM:5}
-      burst-capacity: ${RATE_LIMIT_LOGIN_BURST:10}
+      requests-per-minute: 5
+      burst-capacity: 10
 
 resilience4j:
   circuitbreaker:
@@ -144,51 +132,59 @@ resilience4j:
         sliding-window-size: 10
         minimum-number-of-calls: 5
         wait-duration-in-open-state: 30s
-        automatic-transition-from-open-to-half-open-enabled: true
   timelimiter:
     instances:
       gatewayDefaultCircuitBreaker:
         timeout-duration: 30s
 
 springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+
   swagger-ui:
     enabled: true
     path: /swagger-ui.html
+    config-url: /v3/api-docs/swagger-config
+    url: ""
+    use-root-path: false
     disable-swagger-default-url: true
+    urls-primary-name: Identity Service
+
     urls:
-      - name: identity-service
+      - name: Identity Service
         url: /identity/v3/api-docs
-      - name: user-group-service
+
+      - name: User Group Service
         url: /user-group/v3/api-docs
-      - name: project-config-service
-        url: /project-config/v3/api-docs
-      - name: sync-service
+
+      - name: Sync Service
         url: /sync/v3/api-docs
-      - name: analysis-service
-        url: /analysis/v3/api-docs
-      - name: report-service
-        url: /report/v3/api-docs
-      - name: notification-service
+
+      - name: Project Config Service
+        url: /project-config/v3/api-docs
+
+      - name: Notification Service
         url: /notification/v3/api-docs
-  api-docs:
-    enabled: true
+
+      - name: Analysis Service
+        url: /analysis/v3/api-docs
+
+      - name: Report Service
+        url: /report/v3/api-docs
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics,gateway
-  endpoint:
-    health:
-      show-details: never
 
 logging:
   level:
-    root: ${LOG_LEVEL:INFO}
-    com.example.gateway: ${GATEWAY_LOG_LEVEL:INFO}
-    org.springframework.cloud.gateway: ${SPRING_GATEWAY_LOG_LEVEL:INFO}
+    root: INFO
+    org.springframework.cloud.gateway: INFO
+    com.example.gateway: INFO
 
-# surface route-not-found as 404 for error handler
 spring.webflux:
   problemdetails:
     enabled: false

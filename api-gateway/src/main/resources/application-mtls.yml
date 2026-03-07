@@ -22,7 +22,8 @@ gateway:
   upstream:
     identity: ${GATEWAY_UPSTREAM_IDENTITY_URI:https://identity-service:8081}
     user-group: ${GATEWAY_UPSTREAM_USER_GROUP_URI:https://user-group-service:8082}
-    project-config: ${GATEWAY_UPSTREAM_PROJECT_CONFIG_URI:https://project-config-service:8083}
-    sync: ${GATEWAY_UPSTREAM_SYNC_URI:https://sync-service:8084}
-    analysis: ${GATEWAY_UPSTREAM_ANALYSIS_URI:https://analysis-service:8085}
-    report: ${GATEWAY_UPSTREAM_REPORT_URI:https://report-service:8086}
+    project-config: ${GATEWAY_UPSTREAM_PROJECT_CONFIG_URI:https://project-config-service:8084}
+    sync: ${GATEWAY_UPSTREAM_SYNC_URI:https://sync-service:8083}
+    analysis: ${GATEWAY_UPSTREAM_ANALYSIS_URI:https://analysis-service:8087}
+    report: ${GATEWAY_UPSTREAM_REPORT_URI:https://report-service:8088}
+    notification: ${GATEWAY_UPSTREAM_NOTIFICATION_URI:https://notification-service:8085}

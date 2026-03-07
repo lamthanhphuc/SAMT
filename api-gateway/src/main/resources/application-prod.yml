@@ -17,7 +17,7 @@ samt:
     gateway-internal-jwt-private-key-pem-path: ${GATEWAY_INTERNAL_JWT_PRIVATE_KEY_PEM_PATH}
     gateway-internal-jwt-kid: ${GATEWAY_INTERNAL_JWT_KID}
 
-# Production hardening: expose only health; disable API docs.
+# Production hardening: expose only health/info actuator while keeping gateway docs aggregation available.
 management:
   endpoints:
     web:
@@ -30,5 +30,8 @@ management:
 springdoc:
   api-docs:
     enabled: true
+    path: /v3/api-docs
   swagger-ui:
     enabled: true
+    path: /swagger-ui.html
+    use-root-path: false

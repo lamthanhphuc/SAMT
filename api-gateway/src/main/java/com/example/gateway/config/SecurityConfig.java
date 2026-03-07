@@ -37,6 +37,7 @@ public class SecurityConfig {
                         .pathMatchers(
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
+                                "/swagger-ui/index.html",
                                 "/v3/api-docs/**",
                                 "/webjars/**",
                                 "/identity/v3/api-docs/**",
@@ -45,7 +46,8 @@ public class SecurityConfig {
                                 "/sync/v3/api-docs/**",
                                 "/analysis/v3/api-docs/**",
                                 "/report/v3/api-docs/**",
-                                "/notification/v3/api-docs/**"
+                                "/notification/v3/api-docs/**",
+                                "/actuator/**"
                         ).permitAll()
                         .anyExchange().authenticated())
                 .build();
@@ -74,6 +76,7 @@ public class SecurityConfig {
                                 // Gateway's own Swagger UI
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
+                                "/swagger-ui/index.html",
                                 "/v3/api-docs/**",
                                 "/webjars/**",
                                 "/identity/v3/api-docs/**",

@@ -91,7 +91,7 @@ public class GatewayRoutesConfig {
                                         .setFallbackUri("forward:/__gateway/fallback/identity")))
                         .uri(identityServiceUri))
 
-                .route("identity-service", r -> r
+                .route("identity-service-api", r -> r
                         .path("/api/identity/**")
                         .filters(f -> f
                                 .filter(rateLimitGatewayFilter.globalRateLimit("identity-service"))
@@ -102,7 +102,7 @@ public class GatewayRoutesConfig {
                                         .setFallbackUri("forward:/__gateway/fallback/identity")))
                         .uri(identityServiceUri))
 
-                .route("user-group-service", r -> r
+                .route("user-group-service-api", r -> r
                         .path("/api/groups/**", "/api/users/**")
                         .filters(f -> f
                                 .filter(rateLimitGatewayFilter.globalRateLimit("user-group-service"))
@@ -113,7 +113,7 @@ public class GatewayRoutesConfig {
                                         .setFallbackUri("forward:/__gateway/fallback/user-group")))
                         .uri(userGroupServiceUri))
 
-                .route("project-config-service", r -> r
+                .route("project-config-service-api", r -> r
                         .path("/api/project-configs/**")
                         .filters(f -> f
                                 .filter(rateLimitGatewayFilter.globalRateLimit("project-config-service"))
@@ -124,7 +124,7 @@ public class GatewayRoutesConfig {
                                         .setFallbackUri("forward:/__gateway/fallback/project-config")))
                         .uri(projectConfigServiceUri))
 
-                .route("sync-service", r -> r
+                .route("sync-service-api", r -> r
                         .path("/api/sync/**")
                         .filters(f -> f
                                 .filter(rateLimitGatewayFilter.globalRateLimit("sync-service"))
@@ -135,7 +135,7 @@ public class GatewayRoutesConfig {
                                         .setFallbackUri("forward:/__gateway/fallback/sync")))
                         .uri(syncServiceUri))
 
-                .route("analysis-service", r -> r
+                .route("analysis-service-api", r -> r
                         .path("/api/analysis/**")
                         .filters(f -> f
                                 .filter(rateLimitGatewayFilter.globalRateLimit("analysis-service"))
@@ -146,7 +146,7 @@ public class GatewayRoutesConfig {
                                         .setFallbackUri("forward:/__gateway/fallback/analysis")))
                         .uri(analysisServiceUri))
 
-                .route("report-service", r -> r
+                .route("report-service-api", r -> r
                         .path("/api/reports/**")
                         .filters(f -> f
                                 .filter(rateLimitGatewayFilter.globalRateLimit("report-service"))
@@ -157,7 +157,7 @@ public class GatewayRoutesConfig {
                                         .setFallbackUri("forward:/__gateway/fallback/report")))
                         .uri(reportServiceUri))
 
-                .route("notification-service", r -> r
+                .route("notification-service-api", r -> r
                         .path("/api/notifications/**")
                         .filters(f -> f
                                 .filter(rateLimitGatewayFilter.globalRateLimit("notification-service"))

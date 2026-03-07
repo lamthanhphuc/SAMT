@@ -284,6 +284,14 @@ services:
       gateway.upstream.notification: http://notification-service:${NOTIFICATION_SERVICE_PORT:-8085}
       # External JWT validation (gateway validates user JWT via identity service JWKS)
       JWT_JWKS_URI: http://identity-service:${IDENTITY_SERVICE_PORT:-8081}/.well-known/jwks.json
+      SPRINGDOC_API_DOCS_ENABLED: "true"
+      SPRINGDOC_API_DOCS_PATH: /v3/api-docs
+      SPRINGDOC_SWAGGER_UI_ENABLED: "true"
+      SPRINGDOC_SWAGGER_UI_PATH: /swagger-ui.html
+      SPRINGDOC_SWAGGER_UI_CONFIG_URL: /v3/api-docs/swagger-config
+      SPRINGDOC_SWAGGER_UI_URL: ""
+      SPRINGDOC_SWAGGER_UI_DISABLE_SWAGGER_DEFAULT_URL: "true"
+      SPRINGDOC_SWAGGER_UI_USE_ROOT_PATH: "false"
     ports:
       - "${API_GATEWAY_PORT:-9080}:8080"
     volumes:
@@ -298,6 +306,12 @@ services:
       project-config-service:
         condition: service_started
       sync-service:
+        condition: service_started
+      analysis-service:
+        condition: service_started
+      report-service:
+        condition: service_started
+      notification-service:
         condition: service_started
     networks:
       - samt-network
@@ -347,6 +361,8 @@ services:
       JWT_KEY_ID: ${JWT_KEY_ID:-identity-local-1}
       # Local/dev: allow running without gRPC TLS material
       GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-true}
+    ports:
+      - "${IDENTITY_SERVICE_PORT:-8081}:${IDENTITY_SERVICE_PORT:-8081}"
     expose:
       - "${IDENTITY_SERVICE_PORT:-8081}"
       - "${IDENTITY_SERVICE_GRPC_PORT:-9091}"
@@ -405,6 +421,8 @@ services:
       # SECURITY DEFAULTS: TLS/mTLS by default. Override explicitly for local dev if needed.
       GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-true}
       GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE: ${GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE:-TLS}
+    ports:
+      - "${USER_GROUP_SERVICE_PORT:-8082}:${USER_GROUP_SERVICE_PORT:-8082}"
     expose:
       - "${USER_GROUP_SERVICE_PORT:-8082}"
       - "${USER_GROUP_SERVICE_GRPC_PORT:-9095}"
@@ -460,6 +478,8 @@ services:
       # SECURITY DEFAULTS: TLS/mTLS by default. Override explicitly for local dev if needed.
       GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-true}
       GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE: ${GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE:-TLS}
+    ports:
+      - "${PROJECT_CONFIG_SERVICE_PORT:-8084}:${PROJECT_CONFIG_SERVICE_PORT:-8084}"
     expose:
       - "${PROJECT_CONFIG_SERVICE_PORT:-8084}"
     depends_on:
@@ -513,6 +533,8 @@ services:
       # SECURITY DEFAULTS: TLS/mTLS by default. Override explicitly for local dev if needed.
       GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-true}
       GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE: ${GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE:-TLS}
+    ports:
+      - "${SYNC_SERVICE_PORT:-8083}:${SYNC_SERVICE_PORT:-8083}"
     expose:
       - "${SYNC_SERVICE_PORT:-8083}"
     depends_on:
@@ -564,6 +586,8 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - create .env file}
       JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    ports:
+      - "${ANALYSIS_SERVICE_PORT:-8087}:${ANALYSIS_SERVICE_PORT:-8087}"
     expose:
       - "${ANALYSIS_SERVICE_PORT:-8087}"
     depends_on:
@@ -613,6 +637,8 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - create .env file}
       JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    ports:
+      - "${REPORT_SERVICE_PORT:-8088}:${REPORT_SERVICE_PORT:-8088}"
     expose:
       - "${REPORT_SERVICE_PORT:-8088}"
     depends_on:
@@ -662,6 +688,8 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - create .env file}
       JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT:-8085}:${NOTIFICATION_SERVICE_PORT:-8085}"
     expose:
       - "${NOTIFICATION_SERVICE_PORT:-8085}"
     depends_on:

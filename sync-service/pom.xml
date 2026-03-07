@@ -94,8 +94,13 @@
 	<!-- gRPC -->
 	<dependency>
 		<groupId>net.devh</groupId>
-		<artifactId>grpc-spring-boot-starter</artifactId>
-		<version>2.15.0.RELEASE</version>
+		<artifactId>grpc-server-spring-boot-starter</artifactId>
+		<version>3.1.0.RELEASE</version>
+	</dependency>
+	<dependency>
+		<groupId>net.devh</groupId>
+		<artifactId>grpc-client-spring-boot-starter</artifactId>
+		<version>3.1.0.RELEASE</version>
 	</dependency>
 
 	<!-- Micrometer for Prometheus metrics -->
@@ -108,7 +113,6 @@
 	<dependency>
 		<groupId>org.springdoc</groupId>
 		<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-		<version>2.5.0</version>
 	</dependency>
 
 	<!-- Common Events Library -->
