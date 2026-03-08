@@ -1,0 +1,12 @@
+@baseUrl = http://localhost:9080
+
+### Auth cooldown
+# @name authCooldown
+< {% await new Promise((resolve) => setTimeout(resolve, 15000)); %}
+GET {{baseUrl}}/actuator/health
+
+> {%
+client.test("auth cooldown", function () {
+  client.assert(response.status === 200);
+});
+%}

@@ -1,0 +1,5 @@
+
+> samt-api-qa@1.0.0 tests:generate
+> node scripts/generate-httpyac-tests.mjs
+
+Generated 7 files with 194 test cases.

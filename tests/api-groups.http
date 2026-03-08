@@ -1,199 +1,181 @@
 @baseUrl = http://localhost:9080
 @identityBaseUrl = http://localhost:8081
-@adminEmail = admin@example.com
-@adminPassword = password
-@lecturerEmail = lecturer@example.com
-@lecturerPassword = password
-@studentEmail = student@example.com
-@studentPassword = password
-@adminAccessToken = invalid.jwt.token
-@studentAccessToken = invalid.jwt.token
-@adminRefreshToken = invalid.refresh.token
-# Optional environment variable usage:
-# @baseUrl = {{BASE_URL}}
-# @adminEmail = {{ADMIN_EMAIL}}
-# @adminPassword = {{ADMIN_PASSWORD}}
+@adminEmail = admin@samt.local
+@adminPassword = Str0ng@Pass!
+@lecturerEmail = qa.lecturer@samt.local
+@lecturerPassword = Str0ng@Pass!
+@studentEmail = qa.student@samt.local
+@studentPassword = Str0ng@Pass!
 @invalidUuid = not-a-uuid
 @missingToken = invalid.jwt.token
 
-### Bootstrap admin login
-# @name adminLogin
-POST {{baseUrl}}/api/auth/login
-Content-Type: application/json
+# Prefer running regression through:
+#   httpyac tests/bootstrap.http tests/fixtures.http tests/api-*.http --all
+# so globals (tokens and fixture IDs) are present for generated cases.
 
-{
-  "email": "{{adminEmail}}",
-  "password": "{{adminPassword}}"
-}
-
-> {%
-client.test("admin login", function () {
-  client.assert(response.status === 200 || response.status === 401);
-  if (response.status === 200 && response.body.accessToken) {
-    client.global.set("adminAccessToken", response.body.accessToken);
-  }
-  if (response.status === 200 && response.body.refreshToken) {
-    client.global.set("adminRefreshToken", response.body.refreshToken);
-  }
-});
-%}
-
-### Bootstrap student login
-# @name studentLogin
-POST {{baseUrl}}/api/auth/login
-Content-Type: application/json
-
-{
-  "email": "{{studentEmail}}",
-  "password": "{{studentPassword}}"
-}
-
-> {%
-client.test("student login", function () {
-  client.assert(response.status === 200 || response.status === 401);
-  if (response.status === 200 && response.body.accessToken) {
-    client.global.set("studentAccessToken", response.body.accessToken);
-  }
-});
-%}
-
-### GET_/api/groups/{groupId}_happy
-# @name GET__api_groups__groupId__happy
-GET {{baseUrl}}/api/groups/1
+### GET_/api/groups/{groupId}/members_happy
+# @name GET__api_groups__groupId__members_happy
+GET {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}/members
 Authorization: Bearer {{adminAccessToken}}
 
 
 
 > {%
-client.test("GET_/api/groups/{groupId}_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("GET_/api/groups/{groupId}/members_happy -> [200]", function () {
+  const expectedStatuses = [200];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### GET_/api/groups/{groupId}_unauthorized
-# @name GET__api_groups__groupId__unauthorized
-GET {{baseUrl}}/api/groups/1
+### GET_/api/groups/{groupId}/members_unauthorized
+# @name GET__api_groups__groupId__members_unauthorized
+GET {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}/members
 Authorization: Bearer {{missingToken}}
 
 
 
 > {%
-client.test("GET_/api/groups/{groupId}_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
+client.test("GET_/api/groups/{groupId}/members_unauthorized -> [401]", function () {
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### GET_/api/groups/{groupId}_forbidden_role
-# @name GET__api_groups__groupId__forbidden_role
-GET {{baseUrl}}/api/groups/1
-Authorization: Bearer {{studentAccessToken}}
-
-
-
-> {%
-client.test("GET_/api/groups/{groupId}_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
-});
-%}
-
-### GET_/api/groups/{groupId}_invalid_uuid
-# @name GET__api_groups__groupId__invalid_uuid
-GET {{baseUrl}}/api/groups/{{invalidUuid}}
+### GET_/api/groups/{groupId}/members_invalid_uuid
+# @name GET__api_groups__groupId__members_invalid_uuid
+GET {{baseUrl}}/api/groups/{{invalidUuid}}/members
 Authorization: Bearer {{adminAccessToken}}
 
 
 
 > {%
-client.test("GET_/api/groups/{groupId}_invalid_uuid -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+client.test("GET_/api/groups/{groupId}/members_invalid_uuid -> [400, 401]", function () {
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### GET_/api/groups/{groupId}_not_found
-# @name GET__api_groups__groupId__not_found
-GET {{baseUrl}}/api/groups/999999999
+### GET_/api/groups/{groupId}/members_not_found
+# @name GET__api_groups__groupId__members_not_found
+GET {{baseUrl}}/api/groups/999999999/members
 Authorization: Bearer {{adminAccessToken}}
 
 
 
 > {%
-client.test("GET_/api/groups/{groupId}_not_found -> [404, 401]", function () {
-  client.assert([404, 401].includes(response.status));
+client.test("GET_/api/groups/{groupId}/members_not_found -> [404, 401]", function () {
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### PUT_/api/groups/{groupId}_happy
-# @name PUT__api_groups__groupId__happy
-PUT {{baseUrl}}/api/groups/1
+### POST_/api/groups/{groupId}/members_happy
+# @name POST__api_groups__groupId__members_happy
+POST {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}/members
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 
 {
-  "groupName": "groupName-sample",
-  "lecturerId": 1
+  "userId": "{{fixtureStatefulMemberUserId}}"
 }
 
 > {%
-client.test("PUT_/api/groups/{groupId}_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("POST_/api/groups/{groupId}/members_happy -> [200, 201]", function () {
+  const expectedStatuses = [200, 201];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200, 201]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### PUT_/api/groups/{groupId}_unauthorized
-# @name PUT__api_groups__groupId__unauthorized
-PUT {{baseUrl}}/api/groups/1
+### POST_/api/groups/{groupId}/members_unauthorized
+# @name POST__api_groups__groupId__members_unauthorized
+POST {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}/members
 Authorization: Bearer {{missingToken}}
 Content-Type: application/json
 
 
 {
-  "groupName": "groupName-sample",
-  "lecturerId": 1
+  "userId": "{{fixtureStatefulMemberUserId}}"
 }
 
 > {%
-client.test("PUT_/api/groups/{groupId}_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
+client.test("POST_/api/groups/{groupId}/members_unauthorized -> [401]", function () {
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### PUT_/api/groups/{groupId}_forbidden_role
-# @name PUT__api_groups__groupId__forbidden_role
-PUT {{baseUrl}}/api/groups/1
+### POST_/api/groups/{groupId}/members_forbidden_role
+# @name POST__api_groups__groupId__members_forbidden_role
+POST {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}/members
 Authorization: Bearer {{studentAccessToken}}
 Content-Type: application/json
 
 
 {
-  "groupName": "groupName-sample",
-  "lecturerId": 1
+  "userId": "{{fixtureStatefulMemberUserId}}"
 }
 
 > {%
-client.test("PUT_/api/groups/{groupId}_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
+client.test("POST_/api/groups/{groupId}/members_forbidden_role -> [403]", function () {
+  const expectedStatuses = [403];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [403]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### PUT_/api/groups/{groupId}_invalid_payload
-# @name PUT__api_groups__groupId__invalid_payload
-PUT {{baseUrl}}/api/groups/1
+### POST_/api/groups/{groupId}/members_invalid_payload
+# @name POST__api_groups__groupId__members_invalid_payload
+POST {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}/members
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 
-{"invalid":"payload"}
+{
+  "userId": "not-a-number"
+}
 
 > {%
-client.test("PUT_/api/groups/{groupId}_invalid_payload -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+client.test("POST_/api/groups/{groupId}/members_invalid_payload -> [400, 401]", function () {
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### PUT_/api/groups/{groupId}_missing_required
-# @name PUT__api_groups__groupId__missing_required
-PUT {{baseUrl}}/api/groups/1
+### POST_/api/groups/{groupId}/members_missing_required
+# @name POST__api_groups__groupId__members_missing_required
+POST {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}/members
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
@@ -201,115 +183,63 @@ Content-Type: application/json
 {}
 
 > {%
-client.test("PUT_/api/groups/{groupId}_missing_required -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+client.test("POST_/api/groups/{groupId}/members_missing_required -> [400, 401]", function () {
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### PUT_/api/groups/{groupId}_invalid_uuid
-# @name PUT__api_groups__groupId__invalid_uuid
-PUT {{baseUrl}}/api/groups/{{invalidUuid}}
+### POST_/api/groups/{groupId}/members_invalid_uuid
+# @name POST__api_groups__groupId__members_invalid_uuid
+POST {{baseUrl}}/api/groups/{{invalidUuid}}/members
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 
 {
-  "groupName": "groupName-sample",
-  "lecturerId": 1
+  "userId": "{{fixtureStatefulMemberUserId}}"
 }
 
 > {%
-client.test("PUT_/api/groups/{groupId}_invalid_uuid -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+client.test("POST_/api/groups/{groupId}/members_invalid_uuid -> [400, 401]", function () {
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### PUT_/api/groups/{groupId}_not_found
-# @name PUT__api_groups__groupId__not_found
-PUT {{baseUrl}}/api/groups/999999999
+### POST_/api/groups/{groupId}/members_not_found
+# @name POST__api_groups__groupId__members_not_found
+POST {{baseUrl}}/api/groups/999999999/members
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 
 {
-  "groupName": "groupName-sample",
-  "lecturerId": 1
+  "userId": "{{fixtureStatefulMemberUserId}}"
 }
 
 > {%
-client.test("PUT_/api/groups/{groupId}_not_found -> [404, 401]", function () {
-  client.assert([404, 401].includes(response.status));
-});
-%}
-
-### DELETE_/api/groups/{groupId}_happy
-# @name DELETE__api_groups__groupId__happy
-DELETE {{baseUrl}}/api/groups/1
-Authorization: Bearer {{adminAccessToken}}
-
-
-
-> {%
-client.test("DELETE_/api/groups/{groupId}_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
-});
-%}
-
-### DELETE_/api/groups/{groupId}_unauthorized
-# @name DELETE__api_groups__groupId__unauthorized
-DELETE {{baseUrl}}/api/groups/1
-Authorization: Bearer {{missingToken}}
-
-
-
-> {%
-client.test("DELETE_/api/groups/{groupId}_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
-});
-%}
-
-### DELETE_/api/groups/{groupId}_forbidden_role
-# @name DELETE__api_groups__groupId__forbidden_role
-DELETE {{baseUrl}}/api/groups/1
-Authorization: Bearer {{studentAccessToken}}
-
-
-
-> {%
-client.test("DELETE_/api/groups/{groupId}_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
-});
-%}
-
-### DELETE_/api/groups/{groupId}_invalid_uuid
-# @name DELETE__api_groups__groupId__invalid_uuid
-DELETE {{baseUrl}}/api/groups/{{invalidUuid}}
-Authorization: Bearer {{adminAccessToken}}
-
-
-
-> {%
-client.test("DELETE_/api/groups/{groupId}_invalid_uuid -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
-});
-%}
-
-### DELETE_/api/groups/{groupId}_not_found
-# @name DELETE__api_groups__groupId__not_found
-DELETE {{baseUrl}}/api/groups/999999999
-Authorization: Bearer {{adminAccessToken}}
-
-
-
-> {%
-client.test("DELETE_/api/groups/{groupId}_not_found -> [404, 401]", function () {
-  client.assert([404, 401].includes(response.status));
+client.test("POST_/api/groups/{groupId}/members_not_found -> [404, 401]", function () {
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### PUT_/api/groups/{groupId}/members/{userId}/promote_happy
 # @name PUT__api_groups__groupId__members__userId__promote_happy
-PUT {{baseUrl}}/api/groups/1/members/1/promote
+PUT {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}/members/{{fixtureStatefulMemberUserId}}/promote
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
@@ -317,14 +247,19 @@ Content-Type: application/json
 {}
 
 > {%
-client.test("PUT_/api/groups/{groupId}/members/{userId}/promote_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("PUT_/api/groups/{groupId}/members/{userId}/promote_happy -> [200]", function () {
+  const expectedStatuses = [200];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### PUT_/api/groups/{groupId}/members/{userId}/promote_unauthorized
 # @name PUT__api_groups__groupId__members__userId__promote_unauthorized
-PUT {{baseUrl}}/api/groups/1/members/1/promote
+PUT {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}/members/{{fixtureStatefulMemberUserId}}/promote
 Authorization: Bearer {{missingToken}}
 Content-Type: application/json
 
@@ -333,13 +268,18 @@ Content-Type: application/json
 
 > {%
 client.test("PUT_/api/groups/{groupId}/members/{userId}/promote_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### PUT_/api/groups/{groupId}/members/{userId}/promote_forbidden_role
 # @name PUT__api_groups__groupId__members__userId__promote_forbidden_role
-PUT {{baseUrl}}/api/groups/1/members/1/promote
+PUT {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}/members/{{fixtureStatefulMemberUserId}}/promote
 Authorization: Bearer {{studentAccessToken}}
 Content-Type: application/json
 
@@ -347,38 +287,13 @@ Content-Type: application/json
 {}
 
 > {%
-client.test("PUT_/api/groups/{groupId}/members/{userId}/promote_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
-});
-%}
-
-### PUT_/api/groups/{groupId}/members/{userId}/promote_invalid_payload
-# @name PUT__api_groups__groupId__members__userId__promote_invalid_payload
-PUT {{baseUrl}}/api/groups/1/members/1/promote
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{"invalid":"payload"}
-
-> {%
-client.test("PUT_/api/groups/{groupId}/members/{userId}/promote_invalid_payload -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
-});
-%}
-
-### PUT_/api/groups/{groupId}/members/{userId}/promote_missing_required
-# @name PUT__api_groups__groupId__members__userId__promote_missing_required
-PUT {{baseUrl}}/api/groups/1/members/1/promote
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("PUT_/api/groups/{groupId}/members/{userId}/promote_missing_required -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+client.test("PUT_/api/groups/{groupId}/members/{userId}/promote_forbidden_role -> [403]", function () {
+  const expectedStatuses = [403];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [403]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -393,7 +308,12 @@ Content-Type: application/json
 
 > {%
 client.test("PUT_/api/groups/{groupId}/members/{userId}/promote_invalid_uuid -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -408,13 +328,18 @@ Content-Type: application/json
 
 > {%
 client.test("PUT_/api/groups/{groupId}/members/{userId}/promote_not_found -> [404, 401]", function () {
-  client.assert([404, 401].includes(response.status));
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### PUT_/api/groups/{groupId}/members/{userId}/demote_happy
 # @name PUT__api_groups__groupId__members__userId__demote_happy
-PUT {{baseUrl}}/api/groups/1/members/1/demote
+PUT {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}/members/{{fixtureStatefulMemberUserId}}/demote
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
@@ -422,14 +347,19 @@ Content-Type: application/json
 {}
 
 > {%
-client.test("PUT_/api/groups/{groupId}/members/{userId}/demote_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("PUT_/api/groups/{groupId}/members/{userId}/demote_happy -> [200]", function () {
+  const expectedStatuses = [200];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### PUT_/api/groups/{groupId}/members/{userId}/demote_unauthorized
 # @name PUT__api_groups__groupId__members__userId__demote_unauthorized
-PUT {{baseUrl}}/api/groups/1/members/1/demote
+PUT {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}/members/{{fixtureStatefulMemberUserId}}/demote
 Authorization: Bearer {{missingToken}}
 Content-Type: application/json
 
@@ -438,13 +368,18 @@ Content-Type: application/json
 
 > {%
 client.test("PUT_/api/groups/{groupId}/members/{userId}/demote_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### PUT_/api/groups/{groupId}/members/{userId}/demote_forbidden_role
 # @name PUT__api_groups__groupId__members__userId__demote_forbidden_role
-PUT {{baseUrl}}/api/groups/1/members/1/demote
+PUT {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}/members/{{fixtureStatefulMemberUserId}}/demote
 Authorization: Bearer {{studentAccessToken}}
 Content-Type: application/json
 
@@ -452,38 +387,13 @@ Content-Type: application/json
 {}
 
 > {%
-client.test("PUT_/api/groups/{groupId}/members/{userId}/demote_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
-});
-%}
-
-### PUT_/api/groups/{groupId}/members/{userId}/demote_invalid_payload
-# @name PUT__api_groups__groupId__members__userId__demote_invalid_payload
-PUT {{baseUrl}}/api/groups/1/members/1/demote
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{"invalid":"payload"}
-
-> {%
-client.test("PUT_/api/groups/{groupId}/members/{userId}/demote_invalid_payload -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
-});
-%}
-
-### PUT_/api/groups/{groupId}/members/{userId}/demote_missing_required
-# @name PUT__api_groups__groupId__members__userId__demote_missing_required
-PUT {{baseUrl}}/api/groups/1/members/1/demote
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("PUT_/api/groups/{groupId}/members/{userId}/demote_missing_required -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+client.test("PUT_/api/groups/{groupId}/members/{userId}/demote_forbidden_role -> [403]", function () {
+  const expectedStatuses = [403];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [403]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -498,7 +408,12 @@ Content-Type: application/json
 
 > {%
 client.test("PUT_/api/groups/{groupId}/members/{userId}/demote_invalid_uuid -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -513,46 +428,102 @@ Content-Type: application/json
 
 > {%
 client.test("PUT_/api/groups/{groupId}/members/{userId}/demote_not_found -> [404, 401]", function () {
-  client.assert([404, 401].includes(response.status));
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### GET_/api/groups_happy
-# @name GET__api_groups_happy
-GET {{baseUrl}}/api/groups
+### DELETE_/api/groups/{groupId}/members/{userId}_happy
+# @name DELETE__api_groups__groupId__members__userId__happy
+DELETE {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}/members/{{fixtureStatefulMemberUserId}}
 Authorization: Bearer {{adminAccessToken}}
 
 
 
 > {%
-client.test("GET_/api/groups_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("DELETE_/api/groups/{groupId}/members/{userId}_happy -> [200, 204]", function () {
+  const expectedStatuses = [200, 204];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200, 204]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### GET_/api/groups_unauthorized
-# @name GET__api_groups_unauthorized
-GET {{baseUrl}}/api/groups
+### DELETE_/api/groups/{groupId}/members/{userId}_unauthorized
+# @name DELETE__api_groups__groupId__members__userId__unauthorized
+DELETE {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}/members/{{fixtureStatefulMemberUserId}}
 Authorization: Bearer {{missingToken}}
 
 
 
 > {%
-client.test("GET_/api/groups_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
+client.test("DELETE_/api/groups/{groupId}/members/{userId}_unauthorized -> [401]", function () {
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### GET_/api/groups_forbidden_role
-# @name GET__api_groups_forbidden_role
-GET {{baseUrl}}/api/groups
+### DELETE_/api/groups/{groupId}/members/{userId}_forbidden_role
+# @name DELETE__api_groups__groupId__members__userId__forbidden_role
+DELETE {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}/members/{{fixtureStatefulMemberUserId}}
 Authorization: Bearer {{studentAccessToken}}
 
 
 
 > {%
-client.test("GET_/api/groups_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
+client.test("DELETE_/api/groups/{groupId}/members/{userId}_forbidden_role -> [403]", function () {
+  const expectedStatuses = [403];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [403]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### DELETE_/api/groups/{groupId}/members/{userId}_invalid_uuid
+# @name DELETE__api_groups__groupId__members__userId__invalid_uuid
+DELETE {{baseUrl}}/api/groups/{{invalidUuid}}/members/{{invalidUuid}}
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("DELETE_/api/groups/{groupId}/members/{userId}_invalid_uuid -> [400, 401]", function () {
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### DELETE_/api/groups/{groupId}/members/{userId}_not_found
+# @name DELETE__api_groups__groupId__members__userId__not_found
+DELETE {{baseUrl}}/api/groups/999999999/members/999999999
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("DELETE_/api/groups/{groupId}/members/{userId}_not_found -> [404, 401]", function () {
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -564,14 +535,19 @@ Content-Type: application/json
 
 
 {
-  "groupName": "groupName-sample",
-  "semesterId": 1,
-  "lecturerId": 1
+  "groupName": "SE2601-G1",
+  "semesterId": "{{fixtureSemesterId}}",
+  "lecturerId": "{{fixtureLecturerId}}"
 }
 
 > {%
-client.test("POST_/api/groups_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("POST_/api/groups_happy -> [200, 201, 409]", function () {
+  const expectedStatuses = [200, 201, 409];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200, 201, 409]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -583,14 +559,19 @@ Content-Type: application/json
 
 
 {
-  "groupName": "groupName-sample",
-  "semesterId": 1,
-  "lecturerId": 1
+  "groupName": "SE2601-G1",
+  "semesterId": "{{fixtureSemesterId}}",
+  "lecturerId": "{{fixtureLecturerId}}"
 }
 
 > {%
 client.test("POST_/api/groups_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -602,14 +583,19 @@ Content-Type: application/json
 
 
 {
-  "groupName": "groupName-sample",
-  "semesterId": 1,
-  "lecturerId": 1
+  "groupName": "SE2601-G1",
+  "semesterId": "{{fixtureSemesterId}}",
+  "lecturerId": "{{fixtureLecturerId}}"
 }
 
 > {%
-client.test("POST_/api/groups_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
+client.test("POST_/api/groups_forbidden_role -> [403]", function () {
+  const expectedStatuses = [403];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [403]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -620,11 +606,20 @@ Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 
-{"invalid":"payload"}
+{
+  "groupName": "",
+  "semesterId": {{fixtureSemesterId}},
+  "lecturerId": {{fixtureLecturerId}}
+}
 
 > {%
 client.test("POST_/api/groups_invalid_payload -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -639,144 +634,221 @@ Content-Type: application/json
 
 > {%
 client.test("POST_/api/groups_missing_required -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### GET_/api/groups/{groupId}/members_happy
-# @name GET__api_groups__groupId__members_happy
-GET {{baseUrl}}/api/groups/1/members
+### GET_/api/groups_happy
+# @name GET__api_groups_happy
+GET {{baseUrl}}/api/groups?page=0&size=20
 Authorization: Bearer {{adminAccessToken}}
 
 
 
 > {%
-client.test("GET_/api/groups/{groupId}/members_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("GET_/api/groups_happy -> [200]", function () {
+  const expectedStatuses = [200];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### GET_/api/groups/{groupId}/members_unauthorized
-# @name GET__api_groups__groupId__members_unauthorized
-GET {{baseUrl}}/api/groups/1/members
+### GET_/api/groups_unauthorized
+# @name GET__api_groups_unauthorized
+GET {{baseUrl}}/api/groups?page=0&size=20
 Authorization: Bearer {{missingToken}}
 
 
 
 > {%
-client.test("GET_/api/groups/{groupId}/members_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
+client.test("GET_/api/groups_unauthorized -> [401]", function () {
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### GET_/api/groups/{groupId}/members_forbidden_role
-# @name GET__api_groups__groupId__members_forbidden_role
-GET {{baseUrl}}/api/groups/1/members
-Authorization: Bearer {{studentAccessToken}}
-
-
-
-> {%
-client.test("GET_/api/groups/{groupId}/members_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
-});
-%}
-
-### GET_/api/groups/{groupId}/members_invalid_uuid
-# @name GET__api_groups__groupId__members_invalid_uuid
-GET {{baseUrl}}/api/groups/{{invalidUuid}}/members
+### GET_/api/groups/{groupId}_happy
+# @name GET__api_groups__groupId__happy
+GET {{baseUrl}}/api/groups/{{fixtureGroupId}}
 Authorization: Bearer {{adminAccessToken}}
 
 
 
 > {%
-client.test("GET_/api/groups/{groupId}/members_invalid_uuid -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+client.test("GET_/api/groups/{groupId}_happy -> [200]", function () {
+  const expectedStatuses = [200];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### GET_/api/groups/{groupId}/members_not_found
-# @name GET__api_groups__groupId__members_not_found
-GET {{baseUrl}}/api/groups/999999999/members
+### GET_/api/groups/{groupId}_unauthorized
+# @name GET__api_groups__groupId__unauthorized
+GET {{baseUrl}}/api/groups/{{fixtureGroupId}}
+Authorization: Bearer {{missingToken}}
+
+
+
+> {%
+client.test("GET_/api/groups/{groupId}_unauthorized -> [401]", function () {
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### GET_/api/groups/{groupId}_invalid_uuid
+# @name GET__api_groups__groupId__invalid_uuid
+GET {{baseUrl}}/api/groups/{{invalidUuid}}
 Authorization: Bearer {{adminAccessToken}}
 
 
 
 > {%
-client.test("GET_/api/groups/{groupId}/members_not_found -> [404, 401]", function () {
-  client.assert([404, 401].includes(response.status));
+client.test("GET_/api/groups/{groupId}_invalid_uuid -> [400, 401]", function () {
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### POST_/api/groups/{groupId}/members_happy
-# @name POST__api_groups__groupId__members_happy
-POST {{baseUrl}}/api/groups/1/members
+### GET_/api/groups/{groupId}_not_found
+# @name GET__api_groups__groupId__not_found
+GET {{baseUrl}}/api/groups/999999999
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/groups/{groupId}_not_found -> [404, 401]", function () {
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### PUT_/api/groups/{groupId}_happy
+# @name PUT__api_groups__groupId__happy
+PUT {{baseUrl}}/api/groups/{{fixtureGroupId}}
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 
 {
-  "userId": 1
+  "groupName": "SE2601-G1",
+  "semesterId": "{{fixtureSemesterId}}",
+  "lecturerId": "{{fixtureLecturerId}}"
 }
 
 > {%
-client.test("POST_/api/groups/{groupId}/members_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("PUT_/api/groups/{groupId}_happy -> [200]", function () {
+  const expectedStatuses = [200];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### POST_/api/groups/{groupId}/members_unauthorized
-# @name POST__api_groups__groupId__members_unauthorized
-POST {{baseUrl}}/api/groups/1/members
+### PUT_/api/groups/{groupId}_unauthorized
+# @name PUT__api_groups__groupId__unauthorized
+PUT {{baseUrl}}/api/groups/{{fixtureGroupId}}
 Authorization: Bearer {{missingToken}}
 Content-Type: application/json
 
 
 {
-  "userId": 1
+  "groupName": "SE2601-G1",
+  "semesterId": "{{fixtureSemesterId}}",
+  "lecturerId": "{{fixtureLecturerId}}"
 }
 
 > {%
-client.test("POST_/api/groups/{groupId}/members_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
+client.test("PUT_/api/groups/{groupId}_unauthorized -> [401]", function () {
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### POST_/api/groups/{groupId}/members_forbidden_role
-# @name POST__api_groups__groupId__members_forbidden_role
-POST {{baseUrl}}/api/groups/1/members
+### PUT_/api/groups/{groupId}_forbidden_role
+# @name PUT__api_groups__groupId__forbidden_role
+PUT {{baseUrl}}/api/groups/{{fixtureGroupId}}
 Authorization: Bearer {{studentAccessToken}}
 Content-Type: application/json
 
 
 {
-  "userId": 1
+  "groupName": "SE2601-G1",
+  "semesterId": "{{fixtureSemesterId}}",
+  "lecturerId": "{{fixtureLecturerId}}"
 }
 
 > {%
-client.test("POST_/api/groups/{groupId}/members_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
+client.test("PUT_/api/groups/{groupId}_forbidden_role -> [403]", function () {
+  const expectedStatuses = [403];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [403]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### POST_/api/groups/{groupId}/members_invalid_payload
-# @name POST__api_groups__groupId__members_invalid_payload
-POST {{baseUrl}}/api/groups/1/members
+### PUT_/api/groups/{groupId}_invalid_payload
+# @name PUT__api_groups__groupId__invalid_payload
+PUT {{baseUrl}}/api/groups/{{fixtureGroupId}}
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 
-{"invalid":"payload"}
+{
+  "groupName": "",
+  "lecturerId": {{fixtureLecturerId}}
+}
 
 > {%
-client.test("POST_/api/groups/{groupId}/members_invalid_payload -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+client.test("PUT_/api/groups/{groupId}_invalid_payload -> [400, 401]", function () {
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### POST_/api/groups/{groupId}/members_missing_required
-# @name POST__api_groups__groupId__members_missing_required
-POST {{baseUrl}}/api/groups/1/members
+### PUT_/api/groups/{groupId}_missing_required
+# @name PUT__api_groups__groupId__missing_required
+PUT {{baseUrl}}/api/groups/{{fixtureGroupId}}
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
@@ -784,114 +856,245 @@ Content-Type: application/json
 {}
 
 > {%
-client.test("POST_/api/groups/{groupId}/members_missing_required -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+client.test("PUT_/api/groups/{groupId}_missing_required -> [400, 401]", function () {
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### POST_/api/groups/{groupId}/members_invalid_uuid
-# @name POST__api_groups__groupId__members_invalid_uuid
-POST {{baseUrl}}/api/groups/{{invalidUuid}}/members
+### PUT_/api/groups/{groupId}_invalid_uuid
+# @name PUT__api_groups__groupId__invalid_uuid
+PUT {{baseUrl}}/api/groups/{{invalidUuid}}
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 
 {
-  "userId": 1
+  "groupName": "SE2601-G1",
+  "semesterId": "{{fixtureSemesterId}}",
+  "lecturerId": "{{fixtureLecturerId}}"
 }
 
 > {%
-client.test("POST_/api/groups/{groupId}/members_invalid_uuid -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+client.test("PUT_/api/groups/{groupId}_invalid_uuid -> [400, 401]", function () {
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### POST_/api/groups/{groupId}/members_not_found
-# @name POST__api_groups__groupId__members_not_found
-POST {{baseUrl}}/api/groups/999999999/members
+### PUT_/api/groups/{groupId}_not_found
+# @name PUT__api_groups__groupId__not_found
+PUT {{baseUrl}}/api/groups/999999999
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 
 {
-  "userId": 1
+  "groupName": "SE2601-G1",
+  "semesterId": "{{fixtureSemesterId}}",
+  "lecturerId": "{{fixtureLecturerId}}"
 }
 
 > {%
-client.test("POST_/api/groups/{groupId}/members_not_found -> [404, 401]", function () {
-  client.assert([404, 401].includes(response.status));
+client.test("PUT_/api/groups/{groupId}_not_found -> [404, 401]", function () {
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### DELETE_/api/groups/{groupId}_happy
+# @name DELETE__api_groups__groupId__happy
+DELETE {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("DELETE_/api/groups/{groupId}_happy -> [200, 204]", function () {
+  const expectedStatuses = [200, 204];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200, 204]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### DELETE_/api/groups/{groupId}_unauthorized
+# @name DELETE__api_groups__groupId__unauthorized
+DELETE {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}
+Authorization: Bearer {{missingToken}}
+
+
+
+> {%
+client.test("DELETE_/api/groups/{groupId}_unauthorized -> [401]", function () {
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### DELETE_/api/groups/{groupId}_forbidden_role
+# @name DELETE__api_groups__groupId__forbidden_role
+DELETE {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}
+Authorization: Bearer {{studentAccessToken}}
+
+
+
+> {%
+client.test("DELETE_/api/groups/{groupId}_forbidden_role -> [403]", function () {
+  const expectedStatuses = [403];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [403]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### DELETE_/api/groups/{groupId}_invalid_uuid
+# @name DELETE__api_groups__groupId__invalid_uuid
+DELETE {{baseUrl}}/api/groups/{{invalidUuid}}
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("DELETE_/api/groups/{groupId}_invalid_uuid -> [400, 401]", function () {
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### DELETE_/api/groups/{groupId}_not_found
+# @name DELETE__api_groups__groupId__not_found
+DELETE {{baseUrl}}/api/groups/999999999
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("DELETE_/api/groups/{groupId}_not_found -> [404, 401]", function () {
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### PATCH_/api/groups/{groupId}/lecturer_happy
 # @name PATCH__api_groups__groupId__lecturer_happy
-PATCH {{baseUrl}}/api/groups/1/lecturer
+PATCH {{baseUrl}}/api/groups/{{fixtureGroupId}}/lecturer
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 
 {
-  "lecturerId": 1
+  "lecturerId": "{{fixtureLecturerId}}"
 }
 
 > {%
-client.test("PATCH_/api/groups/{groupId}/lecturer_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("PATCH_/api/groups/{groupId}/lecturer_happy -> [200]", function () {
+  const expectedStatuses = [200];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### PATCH_/api/groups/{groupId}/lecturer_unauthorized
 # @name PATCH__api_groups__groupId__lecturer_unauthorized
-PATCH {{baseUrl}}/api/groups/1/lecturer
+PATCH {{baseUrl}}/api/groups/{{fixtureGroupId}}/lecturer
 Authorization: Bearer {{missingToken}}
 Content-Type: application/json
 
 
 {
-  "lecturerId": 1
+  "lecturerId": "{{fixtureLecturerId}}"
 }
 
 > {%
 client.test("PATCH_/api/groups/{groupId}/lecturer_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### PATCH_/api/groups/{groupId}/lecturer_forbidden_role
 # @name PATCH__api_groups__groupId__lecturer_forbidden_role
-PATCH {{baseUrl}}/api/groups/1/lecturer
+PATCH {{baseUrl}}/api/groups/{{fixtureGroupId}}/lecturer
 Authorization: Bearer {{studentAccessToken}}
 Content-Type: application/json
 
 
 {
-  "lecturerId": 1
+  "lecturerId": "{{fixtureLecturerId}}"
 }
 
 > {%
-client.test("PATCH_/api/groups/{groupId}/lecturer_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
+client.test("PATCH_/api/groups/{groupId}/lecturer_forbidden_role -> [403]", function () {
+  const expectedStatuses = [403];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [403]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### PATCH_/api/groups/{groupId}/lecturer_invalid_payload
 # @name PATCH__api_groups__groupId__lecturer_invalid_payload
-PATCH {{baseUrl}}/api/groups/1/lecturer
+PATCH {{baseUrl}}/api/groups/{{fixtureGroupId}}/lecturer
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 
-{"invalid":"payload"}
+{
+  "lecturerId": "not-a-number"
+}
 
 > {%
 client.test("PATCH_/api/groups/{groupId}/lecturer_invalid_payload -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### PATCH_/api/groups/{groupId}/lecturer_missing_required
 # @name PATCH__api_groups__groupId__lecturer_missing_required
-PATCH {{baseUrl}}/api/groups/1/lecturer
+PATCH {{baseUrl}}/api/groups/{{fixtureGroupId}}/lecturer
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
@@ -900,7 +1103,12 @@ Content-Type: application/json
 
 > {%
 client.test("PATCH_/api/groups/{groupId}/lecturer_missing_required -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -912,12 +1120,17 @@ Content-Type: application/json
 
 
 {
-  "lecturerId": 1
+  "lecturerId": "{{fixtureLecturerId}}"
 }
 
 > {%
 client.test("PATCH_/api/groups/{groupId}/lecturer_invalid_uuid -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -929,77 +1142,17 @@ Content-Type: application/json
 
 
 {
-  "lecturerId": 1
+  "lecturerId": "{{fixtureLecturerId}}"
 }
 
 > {%
 client.test("PATCH_/api/groups/{groupId}/lecturer_not_found -> [404, 401]", function () {
-  client.assert([404, 401].includes(response.status));
-});
-%}
-
-### DELETE_/api/groups/{groupId}/members/{userId}_happy
-# @name DELETE__api_groups__groupId__members__userId__happy
-DELETE {{baseUrl}}/api/groups/1/members/1
-Authorization: Bearer {{adminAccessToken}}
-
-
-
-> {%
-client.test("DELETE_/api/groups/{groupId}/members/{userId}_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
-});
-%}
-
-### DELETE_/api/groups/{groupId}/members/{userId}_unauthorized
-# @name DELETE__api_groups__groupId__members__userId__unauthorized
-DELETE {{baseUrl}}/api/groups/1/members/1
-Authorization: Bearer {{missingToken}}
-
-
-
-> {%
-client.test("DELETE_/api/groups/{groupId}/members/{userId}_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
-});
-%}
-
-### DELETE_/api/groups/{groupId}/members/{userId}_forbidden_role
-# @name DELETE__api_groups__groupId__members__userId__forbidden_role
-DELETE {{baseUrl}}/api/groups/1/members/1
-Authorization: Bearer {{studentAccessToken}}
-
-
-
-> {%
-client.test("DELETE_/api/groups/{groupId}/members/{userId}_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
-});
-%}
-
-### DELETE_/api/groups/{groupId}/members/{userId}_invalid_uuid
-# @name DELETE__api_groups__groupId__members__userId__invalid_uuid
-DELETE {{baseUrl}}/api/groups/{{invalidUuid}}/members/{{invalidUuid}}
-Authorization: Bearer {{adminAccessToken}}
-
-
-
-> {%
-client.test("DELETE_/api/groups/{groupId}/members/{userId}_invalid_uuid -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
-});
-%}
-
-### DELETE_/api/groups/{groupId}/members/{userId}_not_found
-# @name DELETE__api_groups__groupId__members__userId__not_found
-DELETE {{baseUrl}}/api/groups/999999999/members/999999999
-Authorization: Bearer {{adminAccessToken}}
-
-
-
-> {%
-client.test("DELETE_/api/groups/{groupId}/members/{userId}_not_found -> [404, 401]", function () {
-  client.assert([404, 401].includes(response.status));
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 

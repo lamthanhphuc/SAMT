@@ -1,0 +1,10 @@
+{
+  "mode": "contract",
+  "seed": "20260308",
+  "generated": 100,
+  "passed": 27,
+  "skipped": 27,
+  "failures": 46,
+  "warnings": 0,
+  "latencyBudgetMs": 800
+}

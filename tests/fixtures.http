@@ -1,0 +1,374 @@
+@baseUrl = http://localhost:9080
+@adminEmail = admin@samt.local
+@adminPassword = Str0ng@Pass!
+@lecturerEmail = qa.lecturer@samt.local
+@studentEmail = qa.student@samt.local
+@student2Email = qa.student2@samt.local
+@userPassword = Str0ng@Pass!
+@semesterCode = QA-2026-S1
+@semesterName = QA Semester 2026 S1
+@groupName = SE2601-G1
+@emptyGroupName = SE2601-G2
+@deletableConfigGroupName = SE2601-G3
+@jiraHostUrl = https://example.atlassian.net
+@jiraApiToken = ATATTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+@githubRepoUrl = https://github.com/example-org/example-repo
+@githubToken = ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+### Validate fixture users from bootstrap
+# @name validateFixtureUsers
+GET {{baseUrl}}/actuator/health
+
+> {%
+client.test("validate fixture users from bootstrap", function () {
+  client.assert(response.status === 200);
+  client.assert(!!client.global.get('fixtureLecturerId'), 'fixtureLecturerId missing from bootstrap');
+  client.assert(!!client.global.get('fixtureUserId'), 'fixtureUserId missing from bootstrap');
+  client.assert(!!client.global.get('fixtureStudent2Id'), 'fixtureStudent2Id missing from bootstrap');
+});
+%}
+
+### Create fixture semester
+# @name createFixtureSemester
+POST {{baseUrl}}/api/semesters
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+{
+  "semesterCode": "{{semesterCode}}",
+  "semesterName": "{{semesterName}}",
+  "startDate": "2026-06-01",
+  "endDate": "2026-08-31"
+}
+
+> {%
+client.test("create fixture semester", function () {
+  client.assert([200, 201, 409].includes(response.status));
+  if (response.body && response.body.id) {
+    client.global.set('fixtureSemesterId', response.body.id);
+  }
+});
+%}
+
+### Resolve fixture semester
+# @name resolveFixtureSemester
+GET {{baseUrl}}/api/semesters?page=0&size=200
+Authorization: Bearer {{adminAccessToken}}
+
+> {%
+client.test("resolve fixture semester", function () {
+  client.assert(response.status === 200);
+  const content = Array.isArray(response.body)
+    ? response.body
+    : response.body && Array.isArray(response.body.content)
+      ? response.body.content
+      : [];
+  const semester = content.find((item) => item.semesterCode === request.variables.get('semesterCode'));
+  client.assert(!!semester, 'QA semester not found');
+  client.global.set('fixtureSemesterId', semester.id);
+});
+%}
+
+### Create fixture group
+# @name createFixtureGroup
+POST {{baseUrl}}/api/groups
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+{
+  "groupName": "{{groupName}}",
+  "semesterId": {{fixtureSemesterId}},
+  "lecturerId": {{fixtureLecturerId}}
+}
+
+> {%
+client.test("create fixture group", function () {
+  client.assert([200, 201, 409].includes(response.status));
+  if (response.body && response.body.id) {
+    client.global.set('fixtureGroupId', response.body.id);
+  }
+});
+%}
+
+### Resolve fixture group
+# @name resolveFixtureGroup
+GET {{baseUrl}}/api/groups?page=0&size=200&semesterId={{fixtureSemesterId}}
+Authorization: Bearer {{adminAccessToken}}
+
+> {%
+client.test("resolve fixture group", function () {
+  client.assert(response.status === 200);
+  const content = Array.isArray(response.body)
+    ? response.body
+    : response.body && Array.isArray(response.body.content)
+      ? response.body.content
+      : [];
+  const group = content.find((item) => item.groupName === request.variables.get('groupName'));
+  client.assert(!!group, 'QA group not found');
+  client.global.set('fixtureGroupId', group.id || group.groupId);
+});
+%}
+
+### Create empty group fixture
+# @name createEmptyGroupFixture
+POST {{baseUrl}}/api/groups
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+{
+  "groupName": "{{emptyGroupName}}",
+  "semesterId": {{fixtureSemesterId}},
+  "lecturerId": {{fixtureLecturerId}}
+}
+
+> {%
+client.test("create empty group fixture", function () {
+  client.assert([200, 201, 409].includes(response.status));
+  if (response.body && response.body.id) {
+    client.global.set('fixtureEmptyGroupId', response.body.id);
+  }
+});
+%}
+
+### Resolve empty group fixture
+# @name resolveEmptyGroupFixture
+GET {{baseUrl}}/api/groups?page=0&size=200&semesterId={{fixtureSemesterId}}
+Authorization: Bearer {{adminAccessToken}}
+
+> {%
+client.test("resolve empty group fixture", function () {
+  client.assert(response.status === 200);
+  const content = Array.isArray(response.body)
+    ? response.body
+    : response.body && Array.isArray(response.body.content)
+      ? response.body.content
+      : [];
+  const group = content.find((item) => item.groupName === request.variables.get('emptyGroupName'));
+  client.assert(!!group, 'Empty group fixture not found');
+  client.global.set('fixtureEmptyGroupId', group.id || group.groupId);
+});
+%}
+
+### Create deletable config group fixture
+# @name createDeletableConfigGroupFixture
+POST {{baseUrl}}/api/groups
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+{
+  "groupName": "{{deletableConfigGroupName}}",
+  "semesterId": {{fixtureSemesterId}},
+  "lecturerId": {{fixtureLecturerId}}
+}
+
+> {%
+client.test("create deletable config group fixture", function () {
+  client.assert([200, 201, 409].includes(response.status));
+  if (response.body && response.body.id) {
+    client.global.set('fixtureDeletableConfigGroupId', response.body.id);
+  }
+});
+%}
+
+### Resolve deletable config group fixture
+# @name resolveDeletableConfigGroupFixture
+GET {{baseUrl}}/api/groups?page=0&size=200&semesterId={{fixtureSemesterId}}
+Authorization: Bearer {{adminAccessToken}}
+
+> {%
+client.test("resolve deletable config group fixture", function () {
+  client.assert(response.status === 200);
+  const content = Array.isArray(response.body)
+    ? response.body
+    : response.body && Array.isArray(response.body.content)
+      ? response.body.content
+      : [];
+  const group = content.find((item) => item.groupName === request.variables.get('deletableConfigGroupName'));
+  client.assert(!!group, 'Deletable config group fixture not found');
+  client.global.set('fixtureDeletableConfigGroupId', group.id || group.groupId);
+});
+%}
+
+### Add qa student to group
+# @name addFixtureStudent
+POST {{baseUrl}}/api/groups/{{fixtureGroupId}}/members
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+{
+  "userId": {{fixtureUserId}}
+}
+
+> {%
+client.test("add fixture student", function () {
+  client.assert([201, 409].includes(response.status));
+});
+%}
+
+### Add qa student2 to group
+# @name addFixtureStudent2
+POST {{baseUrl}}/api/groups/{{fixtureGroupId}}/members
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+{
+  "userId": {{fixtureStudent2Id}}
+}
+
+> {%
+client.test("add fixture student2", function () {
+  client.assert([201, 409].includes(response.status));
+});
+%}
+
+### Ensure fixture group has a leader
+# @name ensureFixtureGroupLeader
+PUT {{baseUrl}}/api/groups/{{fixtureGroupId}}/members/{{fixtureStudent2Id}}/promote
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+{}
+
+> {%
+client.test("ensure fixture group leader", function () {
+  client.assert([200, 409].includes(response.status));
+});
+%}
+
+### Resolve existing lifecycle membership
+# @name resolveStatefulLifecycleMembership
+GET {{baseUrl}}/api/users/{{fixtureStatefulMemberUserId}}/groups?semesterId={{fixtureSemesterId}}
+Authorization: Bearer {{adminAccessToken}}
+
+> {%
+client.test("resolve existing lifecycle membership", function () {
+  client.assert(response.status === 200);
+  const groups = Array.isArray(response.body)
+    ? response.body
+    : response.body && Array.isArray(response.body.content)
+      ? response.body.content
+      : [];
+  const existingGroup = groups[0];
+  client.global.set('fixtureStatefulExistingGroupId', existingGroup ? (existingGroup.groupId || existingGroup.id) : 999999999);
+});
+%}
+
+### Cleanup existing lifecycle membership
+# @name cleanupStatefulLifecycleMembership
+DELETE {{baseUrl}}/api/groups/{{fixtureStatefulExistingGroupId}}/members/{{fixtureStatefulMemberUserId}}
+Authorization: Bearer {{adminAccessToken}}
+
+> {%
+client.test("cleanup existing lifecycle membership", function () {
+  client.assert([204, 404].includes(response.status));
+});
+%}
+
+### Cleanup stateful member from empty lifecycle group
+# @name cleanupStatefulMemberEmptyGroup
+DELETE {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}/members/{{fixtureStatefulMemberUserId}}
+Authorization: Bearer {{adminAccessToken}}
+
+> {%
+client.test("cleanup stateful member from empty lifecycle group", function () {
+  client.assert([204, 404].includes(response.status));
+});
+%}
+
+### Create fixture project config
+# @name createFixtureProjectConfig
+POST {{baseUrl}}/api/project-configs
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+{
+  "groupId": {{fixtureGroupId}},
+  "jiraHostUrl": "{{jiraHostUrl}}",
+  "jiraApiToken": "{{jiraApiToken}}",
+  "githubRepoUrl": "{{githubRepoUrl}}",
+  "githubToken": "{{githubToken}}"
+}
+
+> {%
+client.test("create fixture project config", function () {
+  client.assert([201, 401, 409].includes(response.status));
+  const id = response.body && (response.body.id || (response.body.data && response.body.data.id));
+  if (id) {
+    client.global.set('fixtureProjectConfigId', id);
+  }
+});
+%}
+
+### Resolve fixture project config
+# @name resolveFixtureProjectConfig
+GET {{baseUrl}}/api/project-configs/group/{{fixtureGroupId}}
+Authorization: Bearer {{adminAccessToken}}
+
+> {%
+client.test("resolve fixture project config", function () {
+  client.assert(response.status === 200);
+  const data = response.body && response.body.data ? response.body.data : response.body;
+  client.assert(!!data && !!(data.id || data.configId), 'QA project config not found');
+  client.global.set('fixtureProjectConfigId', data.id || data.configId);
+});
+%}
+
+### Create deletable project config fixture
+# @name createDeletableProjectConfig
+POST {{baseUrl}}/api/project-configs
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+{
+  "groupId": {{fixtureDeletableConfigGroupId}},
+  "jiraHostUrl": "{{jiraHostUrl}}",
+  "jiraApiToken": "{{jiraApiToken}}",
+  "githubRepoUrl": "{{githubRepoUrl}}",
+  "githubToken": "{{githubToken}}"
+}
+
+> {%
+client.test("create deletable project config fixture", function () {
+  client.assert([201, 401, 409].includes(response.status));
+  const id = response.body && (response.body.id || (response.body.data && response.body.data.id));
+  if (id) {
+    client.global.set('fixtureDeletableProjectConfigId', id);
+  }
+});
+%}
+
+### Resolve deletable project config fixture
+# @name resolveDeletableProjectConfig
+GET {{baseUrl}}/api/project-configs/group/{{fixtureDeletableConfigGroupId}}
+Authorization: Bearer {{adminAccessToken}}
+
+> {%
+client.test("resolve deletable project config fixture", function () {
+  client.assert([200, 404].includes(response.status));
+  if (response.status === 200) {
+    const data = response.body && response.body.data ? response.body.data : response.body;
+    client.assert(!!data && !!(data.id || data.configId), 'Deletable project config fixture not found');
+    client.global.set('fixtureDeletableProjectConfigId', data.id || data.configId);
+  }
+});
+%}
+
+### Final fixture sanity check
+# @name fixtureSanity
+GET {{baseUrl}}/actuator/health
+
+> {%
+client.test("fixture vars present", function () {
+  client.assert(!!client.global.get('fixtureAdminAccessToken') || !!client.global.get('adminAccessToken'));
+  client.assert(!!client.global.get('fixtureLecturerAccessToken') || !!client.global.get('lecturerAccessToken'));
+  client.assert(!!client.global.get('fixtureStudentAccessToken') || !!client.global.get('studentAccessToken'));
+  client.assert(!!client.global.get('fixtureAdminLifecycleUserId'));
+  client.assert(!!client.global.get('fixtureStatefulMemberUserId'));
+  client.assert(!!client.global.get('fixtureSemesterId'));
+  client.assert(!!client.global.get('fixtureGroupId'));
+  client.assert(!!client.global.get('fixtureEmptyGroupId'));
+  client.assert(!!client.global.get('fixtureDeletableConfigGroupId'));
+  client.assert(!!client.global.get('fixtureProjectConfigId'));
+  client.assert(!!client.global.get('fixtureDeletableProjectConfigId'));
+});
+%}

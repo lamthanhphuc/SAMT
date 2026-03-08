@@ -3,6 +3,7 @@ package com.example.user_groupservice.dto.request;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,5 +26,6 @@ public class UpdateGroupRequest {
     private String groupName;
     
     @NotNull(message = "Lecturer ID is required")
+    @Positive(message = "Lecturer ID must be greater than 0")
     private Long lecturerId;
 }

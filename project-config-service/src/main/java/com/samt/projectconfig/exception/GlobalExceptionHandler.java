@@ -3,17 +3,21 @@ package com.samt.projectconfig.exception;
 import com.samt.projectconfig.dto.response.ErrorResponse;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.oauth2.jwt.JwtException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -80,8 +84,12 @@ public class GlobalExceptionHandler {
         );
     }
     
-    @ExceptionHandler(jakarta.persistence.OptimisticLockException.class)
-    public ResponseEntity<ErrorResponse> handleOptimisticLock(jakarta.persistence.OptimisticLockException ex) {
+    @ExceptionHandler({
+        jakarta.persistence.OptimisticLockException.class,
+        org.hibernate.StaleObjectStateException.class,
+        org.springframework.orm.ObjectOptimisticLockingFailureException.class
+    })
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(Exception ex) {
         log.warn("Optimistic lock conflict: {}", ex.getMessage());
         return buildErrorResponse(
             HttpStatus.CONFLICT,
@@ -255,6 +263,16 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingRequestParameter(MissingServletRequestParameterException ex) {
+        return buildErrorResponse(
+            HttpStatus.BAD_REQUEST,
+            HttpStatus.BAD_REQUEST.getReasonPhrase(),
+            "Missing required parameter '" + ex.getParameterName() + "'",
+            ex.getParameterName()
+        );
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleUnreadableBody(HttpMessageNotReadableException ex) {
         return buildErrorResponse(
@@ -263,6 +281,18 @@ public class GlobalExceptionHandler {
             "Malformed request body",
             null
         );
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+            .header(HttpHeaders.ALLOW, resolveAllowHeader(ex))
+            .body(buildErrorBody(
+            HttpStatus.METHOD_NOT_ALLOWED,
+            HttpStatus.METHOD_NOT_ALLOWED.getReasonPhrase(),
+            "Method not allowed",
+            null
+        ));
     }
     
     @ExceptionHandler(IllegalStateException.class)
@@ -303,14 +333,31 @@ public class GlobalExceptionHandler {
         String field,
         Object details
     ) {
+        return ResponseEntity.status(status).body(buildErrorBody(status, code, message, details != null ? details : field));
+    }
+
+    private ErrorResponse buildErrorBody(
+        HttpStatus status,
+        String code,
+        String message,
+        Object details
+    ) {
         ErrorResponse response = ErrorResponse.builder()
             .statusCode(status.value())
             .error(status.getReasonPhrase())
             .message(message)
-            .details(details != null ? details : field)
+            .details(details)
             .timestamp(Instant.now().toString())
             .build();
-        
-        return ResponseEntity.status(status).body(response);
+
+        return response;
+    }
+
+    private String resolveAllowHeader(HttpRequestMethodNotSupportedException ex) {
+        String[] supportedMethods = ex.getSupportedMethods();
+        if (supportedMethods == null || supportedMethods.length == 0) {
+            return "GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD";
+        }
+        return String.join(", ", Arrays.stream(supportedMethods).sorted().toList());
     }
 }

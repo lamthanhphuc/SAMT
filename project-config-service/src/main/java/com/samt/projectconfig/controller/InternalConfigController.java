@@ -5,6 +5,7 @@ import com.samt.projectconfig.service.ProjectConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -33,7 +34,8 @@ public class InternalConfigController {
      * SEC-INTERNAL-04: Only if state = VERIFIED
      */
     @GetMapping("/{id}/tokens")
-    public ResponseEntity<Map<String, Object>> getDecryptedTokens(@PathVariable UUID id) {
+    @PreAuthorize("authentication != null and authentication.name == 'sync-service'")
+    public ResponseEntity<Map<String, Object>> getDecryptedTokens(@PathVariable("id") UUID id) {
         log.info("Internal API: getting decrypted tokens for config {}", id);
         
         DecryptedTokensResponse response = service.getDecryptedTokens(id);

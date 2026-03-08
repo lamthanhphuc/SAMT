@@ -177,6 +177,19 @@ public class GroupMemberServiceImpl implements GroupMemberService {
                 "User " + userId + " is not a LEADER"
             );
         }
+
+        long activeMemberCount = membershipRepository.countByGroupIdAndGroupRoleAndDeletedAtIsNull(
+            groupId,
+            GroupRole.MEMBER
+        );
+        if (activeMemberCount > 0) {
+            log.warn(
+                "UC25 - Cannot demote LEADER from group {} - {} active MEMBER(s) exist",
+                groupId,
+                activeMemberCount
+            );
+            throw ConflictException.cannotDemoteLeader();
+        }
         
         // Demote to MEMBER
         membership.demoteToMember();

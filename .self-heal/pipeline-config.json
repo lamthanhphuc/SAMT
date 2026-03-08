@@ -1,0 +1,25 @@
+{
+  "maxIterations": 3,
+  "stages": [
+    {
+      "id": "openapi",
+      "command": "npm run openapi:generate"
+    },
+    {
+      "id": "generate",
+      "command": "npm run tests:generate"
+    },
+    {
+      "id": "smoke",
+      "command": "npm run test:smoke"
+    },
+    {
+      "id": "regression",
+      "command": "npm run tests:regression"
+    },
+    {
+      "id": "contract",
+      "command": "npm run tests:contract"
+    }
+  ]
+}

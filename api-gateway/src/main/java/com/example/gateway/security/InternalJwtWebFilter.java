@@ -34,6 +34,10 @@ public class InternalJwtWebFilter implements WebFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        if (shouldPreserveExternalToken(exchange)) {
+            return chain.filter(exchange);
+        }
+
         Object authenticatedMarker = exchange.getAttribute(JwtAuthenticationFilter.AUTHENTICATED_MARKER_ATTRIBUTE);
         Object jwtAttribute = exchange.getAttribute(JwtAuthenticationFilter.AUTHENTICATED_JWT_ATTRIBUTE);
 
@@ -59,5 +63,12 @@ public class InternalJwtWebFilter implements WebFilter, Ordered {
         });
 
         return chain.filter(exchange.mutate().request(requestBuilder.build()).build());
+    }
+
+    private boolean shouldPreserveExternalToken(ServerWebExchange exchange) {
+        String path = exchange.getRequest().getURI().getPath();
+        return path.startsWith("/api/auth/")
+                || path.startsWith("/api/admin/")
+                || path.startsWith("/api/identity/");
     }
 }

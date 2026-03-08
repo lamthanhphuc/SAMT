@@ -51,29 +51,11 @@ jobs:
           docker compose ps
           exit 1
 
-      - name: Generate OpenAPI from running services
+      - name: Run self-healing API pipeline
         env:
           BASE_URL: http://localhost:9080
-        run: npm run openapi:generate
-
-      - name: Generate httpyac suite from OpenAPI
-        run: npm run tests:generate
-
-      - name: Run smoke tests
-        env:
-          BASE_URL: http://localhost:9080
-        run: npx httpyac tests/api-smoke.http --all
-
-      - name: Run full regression tests
-        env:
-          BASE_URL: http://localhost:9080
-        run: npx httpyac tests --all
-
-      - name: Contract test with Schemathesis
-        run: |
-          python -m pip install --upgrade pip
-          pip install schemathesis
-          schemathesis run openapi.yaml --url=http://localhost:9080 --checks=status_code_conformance,content_type_conformance,response_schema_conformance,not_a_server_error --exclude-checks=unsupported_method,ignored_auth,positive_data_acceptance,negative_data_rejection --exclude-path-regex="^/api/auth/(login|refresh|register)$"
+          QA_SEED: 20260308
+        run: npm run tests:self-heal:ci
 
       - name: Upload API artifacts
         if: always()
@@ -84,6 +66,8 @@ jobs:
             openapi.yaml
             tests/
             postman-collection.json
+            .self-heal/reports/
+            .self-heal/snapshots/
 
       - name: Tear down
         if: always()

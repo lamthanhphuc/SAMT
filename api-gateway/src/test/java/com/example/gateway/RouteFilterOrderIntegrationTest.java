@@ -2,6 +2,7 @@ package com.example.gateway;
 
 import com.example.gateway.filter.JwtAuthenticationFilter;
 import com.example.gateway.filter.RedisRateLimitGatewayFilter;
+import com.example.gateway.filter.UnsupportedHttpMethodWebFilter;
 import com.example.gateway.security.InternalJwtIssuer;
 import com.example.gateway.security.InternalJwtWebFilter;
 import org.junit.jupiter.api.Test;
@@ -9,6 +10,8 @@ import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
 import org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter;
 import org.springframework.core.env.Environment;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
@@ -34,11 +37,36 @@ public class RouteFilterOrderIntegrationTest {
         when(environment.getActiveProfiles()).thenReturn(new String[0]);
 
         JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtDecoder, environment);
+        UnsupportedHttpMethodWebFilter unsupportedHttpMethodWebFilter = new UnsupportedHttpMethodWebFilter();
         InternalJwtWebFilter internalJwtWebFilter = new InternalJwtWebFilter(mock(InternalJwtIssuer.class));
 
+        assertThat(unsupportedHttpMethodWebFilter.getOrder()).isEqualTo(-2147483648);
+        assertThat(unsupportedHttpMethodWebFilter.getOrder()).isLessThan(jwtAuthenticationFilter.getOrder());
         assertThat(jwtAuthenticationFilter.getOrder()).isEqualTo(-2147483638); // HIGHEST_PRECEDENCE + 10
         assertThat(internalJwtWebFilter.getOrder()).isEqualTo(-2147483598); // HIGHEST_PRECEDENCE + 50
         assertThat(jwtAuthenticationFilter.getOrder()).isLessThan(internalJwtWebFilter.getOrder());
+    }
+
+    @Test
+    void unsupportedMethods_return405_and_stop_chain() {
+        UnsupportedHttpMethodWebFilter unsupportedHttpMethodWebFilter = new UnsupportedHttpMethodWebFilter();
+        MockServerWebExchange exchange = MockServerWebExchange.from(
+                MockServerHttpRequest.method(HttpMethod.valueOf("QUERY"), "/api/semesters").build()
+        );
+
+        AtomicBoolean chainReached = new AtomicBoolean(false);
+
+        WebFilterChain terminal = currentExchange -> {
+            chainReached.set(true);
+            return Mono.empty();
+        };
+
+        unsupportedHttpMethodWebFilter.filter(exchange, terminal).block();
+
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+        assertThat(exchange.getResponse().getHeaders().getFirst(HttpHeaders.ALLOW))
+                .isEqualTo("GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD");
+        assertThat(chainReached.get()).isFalse();
     }
 
     @Test

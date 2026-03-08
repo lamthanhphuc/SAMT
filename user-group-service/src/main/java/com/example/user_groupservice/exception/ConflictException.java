@@ -61,6 +61,16 @@ public class ConflictException extends BaseException {
             "Cannot remove leader while group has active members"
         );
     }
+
+    /**
+     * Cannot demote the last leader while other members still exist.
+     */
+    public static ConflictException cannotDemoteLeader() {
+        return new ConflictException(
+            "CANNOT_DEMOTE_LEADER",
+            "Cannot demote leader while group has active members"
+        );
+    }
     
     /**
      * Group name already exists in semester.

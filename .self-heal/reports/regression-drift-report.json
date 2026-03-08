@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-03-08T13:05:06.277Z",
+  "driftDetected": false,
+  "baselinePath": "E:/Bin/SAMT/.self-heal/snapshots/baseline/manifest.json",
+  "latestPath": "E:/Bin/SAMT/.self-heal/snapshots/latest/manifest.json",
+  "diff": {
+    "added": [],
+    "removed": [],
+    "modified": [],
+    "unchanged": [
+      "openapi.yaml",
+      "tests/api-auth.http",
+      "tests/api-users.http",
+      "tests/api-groups.http",
+      "tests/api-semesters.http",
+      "tests/api-project-configs.http",
+      "tests/api-permissions.http",
+      "tests/bootstrap.http",
+      "tests/fixtures.http",
+      ".self-heal/openapi-overrides.json",
+      ".self-heal/generator-overrides.json",
+      "scripts/schema-payload-generator.mjs",
+      "scripts/generate-httpyac-tests.mjs"
+    ]
+  }
+}

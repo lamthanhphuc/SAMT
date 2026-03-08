@@ -23,6 +23,10 @@ public class GatewayRoutesConfig {
     ) {
         return builder.routes()
 
+                .route("identity-jwks", r -> r
+                        .path("/.well-known/jwks.json")
+                        .uri(identityServiceUri))
+
                 // ========================================
                 //   OPENAPI DOCS PROXY ROUTES (no auth)
                 // ========================================

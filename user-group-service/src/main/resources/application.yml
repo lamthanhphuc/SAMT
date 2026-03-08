@@ -12,6 +12,8 @@ spring:
     name: usergroup-service
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
+  mvc:
+    dispatch-trace-request: true
 
   lifecycle:
     timeout-per-shutdown-phase: 30s

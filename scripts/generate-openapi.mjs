@@ -2,13 +2,14 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import dotenv from 'dotenv';
 import yaml from 'js-yaml';
+import { applyOpenapiOverrides, loadOpenapiOverrides } from './self-heal-overrides.mjs';
 
 dotenv.config({ path: path.resolve('.env.test') });
 
 const baseUrl = process.env.BASE_URL || 'http://localhost:9080';
-const identityDocsUrl = process.env.IDENTITY_DOCS_URL || 'http://localhost:8081/v3/api-docs';
-const userGroupDocsUrl = process.env.USER_GROUP_DOCS_URL || 'http://localhost:8082/v3/api-docs';
-const projectConfigDocsUrl = process.env.PROJECT_CONFIG_DOCS_URL || 'http://localhost:8084/v3/api-docs';
+const identityDocsUrl = process.env.IDENTITY_DOCS_URL || `${baseUrl}/identity/v3/api-docs`;
+const userGroupDocsUrl = process.env.USER_GROUP_DOCS_URL || `${baseUrl}/user-group/v3/api-docs`;
+const projectConfigDocsUrl = process.env.PROJECT_CONFIG_DOCS_URL || `${baseUrl}/project-config/v3/api-docs`;
 
 const sources = [
   { key: 'identity', url: identityDocsUrl },
@@ -112,6 +113,172 @@ function ensurePathParameters(doc) {
   }
 }
 
+function patchSchema(schema, patch) {
+  if (!schema) return;
+  Object.assign(schema, patch);
+}
+
+function patchProperty(schema, propertyName, patch) {
+  if (!schema?.properties?.[propertyName]) return;
+  Object.assign(schema.properties[propertyName], patch);
+}
+
+function applySchemaOverrides(doc) {
+  const schemas = doc.components?.schemas || {};
+
+  const register = schemas.identity_RegisterRequest;
+  if (register) {
+    register.required = ['email', 'password', 'confirmPassword', 'fullName', 'role'];
+    patchProperty(register, 'email', { format: 'email', maxLength: 255 });
+    patchProperty(register, 'password', {
+      minLength: 8,
+      maxLength: 128,
+      pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,128}$'
+    });
+    patchProperty(register, 'confirmPassword', { minLength: 1 });
+    patchProperty(register, 'fullName', {
+      minLength: 2,
+      maxLength: 100,
+      pattern: '^[\\p{L}\\s\\-]{2,100}$'
+    });
+    patchProperty(register, 'role', { type: 'string', enum: ['STUDENT'] });
+  }
+
+  const createGroup = schemas.userGroup_CreateGroupRequest;
+  if (createGroup) {
+    createGroup.required = ['groupName', 'semesterId', 'lecturerId'];
+    patchProperty(createGroup, 'groupName', {
+      minLength: 3,
+      maxLength: 50,
+      pattern: '^[A-Z]{2,4}[0-9]{2,4}-G[0-9]+$'
+    });
+    patchProperty(createGroup, 'semesterId', { type: 'integer', format: 'int64', minimum: 1 });
+    patchProperty(createGroup, 'lecturerId', { type: 'integer', format: 'int64', minimum: 1 });
+  }
+
+  const createSemester = schemas.userGroup_CreateSemesterRequest;
+  if (createSemester) {
+    createSemester.required = ['semesterCode', 'semesterName', 'startDate', 'endDate'];
+    createSemester.additionalProperties = false;
+    patchProperty(createSemester, 'semesterCode', { minLength: 1 });
+    patchProperty(createSemester, 'semesterName', { minLength: 1 });
+    patchProperty(createSemester, 'startDate', { type: 'string', format: 'date' });
+    patchProperty(createSemester, 'endDate', { type: 'string', format: 'date' });
+  }
+
+  const createConfig = schemas.projectConfig_CreateConfigRequest;
+  if (createConfig) {
+    createConfig.required = ['groupId', 'jiraHostUrl', 'jiraApiToken', 'githubRepoUrl', 'githubToken'];
+    patchProperty(createConfig, 'groupId', { type: 'integer', format: 'int64', minimum: 1 });
+    patchProperty(createConfig, 'jiraHostUrl', {
+      maxLength: 255,
+      pattern: 'https?://[a-zA-Z0-9.-]+\\.(atlassian\\.net|jira\\.com)(/.*)?'
+    });
+    patchProperty(createConfig, 'jiraApiToken', {
+      minLength: 100,
+      maxLength: 500,
+      pattern: '^ATATT[A-Za-z0-9+/=_-]{95,495}$'
+    });
+    patchProperty(createConfig, 'githubRepoUrl', {
+      maxLength: 512,
+      pattern: 'https://github\\.com/[\\w-]+/[\\w-]+'
+    });
+    patchProperty(createConfig, 'githubToken', {
+      minLength: 40,
+      maxLength: 255,
+      pattern: '^ghp_[A-Za-z0-9]{36,}$'
+    });
+  }
+
+  const updateConfig = schemas.projectConfig_UpdateConfigRequest;
+  if (updateConfig) {
+    patchProperty(updateConfig, 'jiraHostUrl', {
+      maxLength: 255,
+      pattern: 'https?://[a-zA-Z0-9.-]+\\.(atlassian\\.net|jira\\.com)(/.*)?'
+    });
+    patchProperty(updateConfig, 'jiraApiToken', {
+      minLength: 100,
+      maxLength: 500,
+      pattern: '^ATATT[A-Za-z0-9+/=_-]{95,495}$'
+    });
+    patchProperty(updateConfig, 'githubRepoUrl', {
+      maxLength: 512,
+      pattern: 'https://github\\.com/[\\w-]+/[\\w-]+'
+    });
+    patchProperty(updateConfig, 'githubToken', {
+      minLength: 40,
+      maxLength: 255,
+      pattern: '^ghp_[A-Za-z0-9]{36,}$'
+    });
+  }
+}
+
+function applyOperationOverrides(doc) {
+  const register = doc.paths?.['/api/auth/register']?.post;
+  if (register?.responses?.['200']) {
+    register.responses['201'] = register.responses['200'];
+    delete register.responses['200'];
+  }
+
+  const logout = doc.paths?.['/api/auth/logout']?.post;
+  if (logout) {
+    logout.security = [{ bearerAuth: [] }];
+    if (logout.responses?.['200']) {
+      logout.responses['204'] = logout.responses['200'];
+      delete logout.responses['200'];
+    } else if (!logout.responses?.['204']) {
+      logout.responses = logout.responses || {};
+      logout.responses['204'] = { description: 'No Content' };
+    }
+  }
+
+  const createConfig = doc.paths?.['/api/project-configs']?.post;
+  if (createConfig?.responses?.['200']) {
+    createConfig.responses['201'] = createConfig.responses['200'];
+    delete createConfig.responses['200'];
+  }
+
+  const configById = doc.paths?.['/api/project-configs/{id}'];
+  if (configById) {
+    for (const method of ['get', 'put', 'delete']) {
+      const operation = configById[method];
+      if (!operation?.parameters) continue;
+      for (const parameter of operation.parameters) {
+        if (parameter.in === 'path' && parameter.name === 'id') {
+          parameter.schema = { type: 'string', format: 'uuid' };
+        }
+      }
+    }
+  }
+
+  for (const [pathKey, pathItem] of Object.entries(doc.paths || {})) {
+    for (const [method, operation] of Object.entries(pathItem || {})) {
+      if (!operation?.parameters) continue;
+      for (const parameter of operation.parameters) {
+        if (parameter.in !== 'path') continue;
+        if (parameter.name === 'id' && pathKey.includes('/project-configs/')) {
+          parameter.schema = { type: 'string', format: 'uuid' };
+        }
+        if (['groupId', 'semesterId', 'userId'].includes(parameter.name)) {
+          parameter.schema = { type: 'integer', format: 'int64', minimum: 1 };
+        }
+        if ((parameter.name === 'page' || parameter.name === 'size') && parameter.schema) {
+          parameter.schema.type = 'integer';
+        }
+      }
+
+      for (const parameter of operation.parameters) {
+        if (parameter.in === 'query' && parameter.name === 'page') {
+          parameter.schema = { ...(parameter.schema || {}), type: 'integer', minimum: 0, default: 0 };
+        }
+        if (parameter.in === 'query' && parameter.name === 'size') {
+          parameter.schema = { ...(parameter.schema || {}), type: 'integer', minimum: 1, default: 20 };
+        }
+      }
+    }
+  }
+}
+
 async function fetchJson(url) {
   const resp = await fetch(url, { headers: { Accept: 'application/json' } });
   if (!resp.ok) {
@@ -196,6 +363,10 @@ async function main() {
 
   ensureErrorContract(unified);
   ensurePathParameters(unified);
+  applySchemaOverrides(unified);
+  applyOperationOverrides(unified);
+  const selfHealOverrides = await loadOpenapiOverrides();
+  applyOpenapiOverrides(unified, selfHealOverrides);
 
   if (Object.keys(unified.paths).length === 0) {
     throw new Error(

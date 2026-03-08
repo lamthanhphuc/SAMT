@@ -1,0 +1,2112 @@
+
+> samt-api-qa@1.0.0 tests:fixtures
+> httpyac tests/bootstrap.http tests/fixtures.http --all
+
+
+---------------------
+
+=== Admin login ===
+
+POST http://localhost:9080/api/auth/login
+accept-encoding: gzip, deflate, br
+accept: */*
+content-length: 66
+content-type: application/json
+user-agent: httpyac
+
+{
+  "email": "admin@samt.local",
+  "password": "Str0ng@Pass!"
+}
+HTTP/1.1 200  - OK
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:00 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 600
+x-ratelimit-remaining: 260
+x-ratelimit-replenish-rate: 5
+x-ratelimit-requested-tokens: 60
+x-xss-protection: 0
+
+{
+  "accessToken": "eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ",
+  "refreshToken": "8cadaa2e-666e-4bc4-9557-73b23425c5cd",
+  "tokenType": "Bearer",
+  "expiresIn": 900
+}
+[x] admin login
+--------------------- E:\Bin\SAMT\tests\bootstrap.http  --
+
+---------------------
+
+=== Ensure qa lecturer exists ===
+
+POST http://localhost:9080/api/admin/users
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+content-length: 125
+content-type: application/json
+user-agent: httpyac
+
+{
+  "email": "qa.lecturer@samt.local",
+  "password": "Str0ng@Pass!",
+  "fullName": "QA Lecturer",
+  "role": "LECTURER"
+}
+HTTP/1.1 409  - Conflict
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:00 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 199
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "statusCode": 409,
+  "error": "Conflict",
+  "message": "Email already registered"
+}
+[x] ensure qa lecturer
+
+---------------------
+
+=== Ensure qa student exists ===
+
+POST http://localhost:9080/api/admin/users
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+content-length: 122
+content-type: application/json
+user-agent: httpyac
+
+{
+  "email": "qa.student@samt.local",
+  "password": "Str0ng@Pass!",
+  "fullName": "QA Student",
+  "role": "STUDENT"
+}
+HTTP/1.1 409  - Conflict
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:00 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 198
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "statusCode": 409,
+  "error": "Conflict",
+  "message": "Email already registered"
+}
+[x] ensure qa student
+
+---------------------
+
+=== Ensure qa student2 exists ===
+
+POST http://localhost:9080/api/admin/users
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+content-length: 141
+content-type: application/json
+user-agent: httpyac
+
+{
+  "email": "qa.student2+1772943900352@samt.local",
+  "password": "Str0ng@Pass!",
+  "fullName": "QA Student Two",
+  "role": "STUDENT"
+}
+HTTP/1.1 201  - Created
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:00 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 197
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "message": "User created successfully",
+  "user": {
+    "id": 428,
+    "email": "qa.student2+1772943900352@samt.local",
+    "fullName": "QA Student Two",
+    "role": "STUDENT",
+    "status": "ACTIVE",
+    "jiraAccountId": null,
+    "githubUsername": null,
+    "createdAt": "2026-03-08T04:25:00Z"
+  },
+  "temporaryPassword": "Str0ng@Pass!"
+}
+[x] ensure qa student2
+
+---------------------
+
+=== Ensure admin lifecycle user exists ===
+
+POST http://localhost:9080/api/admin/users
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+content-length: 152
+content-type: application/json
+user-agent: httpyac
+
+{
+  "email": "qa.admin.lifecycle+1772943900352@samt.local",
+  "password": "Str0ng@Pass!",
+  "fullName": "QA Admin Lifecycle",
+  "role": "STUDENT"
+}
+HTTP/1.1 201  - Created
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:00 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 196
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "message": "User created successfully",
+  "user": {
+    "id": 429,
+    "email": "qa.admin.lifecycle+1772943900352@samt.local",
+    "fullName": "QA Admin Lifecycle",
+    "role": "STUDENT",
+    "status": "ACTIVE",
+    "jiraAccountId": null,
+    "githubUsername": null,
+    "createdAt": "2026-03-08T04:25:00Z"
+  },
+  "temporaryPassword": "Str0ng@Pass!"
+}
+[x] ensure admin lifecycle user
+
+---------------------
+
+=== Ensure stateful member user exists ===
+
+POST http://localhost:9080/api/admin/users
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+content-length: 152
+content-type: application/json
+user-agent: httpyac
+
+{
+  "email": "qa.stateful.member+1772943900352@samt.local",
+  "password": "Str0ng@Pass!",
+  "fullName": "QA Stateful Member",
+  "role": "STUDENT"
+}
+HTTP/1.1 201  - Created
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:00 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 195
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "message": "User created successfully",
+  "user": {
+    "id": 430,
+    "email": "qa.stateful.member+1772943900352@samt.local",
+    "fullName": "QA Stateful Member",
+    "role": "STUDENT",
+    "status": "ACTIVE",
+    "jiraAccountId": null,
+    "githubUsername": null,
+    "createdAt": "2026-03-08T04:25:00Z"
+  },
+  "temporaryPassword": "Str0ng@Pass!"
+}
+[x] ensure stateful member user
+
+---------------------
+
+=== Lecturer login ===
+
+POST http://localhost:9080/api/auth/login
+accept-encoding: gzip, deflate, br
+accept: */*
+content-length: 72
+content-type: application/json
+user-agent: httpyac
+
+{
+  "email": "qa.lecturer@samt.local",
+  "password": "Str0ng@Pass!"
+}
+HTTP/1.1 200  - OK
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:00 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 600
+x-ratelimit-remaining: 200
+x-ratelimit-replenish-rate: 5
+x-ratelimit-requested-tokens: 60
+x-xss-protection: 0
+
+{
+  "accessToken": "eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIyZjk0M2E4Mi0zMjAyLTQ5ZTgtODk0ZS0wOWE1OWE3NWViMjAiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjIzNSIsImVtYWlsIjoicWEubGVjdHVyZXJAc2FtdC5sb2NhbCIsInJvbGVzIjpbIkxFQ1RVUkVSIl0sInRva2VuX3R5cGUiOiJBQ0NFU1MiLCJpYXQiOjE3NzI5NDM5MDAsImV4cCI6MTc3Mjk0NDgwMH0.YGmtZYVYjs7dkFTFJWsRd_OeHn0AhPPDEZHYWwFdpl6TWDxzNpm6QbXz-I_F9A9bDd7DDobg2gphAhWuOXhtz1bbmeIHm8cDJvw8EOB-4B_7QktZFMoIqkke6rRvgmmqCSDKHBU8XYzTJ8LTgdDadDHBwtmN6GrU_lhqQDJpoD5iM3BQsl8rXNlIfVwmZKbChTi60XWpPb9rGkumyEKaqLQrpMFrEua4remVc9Iq2mJvUGbs2YnqYpze97Qs_usq7w6vmBgnBMmn5U8dMh3kigDqRZdA7hjhlMfJjuokuiZQ_NOQAzxFy2Fq9Xy3KmKis8gEheaapeRnIw9QqUaRIw",
+  "refreshToken": "aeddd04f-2b70-44b1-a077-99a9a773a471",
+  "tokenType": "Bearer",
+  "expiresIn": 900
+}
+[x] lecturer login
+
+---------------------
+
+=== Student login ===
+
+POST http://localhost:9080/api/auth/login
+accept-encoding: gzip, deflate, br
+accept: */*
+content-length: 71
+content-type: application/json
+user-agent: httpyac
+
+{
+  "email": "qa.student@samt.local",
+  "password": "Str0ng@Pass!"
+}
+HTTP/1.1 200  - OK
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:00 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 600
+x-ratelimit-remaining: 140
+x-ratelimit-replenish-rate: 5
+x-ratelimit-requested-tokens: 60
+x-xss-protection: 0
+
+{
+  "accessToken": "eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiI1NTJlODEyNi1iMDU5LTQ4MzYtOWNkYi04MWY3OWIxYTI1YjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjIzNiIsImVtYWlsIjoicWEuc3R1ZGVudEBzYW10LmxvY2FsIiwicm9sZXMiOlsiU1RVREVOVCJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.WlqFmUN6jxW-uF9F7pl4nS9AXwP4vOMJXVWP09lP1HDfz3zcVkzzb76W6du6m1TVNjMiE067czjQUYdbAegazQNO805jIwTq1t1XqdchGOlxw-gimwPlRw8B-qg7zxmr48AwQwRBxspMXKX6jMj2pLnavLQmT4Nfbc09J0mEUJT18hkyznYxjQouiCsee6PMp1LGazTJEop2i3dVbHepxv4JUfE-fCBktkPtH9MYdvMeokCf4qfsBj6dlOl19uP85-OC1kH8YnkTjVGbw3WqDnIoIjxcdjDaP9sKueUg2wU27P8ukSVvwH_ZUgkbvdHvfMuQiuI-NJwYBSjNax_qNw",
+  "refreshToken": "cbdd532e-33b6-43ce-a71d-8da517663d81",
+  "tokenType": "Bearer",
+  "expiresIn": 900
+}
+[x] student login
+
+---------------------
+
+=== Validate fixture users from bootstrap ===
+
+GET http://localhost:9080/actuator/health
+accept-encoding: gzip, deflate, br
+accept: */*
+user-agent: httpyac
+HTTP/1.1 200  - OK
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-length: 15
+content-type: application/vnd.spring-boot.actuator.v3+json
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-xss-protection: 0
+
+{
+  "status": "UP"
+}
+[x] validate fixture users from bootstrap
+--------------------- E:\Bin\SAMT\tests\fixtures.http  --
+
+---------------------
+
+=== Create fixture semester ===
+
+POST http://localhost:9080/api/semesters
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+content-length: 136
+content-type: application/json
+user-agent: httpyac
+
+{
+  "semesterCode": "QA-2026-S1",
+  "semesterName": "QA Semester 2026 S1",
+  "startDate": "2026-06-01",
+  "endDate": "2026-08-31"
+}
+HTTP/1.1 409  - Conflict
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:00 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 199
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "statusCode": 409,
+  "error": "Conflict",
+  "message": "Semester code already exists: QA-2026-S1",
+  "timestamp": "2026-03-08T04:25:00.916822435Z",
+  "errors": null
+}
+[x] create fixture semester
+
+---------------------
+
+=== Resolve fixture semester ===
+
+GET http://localhost:9080/api/semesters?page=0&size=200
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+user-agent: httpyac
+HTTP/1.1 200  - OK
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:00 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 198
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+[
+  {
+    "id": 87,
+    "semesterCode": "\u0013ø´ô\u000b򿷩\u0010񟼏",
+    "semesterName": "񆷳",
+    "startDate": "8356-09-02",
+    "endDate": "8778-06-05",
+    "isActive": false,
+    "createdAt": "2026-03-08T03:52:35.786549Z",
+    "updatedAt": "2026-03-08T03:52:35.786549Z"
+  },
+  {
+    "id": 89,
+    "semesterCode": "򍑞򱖄𴝺ÊY钹W􅻆ñ𘚜",
+    "semesterName": "dê%",
+    "startDate": "6023-03-01",
+    "endDate": "9068-12-07",
+    "isActive": false,
+    "createdAt": "2026-03-08T03:56:27.222633Z",
+    "updatedAt": "2026-03-08T03:56:27.222633Z"
+  },
+  {
+    "id": 71,
+    "semesterCode": "¹v񠾤󃘵",
+    "semesterName": "Z񈻦\u001bgcï²",
+    "startDate": "5895-04-23",
+    "endDate": "8043-02-26",
+    "isActive": false,
+    "createdAt": "2026-03-07T15:09:38.139923Z",
+    "updatedAt": "2026-03-07T15:09:38.139923Z"
+  },
+  {
+    "id": 91,
+    "semesterCode": ")«",
+    "semesterName": "3\t",
+    "startDate": "5394-11-14",
+    "endDate": "8848-10-27",
+    "isActive": false,
+    "createdAt": "2026-03-08T03:58:18.516375Z",
+    "updatedAt": "2026-03-08T03:58:18.516376Z"
+  },
+  {
+    "id": 6,
+    "semesterCode": "AUTO1772872296",
+    "semesterName": "Auto Semester",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T08:31:36.882565Z",
+    "updatedAt": "2026-03-07T08:34:48.795051Z"
+  },
+  {
+    "id": 7,
+    "semesterCode": "AUTO1772872488",
+    "semesterName": "Auto Semester",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T08:34:48.667190Z",
+    "updatedAt": "2026-03-07T08:38:08.302477Z"
+  },
+  {
+    "id": 8,
+    "semesterCode": "AUTO1772872687",
+    "semesterName": "Auto Semester",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T08:38:08.121078Z",
+    "updatedAt": "2026-03-07T08:38:26.841887Z"
+  },
+  {
+    "id": 9,
+    "semesterCode": "AUTO1772872706",
+    "semesterName": "Auto Semester",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T08:38:26.796994Z",
+    "updatedAt": "2026-03-07T08:38:29.710161Z"
+  },
+  {
+    "id": 10,
+    "semesterCode": "AUTO1772872709",
+    "semesterName": "Auto Semester",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T08:38:29.679747Z",
+    "updatedAt": "2026-03-07T08:41:30.705642Z"
+  },
+  {
+    "id": 11,
+    "semesterCode": "AUTO1772872890",
+    "semesterName": "Auto Semester",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T08:41:30.598655Z",
+    "updatedAt": "2026-03-07T08:41:50.040532Z"
+  },
+  {
+    "id": 12,
+    "semesterCode": "AUTO1772872909",
+    "semesterName": "Auto Semester",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T08:41:50.015962Z",
+    "updatedAt": "2026-03-07T09:03:06.966766Z"
+  },
+  {
+    "id": 13,
+    "semesterCode": "AUTO1772874186465",
+    "semesterName": "Auto Semester 1772874186465",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T09:03:06.761279Z",
+    "updatedAt": "2026-03-07T09:07:58.089894Z"
+  },
+  {
+    "id": 14,
+    "semesterCode": "AUTO1772874478033",
+    "semesterName": "Auto Semester 1772874478033",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T09:07:58.056967Z",
+    "updatedAt": "2026-03-07T09:08:53.089681Z"
+  },
+  {
+    "id": 15,
+    "semesterCode": "AUTO1772874533037",
+    "semesterName": "Auto Semester 1772874533037",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T09:08:53.056295Z",
+    "updatedAt": "2026-03-07T09:09:20.558440Z"
+  },
+  {
+    "id": 16,
+    "semesterCode": "AUTO1772874560512",
+    "semesterName": "Auto Semester 1772874560512",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T09:09:20.531322Z",
+    "updatedAt": "2026-03-07T09:09:36.595739Z"
+  },
+  {
+    "id": 17,
+    "semesterCode": "AUTO1772874576525",
+    "semesterName": "Auto Semester 1772874576525",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T09:09:36.566211Z",
+    "updatedAt": "2026-03-07T09:10:29.628942Z"
+  },
+  {
+    "id": 18,
+    "semesterCode": "AUTO1772874629575",
+    "semesterName": "Auto Semester 1772874629575",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T09:10:29.599540Z",
+    "updatedAt": "2026-03-07T09:12:27.101930Z"
+  },
+  {
+    "id": 19,
+    "semesterCode": "AUTO1772874747046",
+    "semesterName": "Auto Semester 1772874747046",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T09:12:27.070724Z",
+    "updatedAt": "2026-03-07T09:13:17.070403Z"
+  },
+  {
+    "id": 21,
+    "semesterCode": "FX1772883462032",
+    "semesterName": "Fixture Semester 1772883462032",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T11:37:42.102062Z",
+    "updatedAt": "2026-03-07T11:37:42.102062Z"
+  },
+  {
+    "id": 22,
+    "semesterCode": "FX1772883548719",
+    "semesterName": "Fixture Semester 1772883548719",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T11:39:08.740488Z",
+    "updatedAt": "2026-03-07T11:39:08.740488Z"
+  },
+  {
+    "id": 23,
+    "semesterCode": "FX1772883573435",
+    "semesterName": "Fixture Semester 1772883573435",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T11:39:33.455365Z",
+    "updatedAt": "2026-03-07T11:39:33.455365Z"
+  },
+  {
+    "id": 20,
+    "semesterCode": "AUTO1772874797028",
+    "semesterName": "Auto Semester 1772874797028",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T09:13:17.046415Z",
+    "updatedAt": "2026-03-07T11:39:41.521200Z"
+  },
+  {
+    "id": 25,
+    "semesterCode": "FX1772883827492",
+    "semesterName": "Fixture Semester 1772883827492",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T11:43:47.517576Z",
+    "updatedAt": "2026-03-07T11:43:47.517577Z"
+  },
+  {
+    "id": 26,
+    "semesterCode": "FX1772884491878",
+    "semesterName": "Fixture Semester 1772884491878",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T11:54:51.901217Z",
+    "updatedAt": "2026-03-07T11:54:51.901217Z"
+  },
+  {
+    "id": 27,
+    "semesterCode": "FX1772884554300",
+    "semesterName": "Fixture Semester 1772884554300",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T11:55:54.314542Z",
+    "updatedAt": "2026-03-07T11:55:54.314542Z"
+  },
+  {
+    "id": 28,
+    "semesterCode": "FX1772884585121",
+    "semesterName": "Fixture Semester 1772884585121",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T11:56:25.133197Z",
+    "updatedAt": "2026-03-07T11:56:25.133197Z"
+  },
+  {
+    "id": 29,
+    "semesterCode": "FX1772884590852",
+    "semesterName": "Fixture Semester 1772884590852",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T11:56:30.863715Z",
+    "updatedAt": "2026-03-07T11:56:30.863715Z"
+  },
+  {
+    "id": 30,
+    "semesterCode": "FX1772885063983",
+    "semesterName": "Fixture Semester 1772885063983",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T12:04:24.003080Z",
+    "updatedAt": "2026-03-07T12:04:24.003080Z"
+  },
+  {
+    "id": 31,
+    "semesterCode": "FX1772885248527",
+    "semesterName": "Fixture Semester 1772885248527",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T12:07:28.544967Z",
+    "updatedAt": "2026-03-07T12:07:28.544967Z"
+  },
+  {
+    "id": 32,
+    "semesterCode": "FX1772885324164",
+    "semesterName": "Fixture Semester 1772885324164",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T12:08:44.178051Z",
+    "updatedAt": "2026-03-07T12:08:44.178051Z"
+  },
+  {
+    "id": 33,
+    "semesterCode": "FX1772885388454",
+    "semesterName": "Fixture Semester 1772885388454",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T12:09:48.468382Z",
+    "updatedAt": "2026-03-07T12:09:48.468382Z"
+  },
+  {
+    "id": 34,
+    "semesterCode": "FX1772885544344",
+    "semesterName": "Fixture Semester 1772885544344",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T12:12:24.357312Z",
+    "updatedAt": "2026-03-07T12:12:24.357312Z"
+  },
+  {
+    "id": 35,
+    "semesterCode": "FX1772885568443",
+    "semesterName": "Fixture Semester 1772885568443",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T12:12:48.456630Z",
+    "updatedAt": "2026-03-07T12:12:48.456630Z"
+  },
+  {
+    "id": 36,
+    "semesterCode": "FX1772886144289",
+    "semesterName": "Fixture Semester 1772886144289",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T12:22:24.304756Z",
+    "updatedAt": "2026-03-07T12:22:24.304757Z"
+  },
+  {
+    "id": 37,
+    "semesterCode": "FX1772886249270",
+    "semesterName": "Fixture Semester 1772886249270",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T12:24:09.296859Z",
+    "updatedAt": "2026-03-07T12:24:09.296859Z"
+  },
+  {
+    "id": 38,
+    "semesterCode": "FX1772886303676",
+    "semesterName": "Fixture Semester 1772886303676",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T12:25:03.693674Z",
+    "updatedAt": "2026-03-07T12:25:03.693674Z"
+  },
+  {
+    "id": 39,
+    "semesterCode": "FX1772886384920",
+    "semesterName": "Fixture Semester 1772886384920",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T12:26:24.934330Z",
+    "updatedAt": "2026-03-07T12:26:24.934330Z"
+  },
+  {
+    "id": 41,
+    "semesterCode": "FX1772886734306",
+    "semesterName": "Fixture Semester 1772886734306",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T12:32:14.321487Z",
+    "updatedAt": "2026-03-07T12:32:14.321487Z"
+  },
+  {
+    "id": 40,
+    "semesterCode": "FX1772886555071",
+    "semesterName": "Fixture Semester 1772886555071",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T12:29:15.099095Z",
+    "updatedAt": "2026-03-07T12:32:17.892181Z"
+  },
+  {
+    "id": 42,
+    "semesterCode": "FX1772887631367",
+    "semesterName": "Fixture Semester 1772887631367",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T12:47:11.394256Z",
+    "updatedAt": "2026-03-07T12:47:11.394256Z"
+  },
+  {
+    "id": 43,
+    "semesterCode": "FX1772887652457",
+    "semesterName": "Fixture Semester 1772887652457",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T12:47:32.475346Z",
+    "updatedAt": "2026-03-07T12:47:32.475347Z"
+  },
+  {
+    "id": 44,
+    "semesterCode": "FX1772887814180",
+    "semesterName": "Fixture Semester 1772887814180",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T12:50:14.195526Z",
+    "updatedAt": "2026-03-07T12:50:14.195527Z"
+  },
+  {
+    "id": 45,
+    "semesterCode": "FX1772888038123",
+    "semesterName": "Fixture Semester 1772888038123",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T12:53:58.147890Z",
+    "updatedAt": "2026-03-07T12:53:58.147891Z"
+  },
+  {
+    "id": 46,
+    "semesterCode": "FX1772888185482",
+    "semesterName": "Fixture Semester 1772888185482",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T12:56:25.495888Z",
+    "updatedAt": "2026-03-07T12:56:25.495888Z"
+  },
+  {
+    "id": 47,
+    "semesterCode": "FX1772889683182",
+    "semesterName": "Fixture Semester 1772889683182",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T13:21:23.426084Z",
+    "updatedAt": "2026-03-07T13:21:23.426086Z"
+  },
+  {
+    "id": 48,
+    "semesterCode": "FX1772889991863",
+    "semesterName": "Fixture Semester 1772889991863",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T13:26:32.105392Z",
+    "updatedAt": "2026-03-07T13:26:32.105395Z"
+  },
+  {
+    "id": 49,
+    "semesterCode": "FXMANUAL1772890053934",
+    "semesterName": "Manual Fixture",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T13:27:33.966335Z",
+    "updatedAt": "2026-03-07T13:27:33.966336Z"
+  },
+  {
+    "id": 50,
+    "semesterCode": "FX1772890073740",
+    "semesterName": "Fixture Semester 1772890073740",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T13:27:53.760250Z",
+    "updatedAt": "2026-03-07T13:27:53.760251Z"
+  },
+  {
+    "id": 52,
+    "semesterCode": "FX1772890352382",
+    "semesterName": "Fixture Semester 1772890352382",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T13:32:32.399613Z",
+    "updatedAt": "2026-03-07T13:32:32.399614Z"
+  },
+  {
+    "id": 51,
+    "semesterCode": "FX1772890086686",
+    "semesterName": "Fixture Semester 1772890086686",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T13:28:06.702129Z",
+    "updatedAt": "2026-03-07T13:35:40.449268Z"
+  },
+  {
+    "id": 54,
+    "semesterCode": "FX1772890692287",
+    "semesterName": "Fixture Semester 1772890692287",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T13:38:12.301987Z",
+    "updatedAt": "2026-03-07T13:38:12.301987Z"
+  },
+  {
+    "id": 53,
+    "semesterCode": "FX1772890536810",
+    "semesterName": "Fixture Semester 1772890536810",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T13:35:36.827071Z",
+    "updatedAt": "2026-03-07T13:41:05.817567Z"
+  },
+  {
+    "id": 56,
+    "semesterCode": "FX1772891702769",
+    "semesterName": "Fixture Semester 1772891702769",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T13:55:03.761074Z",
+    "updatedAt": "2026-03-07T13:55:03.761077Z"
+  },
+  {
+    "id": 55,
+    "semesterCode": "FX1772890862667",
+    "semesterName": "Fixture Semester 1772890862668",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T13:41:02.682801Z",
+    "updatedAt": "2026-03-07T13:58:44.180761Z"
+  },
+  {
+    "id": 58,
+    "semesterCode": "FX1772892232229",
+    "semesterName": "Fixture Semester 1772892232229",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T14:03:52.256194Z",
+    "updatedAt": "2026-03-07T14:03:52.256194Z"
+  },
+  {
+    "id": 57,
+    "semesterCode": "FX1772891911283",
+    "semesterName": "Fixture Semester 1772891911283",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T13:58:31.303622Z",
+    "updatedAt": "2026-03-07T14:05:19.371918Z"
+  },
+  {
+    "id": 60,
+    "semesterCode": "FX1772892487628",
+    "semesterName": "Fixture Semester 1772892487628",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T14:08:07.661219Z",
+    "updatedAt": "2026-03-07T14:08:07.661220Z"
+  },
+  {
+    "id": 61,
+    "semesterCode": "FX1772892522315",
+    "semesterName": "Fixture Semester 1772892522315",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T14:08:42.342759Z",
+    "updatedAt": "2026-03-07T14:08:42.342759Z"
+  },
+  {
+    "id": 62,
+    "semesterCode": "FX1772892556322",
+    "semesterName": "Fixture Semester 1772892556322",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T14:09:16.362985Z",
+    "updatedAt": "2026-03-07T14:09:16.362985Z"
+  },
+  {
+    "id": 63,
+    "semesterCode": "FX1772892622066",
+    "semesterName": "Fixture Semester 1772892622066",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T14:10:22.083726Z",
+    "updatedAt": "2026-03-07T14:10:22.083726Z"
+  },
+  {
+    "id": 64,
+    "semesterCode": "FX1772892671955",
+    "semesterName": "Fixture Semester 1772892671955",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T14:11:11.973879Z",
+    "updatedAt": "2026-03-07T14:11:11.973879Z"
+  },
+  {
+    "id": 59,
+    "semesterCode": "FX1772892314740",
+    "semesterName": "Fixture Semester 1772892314740",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T14:05:14.766786Z",
+    "updatedAt": "2026-03-07T14:11:44.984640Z"
+  },
+  {
+    "id": 65,
+    "semesterCode": "FX1772892701888",
+    "semesterName": "Fixture Semester 1772892701888",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T14:11:41.912663Z",
+    "updatedAt": "2026-03-07T14:14:16.697515Z"
+  },
+  {
+    "id": 66,
+    "semesterCode": "FX1772892853195",
+    "semesterName": "Fixture Semester 1772892853195",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T14:14:13.213533Z",
+    "updatedAt": "2026-03-07T14:17:28.296564Z"
+  },
+  {
+    "id": 67,
+    "semesterCode": "FX1772893045331",
+    "semesterName": "Fixture Semester 1772893045331",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T14:17:25.359551Z",
+    "updatedAt": "2026-03-07T14:48:40.428481Z"
+  },
+  {
+    "id": 24,
+    "semesterCode": "FX1772883674135",
+    "semesterName": "Fixture Semester 1772883674135",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T11:41:14.156899Z",
+    "updatedAt": "2026-03-07T11:41:14.156899Z"
+  },
+  {
+    "id": 3,
+    "semesterCode": "AUTO1772871527",
+    "semesterName": "Auto Semester",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T08:18:47.854630Z",
+    "updatedAt": "2026-03-07T08:31:09.939312Z"
+  },
+  {
+    "id": 4,
+    "semesterCode": "AUTO1772872269",
+    "semesterName": "Auto Semester",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T08:31:09.861150Z",
+    "updatedAt": "2026-03-07T08:31:25.861220Z"
+  },
+  {
+    "id": 5,
+    "semesterCode": "AUTO1772872285",
+    "semesterName": "Auto Semester",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T08:31:25.839676Z",
+    "updatedAt": "2026-03-07T08:31:36.907869Z"
+  },
+  {
+    "id": 72,
+    "semesterCode": "FX1772896198011",
+    "semesterName": "Fixture Semester 1772896198011",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T15:09:58.022849Z",
+    "updatedAt": "2026-03-07T15:13:27.334038Z"
+  },
+  {
+    "id": 73,
+    "semesterCode": "FX1772896405058",
+    "semesterName": "Fixture Semester 1772896405058",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T15:13:25.070135Z",
+    "updatedAt": "2026-03-07T15:27:32.053493Z"
+  },
+  {
+    "id": 74,
+    "semesterCode": "FX1772897250118",
+    "semesterName": "Fixture Semester 1772897250118",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T15:27:30.136271Z",
+    "updatedAt": "2026-03-07T15:31:19.191923Z"
+  },
+  {
+    "id": 75,
+    "semesterCode": "FX1772897477126",
+    "semesterName": "Fixture Semester 1772897477126",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T15:31:17.137257Z",
+    "updatedAt": "2026-03-07T15:36:45.240470Z"
+  },
+  {
+    "id": 76,
+    "semesterCode": "FX1772897803419",
+    "semesterName": "Fixture Semester 1772897803419",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T15:36:43.436951Z",
+    "updatedAt": "2026-03-07T15:39:40.825518Z"
+  },
+  {
+    "id": 85,
+    "semesterCode": "AX1772901713",
+    "semesterName": "Audit Semester",
+    "startDate": "2026-06-01",
+    "endDate": "2026-08-31",
+    "isActive": false,
+    "createdAt": "2026-03-07T16:41:53.632134Z",
+    "updatedAt": "2026-03-07T16:41:53.632134Z"
+  },
+  {
+    "id": 83,
+    "semesterCode": "FX1772899620844",
+    "semesterName": "Updated Generated Semester",
+    "startDate": "2026-01-20",
+    "endDate": "2026-06-05",
+    "isActive": false,
+    "createdAt": "2026-03-07T16:07:00.865157Z",
+    "updatedAt": "2026-03-07T16:14:27.334925Z"
+  },
+  {
+    "id": 84,
+    "semesterCode": "FX1772900064060",
+    "semesterName": "Updated Generated Semester",
+    "startDate": "2026-01-20",
+    "endDate": "2026-06-05",
+    "isActive": false,
+    "createdAt": "2026-03-07T16:14:24.074655Z",
+    "updatedAt": "2026-03-07T17:20:30.210375Z"
+  },
+  {
+    "id": 77,
+    "semesterCode": "FX1772897978813",
+    "semesterName": "Updated Generated Semester",
+    "startDate": "2026-01-20",
+    "endDate": "2026-06-05",
+    "isActive": false,
+    "createdAt": "2026-03-07T15:39:38.826787Z",
+    "updatedAt": "2026-03-07T15:42:04.949884Z"
+  },
+  {
+    "id": 79,
+    "semesterCode": "FX1772898123185",
+    "semesterName": "Updated Generated Semester",
+    "startDate": "2026-01-20",
+    "endDate": "2026-06-05",
+    "isActive": false,
+    "createdAt": "2026-03-07T15:42:03.196849Z",
+    "updatedAt": "2026-03-07T15:45:51.929600Z"
+  },
+  {
+    "id": 80,
+    "semesterCode": "FX1772898349883",
+    "semesterName": "Updated Generated Semester",
+    "startDate": "2026-01-20",
+    "endDate": "2026-06-05",
+    "isActive": false,
+    "createdAt": "2026-03-07T15:45:49.896805Z",
+    "updatedAt": "2026-03-07T15:49:43.552221Z"
+  },
+  {
+    "id": 86,
+    "semesterCode": "QA-2026-S1",
+    "semesterName": "Updated Generated Semester",
+    "startDate": "2026-01-20",
+    "endDate": "2026-06-05",
+    "isActive": false,
+    "createdAt": "2026-03-07T17:11:37.976218Z",
+    "updatedAt": "2026-03-08T03:49:20.530060Z"
+  },
+  {
+    "id": 78,
+    "semesterCode": "SEM-1772897969124",
+    "semesterName": "Generated Semester",
+    "startDate": "2026-01-15",
+    "endDate": "2026-05-30",
+    "isActive": false,
+    "createdAt": "2026-03-07T15:39:40.589394Z",
+    "updatedAt": "2026-03-07T15:39:40.589394Z"
+  },
+  {
+    "id": 81,
+    "semesterCode": "SEM-1772898343216",
+    "semesterName": "Generated Semester",
+    "startDate": "2026-01-15",
+    "endDate": "2026-05-30",
+    "isActive": false,
+    "createdAt": "2026-03-07T15:45:51.730479Z",
+    "updatedAt": "2026-03-07T15:45:51.730479Z"
+  },
+  {
+    "id": 1,
+    "semesterCode": "SPRING2025",
+    "semesterName": "Spring Semester 2025",
+    "startDate": "2025-01-01",
+    "endDate": "2025-05-31",
+    "isActive": true,
+    "createdAt": "2026-03-05T16:57:12.442938Z",
+    "updatedAt": "2026-03-08T03:49:20.529981Z"
+  },
+  {
+    "id": 2,
+    "semesterCode": "FALL2024",
+    "semesterName": "Fall Semester 2024",
+    "startDate": "2024-09-01",
+    "endDate": "2024-12-31",
+    "isActive": false,
+    "createdAt": "2026-03-05T16:57:12.442938Z",
+    "updatedAt": "2026-03-05T16:57:12.442938Z"
+  },
+  {
+    "id": 82,
+    "semesterCode": "FX1772898581060",
+    "semesterName": "W=ÜåÈ䮋",
+    "startDate": "2021-08-21",
+    "endDate": "2171-10-16",
+    "isActive": false,
+    "createdAt": "2026-03-07T15:49:41.088222Z",
+    "updatedAt": "2026-03-07T16:07:04.557363Z"
+  },
+  {
+    "id": 69,
+    "semesterCode": "false",
+    "semesterName": "0",
+    "startDate": "2000-01-01",
+    "endDate": "2000-01-01",
+    "isActive": false,
+    "createdAt": "2026-03-07T15:06:54.850549Z",
+    "updatedAt": "2026-03-07T15:06:54.850549Z"
+  },
+  {
+    "id": 70,
+    "semesterCode": "00",
+    "semesterName": "0",
+    "startDate": "2000-01-01",
+    "endDate": "2000-01-01",
+    "isActive": false,
+    "createdAt": "2026-03-07T15:06:54.989149Z",
+    "updatedAt": "2026-03-07T15:06:54.989149Z"
+  },
+  {
+    "id": 68,
+    "semesterCode": "0",
+    "semesterName": "0",
+    "startDate": "1970-01-01",
+    "endDate": "2000-01-01",
+    "isActive": false,
+    "createdAt": "2026-03-07T14:57:36.310858Z",
+    "updatedAt": "2026-03-07T14:57:36.310862Z"
+  },
+  {
+    "id": 90,
+    "semesterCode": "񴣷ß$",
+    "semesterName": "𥍾A",
+    "startDate": "0497-07-25",
+    "endDate": "4247-05-05",
+    "isActive": false,
+    "createdAt": "2026-03-08T03:56:27.317663Z",
+    "updatedAt": "2026-03-08T03:56:27.317663Z"
+  },
+  {
+    "id": 88,
+    "semesterCode": "\u001eZ",
+    "semesterName": "󬨌®񂙽¾",
+    "startDate": "0262-01-18",
+    "endDate": "9940-08-26",
+    "isActive": false,
+    "createdAt": "2026-03-08T03:52:35.902016Z",
+    "updatedAt": "2026-03-08T03:52:35.902016Z"
+  }
+]
+[x] resolve fixture semester
+
+---------------------
+
+=== Create fixture group ===
+
+POST http://localhost:9080/api/groups
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+content-length: 75
+content-type: application/json
+user-agent: httpyac
+
+{
+  "groupName": "SE2601-G1",
+  "semesterId": 86,
+  "lecturerId": 235
+}
+HTTP/1.1 409  - Conflict
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:00 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 197
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "statusCode": 409,
+  "error": "Conflict",
+  "message": "Group name SE2601-G1 already exists in semester 86",
+  "timestamp": "2026-03-08T04:25:00.951496427Z",
+  "errors": null
+}
+[x] create fixture group
+
+---------------------
+
+=== Resolve fixture group ===
+
+GET http://localhost:9080/api/groups?page=0&size=200&semesterId=86
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+user-agent: httpyac
+HTTP/1.1 200  - OK
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:00 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 196
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "content": [
+    {
+      "id": 90,
+      "groupName": "SE2601-G1",
+      "semesterId": 86,
+      "semesterCode": "QA-2026-S1",
+      "lecturerName": "QA Lecturer",
+      "memberCount": 11
+    },
+    {
+      "id": 103,
+      "groupName": "SE2601-G2",
+      "semesterId": 86,
+      "semesterCode": "QA-2026-S1",
+      "lecturerName": "QA Lecturer",
+      "memberCount": 0
+    },
+    {
+      "id": 92,
+      "groupName": "SE2601-G3",
+      "semesterId": 86,
+      "semesterCode": "QA-2026-S1",
+      "lecturerName": "QA Lecturer",
+      "memberCount": 0
+    }
+  ],
+  "page": 0,
+  "size": 200,
+  "totalElements": 3,
+  "totalPages": 1
+}
+[x] resolve fixture group
+
+---------------------
+
+=== Create empty group fixture ===
+
+POST http://localhost:9080/api/groups
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+content-length: 75
+content-type: application/json
+user-agent: httpyac
+
+{
+  "groupName": "SE2601-G2",
+  "semesterId": 86,
+  "lecturerId": 235
+}
+HTTP/1.1 409  - Conflict
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:00 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 195
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "statusCode": 409,
+  "error": "Conflict",
+  "message": "Group name SE2601-G2 already exists in semester 86",
+  "timestamp": "2026-03-08T04:25:00.992937679Z",
+  "errors": null
+}
+[x] create empty group fixture
+
+---------------------
+
+=== Resolve empty group fixture ===
+
+GET http://localhost:9080/api/groups?page=0&size=200&semesterId=86
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+user-agent: httpyac
+HTTP/1.1 200  - OK
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:01 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 199
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "content": [
+    {
+      "id": 90,
+      "groupName": "SE2601-G1",
+      "semesterId": 86,
+      "semesterCode": "QA-2026-S1",
+      "lecturerName": "QA Lecturer",
+      "memberCount": 11
+    },
+    {
+      "id": 103,
+      "groupName": "SE2601-G2",
+      "semesterId": 86,
+      "semesterCode": "QA-2026-S1",
+      "lecturerName": "QA Lecturer",
+      "memberCount": 0
+    },
+    {
+      "id": 92,
+      "groupName": "SE2601-G3",
+      "semesterId": 86,
+      "semesterCode": "QA-2026-S1",
+      "lecturerName": "QA Lecturer",
+      "memberCount": 0
+    }
+  ],
+  "page": 0,
+  "size": 200,
+  "totalElements": 3,
+  "totalPages": 1
+}
+[x] resolve empty group fixture
+
+---------------------
+
+=== Create deletable config group fixture ===
+
+POST http://localhost:9080/api/groups
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+content-length: 75
+content-type: application/json
+user-agent: httpyac
+
+{
+  "groupName": "SE2601-G3",
+  "semesterId": 86,
+  "lecturerId": 235
+}
+HTTP/1.1 409  - Conflict
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:01 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 198
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "statusCode": 409,
+  "error": "Conflict",
+  "message": "Group name SE2601-G3 already exists in semester 86",
+  "timestamp": "2026-03-08T04:25:01.036368993Z",
+  "errors": null
+}
+[x] create deletable config group fixture
+
+---------------------
+
+=== Resolve deletable config group fixture ===
+
+GET http://localhost:9080/api/groups?page=0&size=200&semesterId=86
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+user-agent: httpyac
+HTTP/1.1 200  - OK
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:01 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 197
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "content": [
+    {
+      "id": 90,
+      "groupName": "SE2601-G1",
+      "semesterId": 86,
+      "semesterCode": "QA-2026-S1",
+      "lecturerName": "QA Lecturer",
+      "memberCount": 11
+    },
+    {
+      "id": 103,
+      "groupName": "SE2601-G2",
+      "semesterId": 86,
+      "semesterCode": "QA-2026-S1",
+      "lecturerName": "QA Lecturer",
+      "memberCount": 0
+    },
+    {
+      "id": 92,
+      "groupName": "SE2601-G3",
+      "semesterId": 86,
+      "semesterCode": "QA-2026-S1",
+      "lecturerName": "QA Lecturer",
+      "memberCount": 0
+    }
+  ],
+  "page": 0,
+  "size": 200,
+  "totalElements": 3,
+  "totalPages": 1
+}
+[x] resolve deletable config group fixture
+
+---------------------
+
+=== Add qa student to group ===
+
+POST http://localhost:9080/api/groups/90/members
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+content-length: 21
+content-type: application/json
+user-agent: httpyac
+
+{
+  "userId": 236
+}
+HTTP/1.1 409  - Conflict
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:01 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 196
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "statusCode": 409,
+  "error": "Conflict",
+  "message": "Request conflicts with existing or missing related data",
+  "timestamp": "2026-03-08T04:25:01.085730267Z",
+  "errors": null
+}
+[x] add fixture student
+
+---------------------
+
+=== Add qa student2 to group ===
+
+POST http://localhost:9080/api/groups/90/members
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+content-length: 21
+content-type: application/json
+user-agent: httpyac
+
+{
+  "userId": 428
+}
+HTTP/1.1 201  - Created
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:01 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 195
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "userId": 428,
+  "groupId": 90,
+  "semesterId": 86,
+  "groupRole": "MEMBER",
+  "joinedAt": "2026-03-08T04:25:01.123688207Z",
+  "updatedAt": "2026-03-08T04:25:01.123688300Z"
+}
+[x] add fixture student2
+
+---------------------
+
+=== Ensure fixture group has a leader ===
+
+PUT http://localhost:9080/api/groups/90/members/428/promote
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+content-length: 2
+content-type: application/json
+user-agent: httpyac
+
+{}
+HTTP/1.1 409  - Conflict
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:01 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 194
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "statusCode": 409,
+  "error": "Conflict",
+  "message": "Request conflicts with existing or missing related data",
+  "timestamp": "2026-03-08T04:25:01.142991230Z",
+  "errors": null
+}
+[x] ensure fixture group leader
+
+---------------------
+
+=== Resolve existing lifecycle membership ===
+
+GET http://localhost:9080/api/users/430/groups?semesterId=86
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+user-agent: httpyac
+HTTP/1.1 200  - OK
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:01 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 193
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "userId": 430,
+  "groups": []
+}
+[x] resolve existing lifecycle membership
+
+---------------------
+
+=== Cleanup existing lifecycle membership ===
+
+DELETE http://localhost:9080/api/groups/999999999/members/430
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+user-agent: httpyac
+HTTP/1.1 404  - Not Found
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:01 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 192
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "statusCode": 404,
+  "error": "Not Found",
+  "message": "Group with ID 999999999 not found",
+  "timestamp": "2026-03-08T04:25:01.173687169Z",
+  "errors": null
+}
+[x] cleanup existing lifecycle membership
+
+---------------------
+
+=== Cleanup stateful member from empty lifecycle group ===
+
+DELETE http://localhost:9080/api/groups/103/members/430
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+user-agent: httpyac
+HTTP/1.1 404  - Not Found
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:01 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 191
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "statusCode": 404,
+  "error": "Not Found",
+  "message": "User 430 is not a member of group 103",
+  "timestamp": "2026-03-08T04:25:01.216284981Z",
+  "errors": null
+}
+[x] cleanup stateful member from empty lifecycle group
+
+---------------------
+
+=== Create fixture project config ===
+
+POST http://localhost:9080/api/project-configs
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+content-length: 324
+content-type: application/json
+user-agent: httpyac
+
+{
+  "groupId": 90,
+  "jiraHostUrl": "https://example.atlassian.net",
+  "jiraApiToken": "ATATTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "githubRepoUrl": "https://github.com/example-org/example-repo",
+  "githubToken": "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+}
+HTTP/1.1 409  - Conflict
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:01 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 199
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-request-id: 1f164b40-09aa-4aa0-afb7-884a0eb37db8
+x-xss-protection: 0
+
+{
+  "statusCode": 409,
+  "error": "Conflict",
+  "message": "Configuration already exists for group: 90",
+  "details": null,
+  "timestamp": "2026-03-08T04:25:01.259040400Z"
+}
+[x] create fixture project config
+
+---------------------
+
+=== Resolve fixture project config ===
+
+GET http://localhost:9080/api/project-configs/group/90
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+user-agent: httpyac
+HTTP/1.1 200  - OK
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:01 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 198
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-request-id: f80bb3a6-1b7d-4617-af52-029813c0a112
+x-xss-protection: 0
+
+{
+  "data": {
+    "id": "300d5753-8f63-4e0b-9843-6a1107be9744",
+    "groupId": 90,
+    "jiraHostUrl": "https://example.atlassian.net",
+    "jiraApiToken": "ATA***AAAA",
+    "githubRepoUrl": "https://github.com/example-org/example-repo",
+    "githubToken": "ghp_***AAAA",
+    "state": "INVALID",
+    "lastVerifiedAt": null,
+    "invalidReason": "Jira: Authentication failed; GitHub: Authentication failed or repository not found",
+    "createdAt": "2026-03-08T02:36:42Z",
+    "updatedAt": "2026-03-08T03:45:44Z"
+  },
+  "timestamp": "2026-03-08T04:25:01.275701580Z"
+}
+[x] resolve fixture project config
+
+---------------------
+
+=== Create deletable project config fixture ===
+
+POST http://localhost:9080/api/project-configs
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+content-length: 324
+content-type: application/json
+user-agent: httpyac
+
+{
+  "groupId": 92,
+  "jiraHostUrl": "https://example.atlassian.net",
+  "jiraApiToken": "ATATTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "githubRepoUrl": "https://github.com/example-org/example-repo",
+  "githubToken": "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+}
+HTTP/1.1 409  - Conflict
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:01 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 197
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-request-id: d8c6afd0-3a98-44f4-b8db-cfd2eda1df54
+x-xss-protection: 0
+
+{
+  "statusCode": 409,
+  "error": "Conflict",
+  "message": "Configuration already exists for group: 92",
+  "details": null,
+  "timestamp": "2026-03-08T04:25:01.296932881Z"
+}
+[x] create deletable project config fixture
+
+---------------------
+
+=== Resolve deletable project config fixture ===
+
+GET http://localhost:9080/api/project-configs/group/92
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiIzNzYzNGI2MC04NWE3LTQ4MmUtYmIzNy04MGIzZDRjZTg2NjMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzOTAwLCJleHAiOjE3NzI5NDQ4MDB9.hIc0qUmb8JCtgsujcTYxuT5O8unTYPqiQ1WEUfT-pXI4ntJtgIYJxSlsIvMxek4rx-Aqpw6ZZF13M-zpyh2MywFZaucmoLQp12YotlG-P6ESPC88wBUDiQNlZnaVA5raQBUQdSdq1EKMubKG8cvvYL8WVPEM3FNkPok_nMbq7n6oqzn-SbS4AwIhT5BotZz0ch5k_Z1Qph2dYP9BB7TJVj4EGs65P2PcaZzX3Ca-5aQe0Sa1R--ehlQzaoj8n69KgqDszKJu7FBjNx1qNuLD_1-OnxtLC88pLWY0En-zzCwZWL-aJRRXYpBc-ehWwi7Cs1r0cNBDbW05mAfEWwDPkQ
+user-agent: httpyac
+HTTP/1.1 200  - OK
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:25:01 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 196
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-request-id: 72432435-355a-439f-97a2-f595397a3744
+x-xss-protection: 0
+
+{
+  "data": {
+    "id": "0b7b86ae-f837-4ca1-80a2-7579456c09c8",
+    "groupId": 92,
+    "jiraHostUrl": "https://example.atlassian.net",
+    "jiraApiToken": "ATA***AAAA",
+    "githubRepoUrl": "https://github.com/example-org/example-repo",
+    "githubToken": "ghp_***AAAA",
+    "state": "DRAFT",
+    "lastVerifiedAt": null,
+    "invalidReason": null,
+    "createdAt": "2026-03-08T03:48:14Z",
+    "updatedAt": "2026-03-08T03:48:14Z"
+  },
+  "timestamp": "2026-03-08T04:25:01.312110876Z"
+}
+[x] resolve deletable project config fixture
+
+---------------------
+
+=== Final fixture sanity check ===
+
+GET http://localhost:9080/actuator/health
+accept-encoding: gzip, deflate, br
+accept: */*
+user-agent: httpyac
+HTTP/1.1 200  - OK
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-length: 15
+content-type: application/vnd.spring-boot.actuator.v3+json
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-xss-protection: 0
+
+{
+  "status": "UP"
+}
+[x] fixture vars present
+
+28 requests processed (28 succeeded)

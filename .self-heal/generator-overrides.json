@@ -1,0 +1,7 @@
+{
+  "globals": {
+    "authCooldownMs": 15000,
+    "fixtureAliases": {}
+  },
+  "operations": {}
+}

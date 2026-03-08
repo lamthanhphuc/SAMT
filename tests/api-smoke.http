@@ -1,25 +1,23 @@
 @baseUrl = http://localhost:9080
 @identityBaseUrl = http://localhost:8081
-@adminEmail = admin@example.com
-@adminPassword = password
-@lecturerEmail = lecturer@example.com
-@lecturerPassword = password
-@studentEmail = student@example.com
-@studentPassword = password
-@adminAccessToken = invalid.jwt.token
-@studentAccessToken = invalid.jwt.token
-@adminRefreshToken = invalid.refresh.token
-# Optional environment variable usage:
-# @baseUrl = {{BASE_URL}}
-# @adminEmail = {{ADMIN_EMAIL}}
-# @adminPassword = {{ADMIN_PASSWORD}}
+@adminEmail = admin@samt.local
+@adminPassword = Str0ng@Pass!
+@lecturerEmail = qa.lecturer@samt.local
+@lecturerPassword = Str0ng@Pass!
+@studentEmail = qa.student@samt.local
+@studentPassword = Str0ng@Pass!
 @invalidUuid = not-a-uuid
 @missingToken = invalid.jwt.token
 
-### Bootstrap admin login
-# @name adminLogin
+# Prefer running regression through:
+#   httpyac tests/bootstrap.http tests/fixtures.http tests/api-*.http --all
+# so globals (tokens and fixture IDs) are present for generated cases.
+
+### POST_/api/auth/login_happy
+# @name POST__api_auth_login_happy
 POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
+
 
 {
   "email": "{{adminEmail}}",
@@ -27,81 +25,41 @@ Content-Type: application/json
 }
 
 > {%
-client.test("admin login", function () {
-  client.assert(response.status === 200 || response.status === 401);
-  if (response.status === 200 && response.body.accessToken) {
-    client.global.set("adminAccessToken", response.body.accessToken);
-  }
-  if (response.status === 200 && response.body.refreshToken) {
-    client.global.set("adminRefreshToken", response.body.refreshToken);
-  }
+if (response.status === 200 && response.body && response.body.accessToken) {
+  client.global.set('adminAccessToken', response.body.accessToken);
+}
+if (response.status === 200 && response.body && response.body.refreshToken) {
+  client.global.set('adminRefreshToken', response.body.refreshToken);
+}
+client.test("POST_/api/auth/login_happy -> [200]", function () {
+  const expectedStatuses = [200];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### Bootstrap student login
-# @name studentLogin
+### POST_/api/auth/login_invalid_payload
+# @name POST__api_auth_login_invalid_payload
 POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
 
+
 {
-  "email": "{{studentEmail}}",
-  "password": "{{studentPassword}}"
+  "email": "",
+  "password": "Str0ng@Pass!"
 }
 
 > {%
-client.test("student login", function () {
-  client.assert(response.status === 200 || response.status === 401);
-  if (response.status === 200 && response.body.accessToken) {
-    client.global.set("studentAccessToken", response.body.accessToken);
-  }
-});
-%}
-
-### POST_/api/auth/register_happy
-# @name POST__api_auth_register_happy
-POST {{baseUrl}}/api/auth/register
-Content-Type: application/json
-
-
-{
-  "email": "qa+1772877116833@example.com",
-  "password": "Password@123",
-  "confirmPassword": "Password@123",
-  "fullName": "QA Automation User",
-  "role": "STUDENT"
-}
-
-> {%
-client.test("POST_/api/auth/register_happy -> [200, 201, 400, 409]", function () {
-  client.assert([200, 201, 400, 409].includes(response.status));
-});
-%}
-
-### POST_/api/auth/register_invalid_payload
-# @name POST__api_auth_register_invalid_payload
-POST {{baseUrl}}/api/auth/register
-Content-Type: application/json
-
-
-{"invalid":"payload"}
-
-> {%
-client.test("POST_/api/auth/register_invalid_payload -> [400]", function () {
-  client.assert([400].includes(response.status));
-});
-%}
-
-### POST_/api/auth/register_missing_required
-# @name POST__api_auth_register_missing_required
-POST {{baseUrl}}/api/auth/register
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("POST_/api/auth/register_missing_required -> [400]", function () {
-  client.assert([400].includes(response.status));
+client.test("POST_/api/auth/login_invalid_payload -> [400]", function () {
+  const expectedStatuses = [400];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -116,8 +74,13 @@ Content-Type: application/json
 }
 
 > {%
-client.test("POST_/api/auth/refresh_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("POST_/api/auth/refresh_happy -> [200]", function () {
+  const expectedStatuses = [200];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -127,31 +90,25 @@ POST {{baseUrl}}/api/auth/refresh
 Content-Type: application/json
 
 
-{"invalid":"payload"}
+{
+  "refreshToken": ""
+}
 
 > {%
 client.test("POST_/api/auth/refresh_invalid_payload -> [400]", function () {
-  client.assert([400].includes(response.status));
-});
-%}
-
-### POST_/api/auth/refresh_missing_required
-# @name POST__api_auth_refresh_missing_required
-POST {{baseUrl}}/api/auth/refresh
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("POST_/api/auth/refresh_missing_required -> [400]", function () {
-  client.assert([400].includes(response.status));
+  const expectedStatuses = [400];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### POST_/api/auth/logout_happy
 # @name POST__api_auth_logout_happy
 POST {{baseUrl}}/api/auth/logout
+Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 
@@ -160,81 +117,126 @@ Content-Type: application/json
 }
 
 > {%
-client.test("POST_/api/auth/logout_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("POST_/api/auth/logout_happy -> [204]", function () {
+  const expectedStatuses = [204];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [204]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### POST_/api/auth/logout_unauthorized
+# @name POST__api_auth_logout_unauthorized
+POST {{baseUrl}}/api/auth/logout
+Authorization: Bearer {{missingToken}}
+Content-Type: application/json
+
+
+{
+  "refreshToken": "{{adminRefreshToken}}"
+}
+
+> {%
+client.test("POST_/api/auth/logout_unauthorized -> [401]", function () {
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### POST_/api/auth/logout_invalid_payload
 # @name POST__api_auth_logout_invalid_payload
 POST {{baseUrl}}/api/auth/logout
-Content-Type: application/json
-
-
-{"invalid":"payload"}
-
-> {%
-client.test("POST_/api/auth/logout_invalid_payload -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
-});
-%}
-
-### POST_/api/auth/logout_missing_required
-# @name POST__api_auth_logout_missing_required
-POST {{baseUrl}}/api/auth/logout
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("POST_/api/auth/logout_missing_required -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
-});
-%}
-
-### POST_/api/auth/login_happy
-# @name POST__api_auth_login_happy
-POST {{baseUrl}}/api/auth/login
+Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 
 {
-  "email": "{{adminEmail}}",
-  "password": "{{adminPassword}}"
+  "refreshToken": ""
 }
 
 > {%
-client.test("POST_/api/auth/login_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("POST_/api/auth/logout_invalid_payload -> [400, 401]", function () {
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### POST_/api/auth/login_invalid_payload
-# @name POST__api_auth_login_invalid_payload
-POST {{baseUrl}}/api/auth/login
+### POST_/api/auth/register_happy
+# @name POST__api_auth_register_happy
+POST {{baseUrl}}/api/auth/register
 Content-Type: application/json
 
 
-{"invalid":"payload"}
+{
+  "email": "qa.student2@samt.local",
+  "password": "Str0ng@Pass!",
+  "confirmPassword": "Str0ng@Pass!",
+  "fullName": "QA Student Two",
+  "role": "STUDENT"
+}
 
 > {%
-client.test("POST_/api/auth/login_invalid_payload -> [400]", function () {
-  client.assert([400].includes(response.status));
+client.test("POST_/api/auth/register_happy -> [201, 409]", function () {
+  const expectedStatuses = [201, 409];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [201, 409]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### POST_/api/auth/login_missing_required
-# @name POST__api_auth_login_missing_required
-POST {{baseUrl}}/api/auth/login
+### POST_/api/auth/register_invalid_payload
+# @name POST__api_auth_register_invalid_payload
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+
+{
+  "email": "not-an-email",
+  "password": "Str0ng@Pass!",
+  "confirmPassword": "Str0ng@Pass!",
+  "fullName": "QA api aut",
+  "role": "STUDENT"
+}
+
+> {%
+client.test("POST_/api/auth/register_invalid_payload -> [400]", function () {
+  const expectedStatuses = [400];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### POST_/api/auth/register_missing_required
+# @name POST__api_auth_register_missing_required
+POST {{baseUrl}}/api/auth/register
 Content-Type: application/json
 
 
 {}
 
 > {%
-client.test("POST_/api/auth/login_missing_required -> [400]", function () {
-  client.assert([400].includes(response.status));
+client.test("POST_/api/auth/register_missing_required -> [400]", function () {
+  const expectedStatuses = [400];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 

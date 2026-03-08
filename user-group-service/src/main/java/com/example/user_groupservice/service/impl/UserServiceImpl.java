@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import io.grpc.StatusRuntimeException;
 
 
 import java.util.List;
@@ -255,7 +254,7 @@ public class UserServiceImpl implements UserService {
      * Check authorization for viewing user profile.
      * Per spec (UC21-AUTH):
      * - ADMIN: can view all users
-     * - LECTURER: can only view users with STUDENT role (if cannot verify, allow with warning)
+        * - LECTURER: can only view users with STUDENT role
      * - STUDENT: can only view self
      * 
      * PRIVACY ENHANCEMENT (Issue 6.1 Fix):
@@ -307,16 +306,10 @@ public class UserServiceImpl implements UserService {
                     throw ForbiddenException.lecturerCanOnlyViewStudents();
                 }
                 
-            } catch (ResourceNotFoundException | ForbiddenException | ConflictException | 
-                     ServiceUnavailableException | GatewayTimeoutException | BadRequestException | 
+                        } catch (ResourceNotFoundException | ForbiddenException | ConflictException | 
+                                         ServiceUnavailableException | GatewayTimeoutException | BadRequestException | 
                      UnauthorizedException e) {
-                // Business exceptions should be thrown normally
                 throw e;
-            } catch (RuntimeException e) {
-                // gRPC failure -> fallback behavior: ALLOW with warning
-                log.warn("LECTURER {} viewing user {} - gRPC failed ({}). Allowing per spec (fallback).", 
-                        actorId, targetUserId, e.getMessage());
-                return;
             }
         }
         

@@ -1,143 +1,107 @@
 @baseUrl = http://localhost:9080
 @identityBaseUrl = http://localhost:8081
-@adminEmail = admin@example.com
-@adminPassword = password
-@lecturerEmail = lecturer@example.com
-@lecturerPassword = password
-@studentEmail = student@example.com
-@studentPassword = password
-@adminAccessToken = invalid.jwt.token
-@studentAccessToken = invalid.jwt.token
-@adminRefreshToken = invalid.refresh.token
-# Optional environment variable usage:
-# @baseUrl = {{BASE_URL}}
-# @adminEmail = {{ADMIN_EMAIL}}
-# @adminPassword = {{ADMIN_PASSWORD}}
+@adminEmail = admin@samt.local
+@adminPassword = Str0ng@Pass!
+@lecturerEmail = qa.lecturer@samt.local
+@lecturerPassword = Str0ng@Pass!
+@studentEmail = qa.student@samt.local
+@studentPassword = Str0ng@Pass!
 @invalidUuid = not-a-uuid
 @missingToken = invalid.jwt.token
 
-### Bootstrap admin login
-# @name adminLogin
-POST {{baseUrl}}/api/auth/login
-Content-Type: application/json
-
-{
-  "email": "{{adminEmail}}",
-  "password": "{{adminPassword}}"
-}
-
-> {%
-client.test("admin login", function () {
-  client.assert(response.status === 200 || response.status === 401);
-  if (response.status === 200 && response.body.accessToken) {
-    client.global.set("adminAccessToken", response.body.accessToken);
-  }
-  if (response.status === 200 && response.body.refreshToken) {
-    client.global.set("adminRefreshToken", response.body.refreshToken);
-  }
-});
-%}
-
-### Bootstrap student login
-# @name studentLogin
-POST {{baseUrl}}/api/auth/login
-Content-Type: application/json
-
-{
-  "email": "{{studentEmail}}",
-  "password": "{{studentPassword}}"
-}
-
-> {%
-client.test("student login", function () {
-  client.assert(response.status === 200 || response.status === 401);
-  if (response.status === 200 && response.body.accessToken) {
-    client.global.set("studentAccessToken", response.body.accessToken);
-  }
-});
-%}
+# Prefer running regression through:
+#   httpyac tests/bootstrap.http tests/fixtures.http tests/api-*.http --all
+# so globals (tokens and fixture IDs) are present for generated cases.
 
 ### PUT_/api/admin/users/{userId}/external-accounts_happy
 # @name PUT__api_admin_users__userId__external_accounts_happy
-PUT {{baseUrl}}/api/admin/users/1/external-accounts
+PUT {{baseUrl}}/api/admin/users/{{fixtureAdminLifecycleUserId}}/external-accounts
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 
 {
-  "jiraAccountId": "jiraAccountId-sample",
-  "githubUsername": "githubUsername-sample"
+  "jiraAccountId": "{{fixtureJiraAccountId}}",
+  "githubUsername": "{{fixtureGithubUsername}}"
 }
 
 > {%
-client.test("PUT_/api/admin/users/{userId}/external-accounts_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("PUT_/api/admin/users/{userId}/external-accounts_happy -> [200]", function () {
+  const expectedStatuses = [200];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### PUT_/api/admin/users/{userId}/external-accounts_unauthorized
 # @name PUT__api_admin_users__userId__external_accounts_unauthorized
-PUT {{baseUrl}}/api/admin/users/1/external-accounts
+PUT {{baseUrl}}/api/admin/users/{{fixtureAdminLifecycleUserId}}/external-accounts
 Authorization: Bearer {{missingToken}}
 Content-Type: application/json
 
 
 {
-  "jiraAccountId": "jiraAccountId-sample",
-  "githubUsername": "githubUsername-sample"
+  "jiraAccountId": "{{fixtureJiraAccountId}}",
+  "githubUsername": "{{fixtureGithubUsername}}"
 }
 
 > {%
 client.test("PUT_/api/admin/users/{userId}/external-accounts_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### PUT_/api/admin/users/{userId}/external-accounts_forbidden_role
 # @name PUT__api_admin_users__userId__external_accounts_forbidden_role
-PUT {{baseUrl}}/api/admin/users/1/external-accounts
+PUT {{baseUrl}}/api/admin/users/{{fixtureAdminLifecycleUserId}}/external-accounts
 Authorization: Bearer {{studentAccessToken}}
 Content-Type: application/json
 
 
 {
-  "jiraAccountId": "jiraAccountId-sample",
-  "githubUsername": "githubUsername-sample"
+  "jiraAccountId": "{{fixtureJiraAccountId}}",
+  "githubUsername": "{{fixtureGithubUsername}}"
 }
 
 > {%
-client.test("PUT_/api/admin/users/{userId}/external-accounts_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
+client.test("PUT_/api/admin/users/{userId}/external-accounts_forbidden_role -> [403]", function () {
+  const expectedStatuses = [403];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [403]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### PUT_/api/admin/users/{userId}/external-accounts_invalid_payload
 # @name PUT__api_admin_users__userId__external_accounts_invalid_payload
-PUT {{baseUrl}}/api/admin/users/1/external-accounts
+PUT {{baseUrl}}/api/admin/users/{{fixtureAdminLifecycleUserId}}/external-accounts
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 
-{"invalid":"payload"}
+{
+  "jiraAccountId": "short",
+  "githubUsername": "bad!"
+}
 
 > {%
 client.test("PUT_/api/admin/users/{userId}/external-accounts_invalid_payload -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
-});
-%}
-
-### PUT_/api/admin/users/{userId}/external-accounts_missing_required
-# @name PUT__api_admin_users__userId__external_accounts_missing_required
-PUT {{baseUrl}}/api/admin/users/1/external-accounts
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("PUT_/api/admin/users/{userId}/external-accounts_missing_required -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -149,13 +113,18 @@ Content-Type: application/json
 
 
 {
-  "jiraAccountId": "jiraAccountId-sample",
-  "githubUsername": "githubUsername-sample"
+  "jiraAccountId": "{{fixtureJiraAccountId}}",
+  "githubUsername": "{{fixtureGithubUsername}}"
 }
 
 > {%
 client.test("PUT_/api/admin/users/{userId}/external-accounts_invalid_uuid -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -167,319 +136,24 @@ Content-Type: application/json
 
 
 {
-  "jiraAccountId": "jiraAccountId-sample",
-  "githubUsername": "githubUsername-sample"
+  "jiraAccountId": "{{fixtureJiraAccountId}}",
+  "githubUsername": "{{fixtureGithubUsername}}"
 }
 
 > {%
 client.test("PUT_/api/admin/users/{userId}/external-accounts_not_found -> [404, 401]", function () {
-  client.assert([404, 401].includes(response.status));
-});
-%}
-
-### POST_/api/admin/users_happy
-# @name POST__api_admin_users_happy
-POST {{baseUrl}}/api/admin/users
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{
-  "email": "email-sample",
-  "password": "password-sample",
-  "fullName": "fullName-sample",
-  "role": "role-sample"
-}
-
-> {%
-client.test("POST_/api/admin/users_happy -> [201, 401]", function () {
-  client.assert([201, 401].includes(response.status));
-});
-%}
-
-### POST_/api/admin/users_unauthorized
-# @name POST__api_admin_users_unauthorized
-POST {{baseUrl}}/api/admin/users
-Authorization: Bearer {{missingToken}}
-Content-Type: application/json
-
-
-{
-  "email": "email-sample",
-  "password": "password-sample",
-  "fullName": "fullName-sample",
-  "role": "role-sample"
-}
-
-> {%
-client.test("POST_/api/admin/users_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
-});
-%}
-
-### POST_/api/admin/users_forbidden_role
-# @name POST__api_admin_users_forbidden_role
-POST {{baseUrl}}/api/admin/users
-Authorization: Bearer {{studentAccessToken}}
-Content-Type: application/json
-
-
-{
-  "email": "email-sample",
-  "password": "password-sample",
-  "fullName": "fullName-sample",
-  "role": "role-sample"
-}
-
-> {%
-client.test("POST_/api/admin/users_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
-});
-%}
-
-### POST_/api/admin/users_invalid_payload
-# @name POST__api_admin_users_invalid_payload
-POST {{baseUrl}}/api/admin/users
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{"invalid":"payload"}
-
-> {%
-client.test("POST_/api/admin/users_invalid_payload -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
-});
-%}
-
-### POST_/api/admin/users_missing_required
-# @name POST__api_admin_users_missing_required
-POST {{baseUrl}}/api/admin/users
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("POST_/api/admin/users_missing_required -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
-});
-%}
-
-### POST_/api/admin/users/{userId}/unlock_happy
-# @name POST__api_admin_users__userId__unlock_happy
-POST {{baseUrl}}/api/admin/users/1/unlock
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("POST_/api/admin/users/{userId}/unlock_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
-});
-%}
-
-### POST_/api/admin/users/{userId}/unlock_unauthorized
-# @name POST__api_admin_users__userId__unlock_unauthorized
-POST {{baseUrl}}/api/admin/users/1/unlock
-Authorization: Bearer {{missingToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("POST_/api/admin/users/{userId}/unlock_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
-});
-%}
-
-### POST_/api/admin/users/{userId}/unlock_forbidden_role
-# @name POST__api_admin_users__userId__unlock_forbidden_role
-POST {{baseUrl}}/api/admin/users/1/unlock
-Authorization: Bearer {{studentAccessToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("POST_/api/admin/users/{userId}/unlock_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
-});
-%}
-
-### POST_/api/admin/users/{userId}/unlock_invalid_payload
-# @name POST__api_admin_users__userId__unlock_invalid_payload
-POST {{baseUrl}}/api/admin/users/1/unlock
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{"invalid":"payload"}
-
-> {%
-client.test("POST_/api/admin/users/{userId}/unlock_invalid_payload -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
-});
-%}
-
-### POST_/api/admin/users/{userId}/unlock_missing_required
-# @name POST__api_admin_users__userId__unlock_missing_required
-POST {{baseUrl}}/api/admin/users/1/unlock
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("POST_/api/admin/users/{userId}/unlock_missing_required -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
-});
-%}
-
-### POST_/api/admin/users/{userId}/unlock_invalid_uuid
-# @name POST__api_admin_users__userId__unlock_invalid_uuid
-POST {{baseUrl}}/api/admin/users/{{invalidUuid}}/unlock
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("POST_/api/admin/users/{userId}/unlock_invalid_uuid -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
-});
-%}
-
-### POST_/api/admin/users/{userId}/unlock_not_found
-# @name POST__api_admin_users__userId__unlock_not_found
-POST {{baseUrl}}/api/admin/users/999999999/unlock
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("POST_/api/admin/users/{userId}/unlock_not_found -> [404, 401]", function () {
-  client.assert([404, 401].includes(response.status));
-});
-%}
-
-### POST_/api/admin/users/{userId}/restore_happy
-# @name POST__api_admin_users__userId__restore_happy
-POST {{baseUrl}}/api/admin/users/1/restore
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("POST_/api/admin/users/{userId}/restore_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
-});
-%}
-
-### POST_/api/admin/users/{userId}/restore_unauthorized
-# @name POST__api_admin_users__userId__restore_unauthorized
-POST {{baseUrl}}/api/admin/users/1/restore
-Authorization: Bearer {{missingToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("POST_/api/admin/users/{userId}/restore_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
-});
-%}
-
-### POST_/api/admin/users/{userId}/restore_forbidden_role
-# @name POST__api_admin_users__userId__restore_forbidden_role
-POST {{baseUrl}}/api/admin/users/1/restore
-Authorization: Bearer {{studentAccessToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("POST_/api/admin/users/{userId}/restore_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
-});
-%}
-
-### POST_/api/admin/users/{userId}/restore_invalid_payload
-# @name POST__api_admin_users__userId__restore_invalid_payload
-POST {{baseUrl}}/api/admin/users/1/restore
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{"invalid":"payload"}
-
-> {%
-client.test("POST_/api/admin/users/{userId}/restore_invalid_payload -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
-});
-%}
-
-### POST_/api/admin/users/{userId}/restore_missing_required
-# @name POST__api_admin_users__userId__restore_missing_required
-POST {{baseUrl}}/api/admin/users/1/restore
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("POST_/api/admin/users/{userId}/restore_missing_required -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
-});
-%}
-
-### POST_/api/admin/users/{userId}/restore_invalid_uuid
-# @name POST__api_admin_users__userId__restore_invalid_uuid
-POST {{baseUrl}}/api/admin/users/{{invalidUuid}}/restore
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("POST_/api/admin/users/{userId}/restore_invalid_uuid -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
-});
-%}
-
-### POST_/api/admin/users/{userId}/restore_not_found
-# @name POST__api_admin_users__userId__restore_not_found
-POST {{baseUrl}}/api/admin/users/999999999/restore
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("POST_/api/admin/users/{userId}/restore_not_found -> [404, 401]", function () {
-  client.assert([404, 401].includes(response.status));
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### POST_/api/admin/users/{userId}/lock_happy
 # @name POST__api_admin_users__userId__lock_happy
-POST {{baseUrl}}/api/admin/users/1/lock
+POST {{baseUrl}}/api/admin/users/{{fixtureAdminLifecycleUserId}}/lock
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
@@ -487,14 +161,19 @@ Content-Type: application/json
 {}
 
 > {%
-client.test("POST_/api/admin/users/{userId}/lock_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("POST_/api/admin/users/{userId}/lock_happy -> [200]", function () {
+  const expectedStatuses = [200];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### POST_/api/admin/users/{userId}/lock_unauthorized
 # @name POST__api_admin_users__userId__lock_unauthorized
-POST {{baseUrl}}/api/admin/users/1/lock
+POST {{baseUrl}}/api/admin/users/{{fixtureAdminLifecycleUserId}}/lock
 Authorization: Bearer {{missingToken}}
 Content-Type: application/json
 
@@ -503,13 +182,18 @@ Content-Type: application/json
 
 > {%
 client.test("POST_/api/admin/users/{userId}/lock_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### POST_/api/admin/users/{userId}/lock_forbidden_role
 # @name POST__api_admin_users__userId__lock_forbidden_role
-POST {{baseUrl}}/api/admin/users/1/lock
+POST {{baseUrl}}/api/admin/users/{{fixtureAdminLifecycleUserId}}/lock
 Authorization: Bearer {{studentAccessToken}}
 Content-Type: application/json
 
@@ -517,38 +201,13 @@ Content-Type: application/json
 {}
 
 > {%
-client.test("POST_/api/admin/users/{userId}/lock_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
-});
-%}
-
-### POST_/api/admin/users/{userId}/lock_invalid_payload
-# @name POST__api_admin_users__userId__lock_invalid_payload
-POST {{baseUrl}}/api/admin/users/1/lock
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{"invalid":"payload"}
-
-> {%
-client.test("POST_/api/admin/users/{userId}/lock_invalid_payload -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
-});
-%}
-
-### POST_/api/admin/users/{userId}/lock_missing_required
-# @name POST__api_admin_users__userId__lock_missing_required
-POST {{baseUrl}}/api/admin/users/1/lock
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("POST_/api/admin/users/{userId}/lock_missing_required -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+client.test("POST_/api/admin/users/{userId}/lock_forbidden_role -> [403]", function () {
+  const expectedStatuses = [403];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [403]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -563,7 +222,12 @@ Content-Type: application/json
 
 > {%
 client.test("POST_/api/admin/users/{userId}/lock_invalid_uuid -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -578,46 +242,166 @@ Content-Type: application/json
 
 > {%
 client.test("POST_/api/admin/users/{userId}/lock_not_found -> [404, 401]", function () {
-  client.assert([404, 401].includes(response.status));
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### POST_/api/admin/users/{userId}/unlock_happy
+# @name POST__api_admin_users__userId__unlock_happy
+POST {{baseUrl}}/api/admin/users/{{fixtureAdminLifecycleUserId}}/unlock
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/admin/users/{userId}/unlock_happy -> [200]", function () {
+  const expectedStatuses = [200];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### POST_/api/admin/users/{userId}/unlock_unauthorized
+# @name POST__api_admin_users__userId__unlock_unauthorized
+POST {{baseUrl}}/api/admin/users/{{fixtureAdminLifecycleUserId}}/unlock
+Authorization: Bearer {{missingToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/admin/users/{userId}/unlock_unauthorized -> [401]", function () {
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### POST_/api/admin/users/{userId}/unlock_forbidden_role
+# @name POST__api_admin_users__userId__unlock_forbidden_role
+POST {{baseUrl}}/api/admin/users/{{fixtureAdminLifecycleUserId}}/unlock
+Authorization: Bearer {{studentAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/admin/users/{userId}/unlock_forbidden_role -> [403]", function () {
+  const expectedStatuses = [403];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [403]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### POST_/api/admin/users/{userId}/unlock_invalid_uuid
+# @name POST__api_admin_users__userId__unlock_invalid_uuid
+POST {{baseUrl}}/api/admin/users/{{invalidUuid}}/unlock
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/admin/users/{userId}/unlock_invalid_uuid -> [400, 401]", function () {
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### POST_/api/admin/users/{userId}/unlock_not_found
+# @name POST__api_admin_users__userId__unlock_not_found
+POST {{baseUrl}}/api/admin/users/999999999/unlock
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/admin/users/{userId}/unlock_not_found -> [404, 401]", function () {
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### DELETE_/api/admin/users/{userId}_happy
 # @name DELETE__api_admin_users__userId__happy
-DELETE {{baseUrl}}/api/admin/users/1
+DELETE {{baseUrl}}/api/admin/users/{{fixtureAdminLifecycleUserId}}
 Authorization: Bearer {{adminAccessToken}}
 
 
 
 > {%
-client.test("DELETE_/api/admin/users/{userId}_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("DELETE_/api/admin/users/{userId}_happy -> [200, 204]", function () {
+  const expectedStatuses = [200, 204];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200, 204]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### DELETE_/api/admin/users/{userId}_unauthorized
 # @name DELETE__api_admin_users__userId__unauthorized
-DELETE {{baseUrl}}/api/admin/users/1
+DELETE {{baseUrl}}/api/admin/users/{{fixtureAdminLifecycleUserId}}
 Authorization: Bearer {{missingToken}}
 
 
 
 > {%
 client.test("DELETE_/api/admin/users/{userId}_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### DELETE_/api/admin/users/{userId}_forbidden_role
 # @name DELETE__api_admin_users__userId__forbidden_role
-DELETE {{baseUrl}}/api/admin/users/1
+DELETE {{baseUrl}}/api/admin/users/{{fixtureAdminLifecycleUserId}}
 Authorization: Bearer {{studentAccessToken}}
 
 
 
 > {%
-client.test("DELETE_/api/admin/users/{userId}_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
+client.test("DELETE_/api/admin/users/{userId}_forbidden_role -> [403]", function () {
+  const expectedStatuses = [403];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [403]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -630,7 +414,12 @@ Authorization: Bearer {{adminAccessToken}}
 
 > {%
 client.test("DELETE_/api/admin/users/{userId}_invalid_uuid -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -643,46 +432,284 @@ Authorization: Bearer {{adminAccessToken}}
 
 > {%
 client.test("DELETE_/api/admin/users/{userId}_not_found -> [404, 401]", function () {
-  client.assert([404, 401].includes(response.status));
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
-### GET_/api/users/{userId}_happy
-# @name GET__api_users__userId__happy
-GET {{baseUrl}}/api/users/1
+### POST_/api/admin/users/{userId}/restore_happy
+# @name POST__api_admin_users__userId__restore_happy
+POST {{baseUrl}}/api/admin/users/{{fixtureAdminLifecycleUserId}}/restore
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/admin/users/{userId}/restore_happy -> [200]", function () {
+  const expectedStatuses = [200];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### POST_/api/admin/users/{userId}/restore_unauthorized
+# @name POST__api_admin_users__userId__restore_unauthorized
+POST {{baseUrl}}/api/admin/users/{{fixtureAdminLifecycleUserId}}/restore
+Authorization: Bearer {{missingToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/admin/users/{userId}/restore_unauthorized -> [401]", function () {
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### POST_/api/admin/users/{userId}/restore_forbidden_role
+# @name POST__api_admin_users__userId__restore_forbidden_role
+POST {{baseUrl}}/api/admin/users/{{fixtureAdminLifecycleUserId}}/restore
+Authorization: Bearer {{studentAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/admin/users/{userId}/restore_forbidden_role -> [403]", function () {
+  const expectedStatuses = [403];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [403]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### POST_/api/admin/users/{userId}/restore_invalid_uuid
+# @name POST__api_admin_users__userId__restore_invalid_uuid
+POST {{baseUrl}}/api/admin/users/{{invalidUuid}}/restore
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/admin/users/{userId}/restore_invalid_uuid -> [400, 401]", function () {
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### POST_/api/admin/users/{userId}/restore_not_found
+# @name POST__api_admin_users__userId__restore_not_found
+POST {{baseUrl}}/api/admin/users/999999999/restore
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/admin/users/{userId}/restore_not_found -> [404, 401]", function () {
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### POST_/api/admin/users_happy
+# @name POST__api_admin_users_happy
+POST {{baseUrl}}/api/admin/users
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{
+  "email": "qa.generated.user@samt.local",
+  "password": "Str0ng@Pass!",
+  "fullName": "QA Generated User",
+  "role": "STUDENT"
+}
+
+> {%
+client.test("POST_/api/admin/users_happy -> [201, 409]", function () {
+  const expectedStatuses = [201, 409];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [201, 409]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### POST_/api/admin/users_unauthorized
+# @name POST__api_admin_users_unauthorized
+POST {{baseUrl}}/api/admin/users
+Authorization: Bearer {{missingToken}}
+Content-Type: application/json
+
+
+{
+  "email": "qa.generated.user@samt.local",
+  "password": "Str0ng@Pass!",
+  "fullName": "QA Generated User",
+  "role": "STUDENT"
+}
+
+> {%
+client.test("POST_/api/admin/users_unauthorized -> [401]", function () {
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### POST_/api/admin/users_forbidden_role
+# @name POST__api_admin_users_forbidden_role
+POST {{baseUrl}}/api/admin/users
+Authorization: Bearer {{studentAccessToken}}
+Content-Type: application/json
+
+
+{
+  "email": "qa.generated.user@samt.local",
+  "password": "Str0ng@Pass!",
+  "fullName": "QA Generated User",
+  "role": "STUDENT"
+}
+
+> {%
+client.test("POST_/api/admin/users_forbidden_role -> [403]", function () {
+  const expectedStatuses = [403];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [403]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### POST_/api/admin/users_invalid_payload
+# @name POST__api_admin_users_invalid_payload
+POST {{baseUrl}}/api/admin/users
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{
+  "email": "",
+  "password": "Str0ng@Pass!",
+  "fullName": "QA api adm",
+  "role": "role-8a9"
+}
+
+> {%
+client.test("POST_/api/admin/users_invalid_payload -> [400, 401]", function () {
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### GET_/api/users_happy
+# @name GET__api_users_happy
+GET {{baseUrl}}/api/users?page=0&size=20
 Authorization: Bearer {{adminAccessToken}}
 
 
 
 > {%
-client.test("GET_/api/users/{userId}_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("GET_/api/users_happy -> [200]", function () {
+  const expectedStatuses = [200];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### GET_/api/users_unauthorized
+# @name GET__api_users_unauthorized
+GET {{baseUrl}}/api/users?page=0&size=20
+Authorization: Bearer {{missingToken}}
+
+
+
+> {%
+client.test("GET_/api/users_unauthorized -> [401]", function () {
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### GET_/api/users/{userId}_happy
+# @name GET__api_users__userId__happy
+GET {{baseUrl}}/api/users/{{fixtureUserId}}
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/users/{userId}_happy -> [200]", function () {
+  const expectedStatuses = [200];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### GET_/api/users/{userId}_unauthorized
 # @name GET__api_users__userId__unauthorized
-GET {{baseUrl}}/api/users/1
+GET {{baseUrl}}/api/users/{{fixtureUserId}}
 Authorization: Bearer {{missingToken}}
 
 
 
 > {%
 client.test("GET_/api/users/{userId}_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
-});
-%}
-
-### GET_/api/users/{userId}_forbidden_role
-# @name GET__api_users__userId__forbidden_role
-GET {{baseUrl}}/api/users/1
-Authorization: Bearer {{studentAccessToken}}
-
-
-
-> {%
-client.test("GET_/api/users/{userId}_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -695,7 +722,12 @@ Authorization: Bearer {{adminAccessToken}}
 
 > {%
 client.test("GET_/api/users/{userId}_invalid_uuid -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -708,88 +740,78 @@ Authorization: Bearer {{adminAccessToken}}
 
 > {%
 client.test("GET_/api/users/{userId}_not_found -> [404, 401]", function () {
-  client.assert([404, 401].includes(response.status));
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### PUT_/api/users/{userId}_happy
 # @name PUT__api_users__userId__happy
-PUT {{baseUrl}}/api/users/1
+PUT {{baseUrl}}/api/users/{{fixtureUserId}}
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 
 {
-  "fullName": "fullName-sample"
+  "fullName": "QA Student Updated"
 }
 
 > {%
-client.test("PUT_/api/users/{userId}_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("PUT_/api/users/{userId}_happy -> [200]", function () {
+  const expectedStatuses = [200];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### PUT_/api/users/{userId}_unauthorized
 # @name PUT__api_users__userId__unauthorized
-PUT {{baseUrl}}/api/users/1
+PUT {{baseUrl}}/api/users/{{fixtureUserId}}
 Authorization: Bearer {{missingToken}}
 Content-Type: application/json
 
 
 {
-  "fullName": "fullName-sample"
+  "fullName": "QA Student Updated"
 }
 
 > {%
 client.test("PUT_/api/users/{userId}_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
-});
-%}
-
-### PUT_/api/users/{userId}_forbidden_role
-# @name PUT__api_users__userId__forbidden_role
-PUT {{baseUrl}}/api/users/1
-Authorization: Bearer {{studentAccessToken}}
-Content-Type: application/json
-
-
-{
-  "fullName": "fullName-sample"
-}
-
-> {%
-client.test("PUT_/api/users/{userId}_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### PUT_/api/users/{userId}_invalid_payload
 # @name PUT__api_users__userId__invalid_payload
-PUT {{baseUrl}}/api/users/1
+PUT {{baseUrl}}/api/users/{{fixtureUserId}}
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 
-{"invalid":"payload"}
+{
+  "fullName": ""
+}
 
 > {%
 client.test("PUT_/api/users/{userId}_invalid_payload -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
-});
-%}
-
-### PUT_/api/users/{userId}_missing_required
-# @name PUT__api_users__userId__missing_required
-PUT {{baseUrl}}/api/users/1
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("PUT_/api/users/{userId}_missing_required -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -801,12 +823,17 @@ Content-Type: application/json
 
 
 {
-  "fullName": "fullName-sample"
+  "fullName": "QA Student Updated"
 }
 
 > {%
 client.test("PUT_/api/users/{userId}_invalid_uuid -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -818,90 +845,53 @@ Content-Type: application/json
 
 
 {
-  "fullName": "fullName-sample"
+  "fullName": "QA Student Updated"
 }
 
 > {%
 client.test("PUT_/api/users/{userId}_not_found -> [404, 401]", function () {
-  client.assert([404, 401].includes(response.status));
-});
-%}
-
-### GET_/api/users_happy
-# @name GET__api_users_happy
-GET {{baseUrl}}/api/users
-Authorization: Bearer {{adminAccessToken}}
-
-
-
-> {%
-client.test("GET_/api/users_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
-});
-%}
-
-### GET_/api/users_unauthorized
-# @name GET__api_users_unauthorized
-GET {{baseUrl}}/api/users
-Authorization: Bearer {{missingToken}}
-
-
-
-> {%
-client.test("GET_/api/users_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
-});
-%}
-
-### GET_/api/users_forbidden_role
-# @name GET__api_users_forbidden_role
-GET {{baseUrl}}/api/users
-Authorization: Bearer {{studentAccessToken}}
-
-
-
-> {%
-client.test("GET_/api/users_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### GET_/api/users/{userId}/groups_happy
 # @name GET__api_users__userId__groups_happy
-GET {{baseUrl}}/api/users/1/groups
+GET {{baseUrl}}/api/users/{{fixtureUserId}}/groups
 Authorization: Bearer {{adminAccessToken}}
 
 
 
 > {%
-client.test("GET_/api/users/{userId}/groups_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("GET_/api/users/{userId}/groups_happy -> [200]", function () {
+  const expectedStatuses = [200];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### GET_/api/users/{userId}/groups_unauthorized
 # @name GET__api_users__userId__groups_unauthorized
-GET {{baseUrl}}/api/users/1/groups
+GET {{baseUrl}}/api/users/{{fixtureUserId}}/groups
 Authorization: Bearer {{missingToken}}
 
 
 
 > {%
 client.test("GET_/api/users/{userId}/groups_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
-});
-%}
-
-### GET_/api/users/{userId}/groups_forbidden_role
-# @name GET__api_users__userId__groups_forbidden_role
-GET {{baseUrl}}/api/users/1/groups
-Authorization: Bearer {{studentAccessToken}}
-
-
-
-> {%
-client.test("GET_/api/users/{userId}/groups_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -914,7 +904,12 @@ Authorization: Bearer {{adminAccessToken}}
 
 > {%
 client.test("GET_/api/users/{userId}/groups_invalid_uuid -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
@@ -927,7 +922,12 @@ Authorization: Bearer {{adminAccessToken}}
 
 > {%
 client.test("GET_/api/users/{userId}/groups_not_found -> [404, 401]", function () {
-  client.assert([404, 401].includes(response.status));
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 

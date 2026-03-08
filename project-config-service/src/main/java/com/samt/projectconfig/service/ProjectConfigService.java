@@ -105,7 +105,7 @@ public class ProjectConfigService {
                 log.debug("Tokens encrypted successfully");
                 
                 // ========== PHASE 4: PERSISTENCE (SHORT TRANSACTION) ==========
-                return persistNewConfig(request, encryptedJiraToken, encryptedGithubToken);
+                return persistNewConfig(request, encryptedJiraToken, encryptedGithubToken, userId);
             });
     }
     
@@ -117,7 +117,8 @@ public class ProjectConfigService {
     protected ConfigResponse persistNewConfig(
         CreateConfigRequest request,
         String encryptedJiraToken,
-        String encryptedGithubToken
+        String encryptedGithubToken,
+        Long userId
     ) {
         try {
             ProjectConfig config = ProjectConfig.builder()
@@ -127,6 +128,8 @@ public class ProjectConfigService {
                 .githubRepoUrl(request.githubRepoUrl())
                 .githubTokenEncrypted(encryptedGithubToken)
                 .state("DRAFT")
+                .createdBy(userId)
+                .updatedBy(userId)
                 .build();
             
             ProjectConfig saved = repository.save(config);
@@ -188,6 +191,14 @@ public class ProjectConfigService {
             return CompletableFuture.completedFuture(toResponse(config));
         }
     }
+
+    public CompletableFuture<ConfigResponse> getConfigByGroupId(Long groupId, Long userId, List<String> roles) {
+        log.debug("User {} fetching config by group {} (async)", userId, groupId);
+
+        ProjectConfig config = loadConfigByGroupId(groupId);
+        return authorizeConfigAccess(config, userId, roles)
+            .thenApply(unused -> toResponse(config));
+    }
     
     /**
      * Load config in separate short transaction.
@@ -196,6 +207,12 @@ public class ProjectConfigService {
     protected ProjectConfig loadConfig(UUID id) {
         return repository.findById(id)
             .orElseThrow(() -> new ConfigNotFoundException(id));
+    }
+
+    @Transactional(readOnly = true)
+    protected ProjectConfig loadConfigByGroupId(Long groupId) {
+        return repository.findByGroupId(groupId)
+            .orElseThrow(() -> new ConfigNotFoundException("Configuration not found for group " + groupId));
     }
     
     /**
@@ -259,7 +276,7 @@ public class ProjectConfigService {
             }
             
             // ========== PHASE 4: UPDATE (SHORT TRANSACTION) ==========
-            return persistUpdate(id, request, encryptedJiraToken, encryptedGithubToken);
+            return persistUpdate(id, request, encryptedJiraToken, encryptedGithubToken, userId);
         });
     }
     
@@ -272,7 +289,8 @@ public class ProjectConfigService {
         UUID id,
         UpdateConfigRequest request,
         String encryptedJiraToken,
-        String encryptedGithubToken
+        String encryptedGithubToken,
+        Long userId
     ) {
         try {
             // Reload config in this transaction (with pessimistic read lock via version)
@@ -307,6 +325,8 @@ public class ProjectConfigService {
                 log.info("Credentials updated, transitioning config {} to DRAFT", id);
                 config.transitionToDraft();
             }
+
+            config.setUpdatedBy(userId);
             
             ProjectConfig updated = repository.save(config);
             log.info("Config {} updated successfully", id);
@@ -392,6 +412,7 @@ public class ProjectConfigService {
             .orElseThrow(() -> new ConfigNotFoundException(id));
         
         config.softDelete(userId);
+        config.setUpdatedBy(userId);
         repository.save(config);
         
         log.info("Config {} soft-deleted successfully by user {}", id, userId);
@@ -480,7 +501,7 @@ public class ProjectConfigService {
                             id, jiraResult.status(), githubResult.status());
                         
                         // ========== PHASE 4: STATUS UPDATE (SHORT TRANSACTION ~50ms) ==========
-                        return persistVerificationResult(id, jiraResult, githubResult);
+                        return persistVerificationResult(id, jiraResult, githubResult, userId);
                     });
                 })
                 .exceptionally(throwable -> {
@@ -499,9 +520,9 @@ public class ProjectConfigService {
     protected ConfigDecryptionResult loadAndDecryptConfig(UUID id) {
         ProjectConfig config = repository.findById(id)
             .orElseThrow(() -> new ConfigNotFoundException(id));
-        
-        String jiraToken = encryptionService.decrypt(config.getJiraApiTokenEncrypted());
-        String githubToken = encryptionService.decrypt(config.getGithubTokenEncrypted());
+
+        String jiraToken = decryptToken(config.getId(), "Jira", config.getJiraApiTokenEncrypted());
+        String githubToken = decryptToken(config.getId(), "GitHub", config.getGithubTokenEncrypted());
         
         return new ConfigDecryptionResult(
             config.getGroupId(),
@@ -519,7 +540,8 @@ public class ProjectConfigService {
     protected VerificationResponse persistVerificationResult(
         UUID id,
         VerificationResponse.JiraResult jiraResult,
-        VerificationResponse.GitHubResult githubResult
+        VerificationResponse.GitHubResult githubResult,
+        Long userId
     ) {
         ProjectConfig config = repository.findById(id)
             .orElseThrow(() -> new ConfigNotFoundException(id));
@@ -535,6 +557,8 @@ public class ProjectConfigService {
             config.markInvalid(errorMsg);
             log.warn("Config {} verification failed: {}", id, errorMsg);
         }
+
+        config.setUpdatedBy(userId);
         
         repository.save(config);
         
@@ -585,8 +609,8 @@ public class ProjectConfigService {
      * @throws ConfigNotFoundException if config not found
      * @throws IllegalStateException if config is not deleted
      */
-    public RestoreResponse restoreConfig(UUID id, List<String> roles) {
-        log.warn("Admin restoring config {}", id);
+    public RestoreResponse restoreConfig(UUID id, Long userId, List<String> roles) {
+        log.warn("Admin {} restoring config {}", userId, id);
         
         // ========== PHASE 1: AUTHORIZATION (NO TRANSACTION) ==========
         boolean isAdmin = roles.contains("ADMIN") || roles.contains("ROLE_ADMIN");
@@ -596,23 +620,23 @@ public class ProjectConfigService {
         }
         
         // ========== PHASE 2 & 3: LOAD AND RESTORE (SHORT TRANSACTION) ==========
-        return persistRestore(id);
+        return persistRestore(id, userId);
     }
     
     /**
      * Persist restore operation in short transaction.
      */
     @Transactional
-    protected RestoreResponse persistRestore(UUID id) {
+    protected RestoreResponse persistRestore(UUID id, Long userId) {
         ProjectConfig config = repository.findByIdIncludingDeleted(id)
             .orElseThrow(() -> new ConfigNotFoundException("Configuration not found or permanently deleted"));
         
         if (config.getDeletedAt() == null) {
-            throw new IllegalStateException("Configuration is not deleted");
+            throw new ConflictException("Configuration is not deleted and cannot be restored");
         }
         
         config.restore();
-        repository.save(config);
+        config.setUpdatedBy(userId);
         
         log.info("Config {} restored successfully", id);
         
@@ -645,8 +669,8 @@ public class ProjectConfigService {
         }
         
         // Decrypt tokens
-        String jiraToken = encryptionService.decrypt(config.getJiraApiTokenEncrypted());
-        String githubToken = encryptionService.decrypt(config.getGithubTokenEncrypted());
+        String jiraToken = decryptToken(config.getId(), "Jira", config.getJiraApiTokenEncrypted());
+        String githubToken = decryptToken(config.getId(), "GitHub", config.getGithubTokenEncrypted());
         
         return DecryptedTokensResponse.builder()
             .configId(config.getId())
@@ -663,9 +687,8 @@ public class ProjectConfigService {
      * Convert entity to response DTO with token masking.
      */
     private ConfigResponse toResponse(ProjectConfig config) {
-        // Decrypt tokens for masking
-        String jiraTokenDecrypted = encryptionService.decrypt(config.getJiraApiTokenEncrypted());
-        String githubTokenDecrypted = encryptionService.decrypt(config.getGithubTokenEncrypted());
+        String jiraTokenDecrypted = decryptToken(config.getId(), "Jira", config.getJiraApiTokenEncrypted());
+        String githubTokenDecrypted = decryptToken(config.getId(), "GitHub", config.getGithubTokenEncrypted());
         
         return ConfigResponse.builder()
             .id(config.getId())
@@ -680,6 +703,30 @@ public class ProjectConfigService {
             .createdAt(config.getCreatedAt())
             .updatedAt(config.getUpdatedAt())
             .build();
+    }
+
+    private CompletableFuture<Void> authorizeConfigAccess(ProjectConfig config, Long userId, List<String> roles) {
+        boolean isAdmin = roles.contains("ADMIN") || roles.contains("ROLE_ADMIN");
+        boolean isLecturer = roles.contains("LECTURER") || roles.contains("ROLE_LECTURER");
+
+        if (isAdmin || isLecturer) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        return userGroupClient.checkGroupMembership(config.getGroupId(), userId)
+            .thenApply(memberResponse -> null);
+    }
+
+    private String decryptToken(UUID configId, String tokenName, String encryptedValue) {
+        try {
+            return encryptionService.decrypt(encryptedValue);
+        } catch (EncryptionException ex) {
+            log.error("Stored {} token for config {} cannot be decrypted", tokenName, configId, ex);
+            throw new ConflictException(
+                "Stored " + tokenName + " credentials for configuration " + configId + " are unreadable. Recreate the integration credentials.",
+                ex
+            );
+        }
     }
     
     private String buildErrorMessage(VerificationResponse.JiraResult jira, 

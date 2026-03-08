@@ -2,10 +2,11 @@ package com.example.user_groupservice.controller;
 
 import com.example.user_groupservice.dto.request.*;
 import com.example.user_groupservice.dto.response.*;
-import com.example.user_groupservice.entity.GroupRole;
 import com.example.user_groupservice.security.CurrentUser;
-import com.example.user_groupservice.service.GroupMemberService;
 import com.example.user_groupservice.service.GroupService;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,9 +14,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * REST Controller for group operations.
@@ -32,6 +32,7 @@ import java.util.List;
 @RequestMapping("/api/groups")
 @RequiredArgsConstructor
 @Slf4j
+@Validated
 public class GroupController {
     
     private final GroupService groupService;
@@ -67,10 +68,10 @@ public class GroupController {
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PageResponse<GroupListResponse>> listGroups(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) Long semesterId,
-            @RequestParam(required = false) Long lecturerId) {
+            @RequestParam(defaultValue = "0") @Min(value = 0, message = "page must be greater than or equal to 0") int page,
+            @RequestParam(defaultValue = "20") @Min(value = 1, message = "size must be greater than 0") @Max(value = 100, message = "size must be less than or equal to 100") int size,
+            @RequestParam(required = false) @Positive(message = "semesterId must be greater than 0") Long semesterId,
+            @RequestParam(required = false) @Positive(message = "lecturerId must be greater than 0") Long lecturerId) {
         
         PageResponse<GroupListResponse> response = groupService.listGroups(
                 page, size, semesterId, lecturerId);

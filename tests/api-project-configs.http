@@ -1,103 +1,59 @@
 @baseUrl = http://localhost:9080
 @identityBaseUrl = http://localhost:8081
-@adminEmail = admin@example.com
-@adminPassword = password
-@lecturerEmail = lecturer@example.com
-@lecturerPassword = password
-@studentEmail = student@example.com
-@studentPassword = password
-@adminAccessToken = invalid.jwt.token
-@studentAccessToken = invalid.jwt.token
-@adminRefreshToken = invalid.refresh.token
-# Optional environment variable usage:
-# @baseUrl = {{BASE_URL}}
-# @adminEmail = {{ADMIN_EMAIL}}
-# @adminPassword = {{ADMIN_PASSWORD}}
+@adminEmail = admin@samt.local
+@adminPassword = Str0ng@Pass!
+@lecturerEmail = qa.lecturer@samt.local
+@lecturerPassword = Str0ng@Pass!
+@studentEmail = qa.student@samt.local
+@studentPassword = Str0ng@Pass!
 @invalidUuid = not-a-uuid
 @missingToken = invalid.jwt.token
 
-### Bootstrap admin login
-# @name adminLogin
-POST {{baseUrl}}/api/auth/login
-Content-Type: application/json
-
-{
-  "email": "{{adminEmail}}",
-  "password": "{{adminPassword}}"
-}
-
-> {%
-client.test("admin login", function () {
-  client.assert(response.status === 200 || response.status === 401);
-  if (response.status === 200 && response.body.accessToken) {
-    client.global.set("adminAccessToken", response.body.accessToken);
-  }
-  if (response.status === 200 && response.body.refreshToken) {
-    client.global.set("adminRefreshToken", response.body.refreshToken);
-  }
-});
-%}
-
-### Bootstrap student login
-# @name studentLogin
-POST {{baseUrl}}/api/auth/login
-Content-Type: application/json
-
-{
-  "email": "{{studentEmail}}",
-  "password": "{{studentPassword}}"
-}
-
-> {%
-client.test("student login", function () {
-  client.assert(response.status === 200 || response.status === 401);
-  if (response.status === 200 && response.body.accessToken) {
-    client.global.set("studentAccessToken", response.body.accessToken);
-  }
-});
-%}
+# Prefer running regression through:
+#   httpyac tests/bootstrap.http tests/fixtures.http tests/api-*.http --all
+# so globals (tokens and fixture IDs) are present for generated cases.
 
 ### GET_/api/project-configs/{id}_happy
 # @name GET__api_project_configs__id__happy
-GET {{baseUrl}}/api/project-configs/1
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+GET {{baseUrl}}/api/project-configs/{{fixtureProjectConfigId}}
 Authorization: Bearer {{adminAccessToken}}
 
 
 
 > {%
-client.test("GET_/api/project-configs/{id}_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("GET_/api/project-configs/{id}_happy -> [200]", function () {
+  const expectedStatuses = [200];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### GET_/api/project-configs/{id}_unauthorized
 # @name GET__api_project_configs__id__unauthorized
-GET {{baseUrl}}/api/project-configs/1
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+GET {{baseUrl}}/api/project-configs/{{fixtureProjectConfigId}}
 Authorization: Bearer {{missingToken}}
 
 
 
 > {%
 client.test("GET_/api/project-configs/{id}_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
-});
-%}
-
-### GET_/api/project-configs/{id}_forbidden_role
-# @name GET__api_project_configs__id__forbidden_role
-GET {{baseUrl}}/api/project-configs/1
-Authorization: Bearer {{studentAccessToken}}
-
-
-
-> {%
-client.test("GET_/api/project-configs/{id}_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### GET_/api/project-configs/{id}_invalid_uuid
 # @name GET__api_project_configs__id__invalid_uuid
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
 GET {{baseUrl}}/api/project-configs/{{invalidUuid}}
 Authorization: Bearer {{adminAccessToken}}
 
@@ -105,194 +61,205 @@ Authorization: Bearer {{adminAccessToken}}
 
 > {%
 client.test("GET_/api/project-configs/{id}_invalid_uuid -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### GET_/api/project-configs/{id}_not_found
 # @name GET__api_project_configs__id__not_found
-GET {{baseUrl}}/api/project-configs/999999999
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+GET {{baseUrl}}/api/project-configs/00000000-0000-0000-0000-000000000999
 Authorization: Bearer {{adminAccessToken}}
 
 
 
 > {%
 client.test("GET_/api/project-configs/{id}_not_found -> [404, 401]", function () {
-  client.assert([404, 401].includes(response.status));
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### PUT_/api/project-configs/{id}_happy
 # @name PUT__api_project_configs__id__happy
-PUT {{baseUrl}}/api/project-configs/1
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+PUT {{baseUrl}}/api/project-configs/{{fixtureProjectConfigId}}
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 
 {
-  "jiraHostUrl": "jiraHostUrl-sample",
-  "jiraApiToken": "jiraApiToken-sample",
-  "githubRepoUrl": "githubRepoUrl-sample",
-  "githubToken": "githubToken-sample"
+  "jiraHostUrl": "https://example.atlassian.net",
+  "jiraApiToken": "ATATTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "githubRepoUrl": "https://github.com/example-org/example-repo",
+  "githubToken": "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 }
 
 > {%
-client.test("PUT_/api/project-configs/{id}_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("PUT_/api/project-configs/{id}_happy -> [200]", function () {
+  const expectedStatuses = [200];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### PUT_/api/project-configs/{id}_unauthorized
 # @name PUT__api_project_configs__id__unauthorized
-PUT {{baseUrl}}/api/project-configs/1
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+PUT {{baseUrl}}/api/project-configs/{{fixtureProjectConfigId}}
 Authorization: Bearer {{missingToken}}
 Content-Type: application/json
 
 
 {
-  "jiraHostUrl": "jiraHostUrl-sample",
-  "jiraApiToken": "jiraApiToken-sample",
-  "githubRepoUrl": "githubRepoUrl-sample",
-  "githubToken": "githubToken-sample"
+  "jiraHostUrl": "https://example.atlassian.net",
+  "jiraApiToken": "ATATTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "githubRepoUrl": "https://github.com/example-org/example-repo",
+  "githubToken": "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 }
 
 > {%
 client.test("PUT_/api/project-configs/{id}_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
-});
-%}
-
-### PUT_/api/project-configs/{id}_forbidden_role
-# @name PUT__api_project_configs__id__forbidden_role
-PUT {{baseUrl}}/api/project-configs/1
-Authorization: Bearer {{studentAccessToken}}
-Content-Type: application/json
-
-
-{
-  "jiraHostUrl": "jiraHostUrl-sample",
-  "jiraApiToken": "jiraApiToken-sample",
-  "githubRepoUrl": "githubRepoUrl-sample",
-  "githubToken": "githubToken-sample"
-}
-
-> {%
-client.test("PUT_/api/project-configs/{id}_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### PUT_/api/project-configs/{id}_invalid_payload
 # @name PUT__api_project_configs__id__invalid_payload
-PUT {{baseUrl}}/api/project-configs/1
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+PUT {{baseUrl}}/api/project-configs/{{fixtureProjectConfigId}}
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 
-{"invalid":"payload"}
+{
+  "jiraHostUrl": "invalid-url",
+  "jiraApiToken": "bad-token",
+  "githubRepoUrl": "invalid-repo",
+  "githubToken": "short"
+}
 
 > {%
 client.test("PUT_/api/project-configs/{id}_invalid_payload -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
-});
-%}
-
-### PUT_/api/project-configs/{id}_missing_required
-# @name PUT__api_project_configs__id__missing_required
-PUT {{baseUrl}}/api/project-configs/1
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("PUT_/api/project-configs/{id}_missing_required -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### PUT_/api/project-configs/{id}_invalid_uuid
 # @name PUT__api_project_configs__id__invalid_uuid
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
 PUT {{baseUrl}}/api/project-configs/{{invalidUuid}}
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 
 {
-  "jiraHostUrl": "jiraHostUrl-sample",
-  "jiraApiToken": "jiraApiToken-sample",
-  "githubRepoUrl": "githubRepoUrl-sample",
-  "githubToken": "githubToken-sample"
+  "jiraHostUrl": "https://example.atlassian.net",
+  "jiraApiToken": "ATATTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "githubRepoUrl": "https://github.com/example-org/example-repo",
+  "githubToken": "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 }
 
 > {%
 client.test("PUT_/api/project-configs/{id}_invalid_uuid -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### PUT_/api/project-configs/{id}_not_found
 # @name PUT__api_project_configs__id__not_found
-PUT {{baseUrl}}/api/project-configs/999999999
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+PUT {{baseUrl}}/api/project-configs/00000000-0000-0000-0000-000000000999
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 
 {
-  "jiraHostUrl": "jiraHostUrl-sample",
-  "jiraApiToken": "jiraApiToken-sample",
-  "githubRepoUrl": "githubRepoUrl-sample",
-  "githubToken": "githubToken-sample"
+  "jiraHostUrl": "https://example.atlassian.net",
+  "jiraApiToken": "ATATTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "githubRepoUrl": "https://github.com/example-org/example-repo",
+  "githubToken": "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 }
 
 > {%
 client.test("PUT_/api/project-configs/{id}_not_found -> [404, 401]", function () {
-  client.assert([404, 401].includes(response.status));
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### DELETE_/api/project-configs/{id}_happy
 # @name DELETE__api_project_configs__id__happy
-DELETE {{baseUrl}}/api/project-configs/1
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+DELETE {{baseUrl}}/api/project-configs/{{fixtureDeletableProjectConfigId}}
 Authorization: Bearer {{adminAccessToken}}
 
 
 
 > {%
-client.test("DELETE_/api/project-configs/{id}_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("DELETE_/api/project-configs/{id}_happy -> [200, 204]", function () {
+  const expectedStatuses = [200, 204];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200, 204]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### DELETE_/api/project-configs/{id}_unauthorized
 # @name DELETE__api_project_configs__id__unauthorized
-DELETE {{baseUrl}}/api/project-configs/1
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+DELETE {{baseUrl}}/api/project-configs/{{fixtureDeletableProjectConfigId}}
 Authorization: Bearer {{missingToken}}
 
 
 
 > {%
 client.test("DELETE_/api/project-configs/{id}_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
-});
-%}
-
-### DELETE_/api/project-configs/{id}_forbidden_role
-# @name DELETE__api_project_configs__id__forbidden_role
-DELETE {{baseUrl}}/api/project-configs/1
-Authorization: Bearer {{studentAccessToken}}
-
-
-
-> {%
-client.test("DELETE_/api/project-configs/{id}_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### DELETE_/api/project-configs/{id}_invalid_uuid
 # @name DELETE__api_project_configs__id__invalid_uuid
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
 DELETE {{baseUrl}}/api/project-configs/{{invalidUuid}}
 Authorization: Bearer {{adminAccessToken}}
 
@@ -300,119 +267,38 @@ Authorization: Bearer {{adminAccessToken}}
 
 > {%
 client.test("DELETE_/api/project-configs/{id}_invalid_uuid -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### DELETE_/api/project-configs/{id}_not_found
 # @name DELETE__api_project_configs__id__not_found
-DELETE {{baseUrl}}/api/project-configs/999999999
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+DELETE {{baseUrl}}/api/project-configs/00000000-0000-0000-0000-000000000999
 Authorization: Bearer {{adminAccessToken}}
 
 
 
 > {%
 client.test("DELETE_/api/project-configs/{id}_not_found -> [404, 401]", function () {
-  client.assert([404, 401].includes(response.status));
-});
-%}
-
-### POST_/api/project-configs_happy
-# @name POST__api_project_configs_happy
-POST {{baseUrl}}/api/project-configs
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{
-  "groupId": 1,
-  "jiraHostUrl": "jiraHostUrl-sample",
-  "jiraApiToken": "jiraApiToken-sample",
-  "githubRepoUrl": "githubRepoUrl-sample",
-  "githubToken": "githubToken-sample"
-}
-
-> {%
-client.test("POST_/api/project-configs_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
-});
-%}
-
-### POST_/api/project-configs_unauthorized
-# @name POST__api_project_configs_unauthorized
-POST {{baseUrl}}/api/project-configs
-Authorization: Bearer {{missingToken}}
-Content-Type: application/json
-
-
-{
-  "groupId": 1,
-  "jiraHostUrl": "jiraHostUrl-sample",
-  "jiraApiToken": "jiraApiToken-sample",
-  "githubRepoUrl": "githubRepoUrl-sample",
-  "githubToken": "githubToken-sample"
-}
-
-> {%
-client.test("POST_/api/project-configs_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
-});
-%}
-
-### POST_/api/project-configs_forbidden_role
-# @name POST__api_project_configs_forbidden_role
-POST {{baseUrl}}/api/project-configs
-Authorization: Bearer {{studentAccessToken}}
-Content-Type: application/json
-
-
-{
-  "groupId": 1,
-  "jiraHostUrl": "jiraHostUrl-sample",
-  "jiraApiToken": "jiraApiToken-sample",
-  "githubRepoUrl": "githubRepoUrl-sample",
-  "githubToken": "githubToken-sample"
-}
-
-> {%
-client.test("POST_/api/project-configs_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
-});
-%}
-
-### POST_/api/project-configs_invalid_payload
-# @name POST__api_project_configs_invalid_payload
-POST {{baseUrl}}/api/project-configs
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{"invalid":"payload"}
-
-> {%
-client.test("POST_/api/project-configs_invalid_payload -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
-});
-%}
-
-### POST_/api/project-configs_missing_required
-# @name POST__api_project_configs_missing_required
-POST {{baseUrl}}/api/project-configs
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("POST_/api/project-configs_missing_required -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### POST_/api/project-configs/{id}/verify_happy
 # @name POST__api_project_configs__id__verify_happy
-POST {{baseUrl}}/api/project-configs/1/verify
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+POST {{baseUrl}}/api/project-configs/{{fixtureProjectConfigId}}/verify
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
@@ -420,14 +306,20 @@ Content-Type: application/json
 {}
 
 > {%
-client.test("POST_/api/project-configs/{id}/verify_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("POST_/api/project-configs/{id}/verify_happy -> [200]", function () {
+  const expectedStatuses = [200];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### POST_/api/project-configs/{id}/verify_unauthorized
 # @name POST__api_project_configs__id__verify_unauthorized
-POST {{baseUrl}}/api/project-configs/1/verify
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+POST {{baseUrl}}/api/project-configs/{{fixtureProjectConfigId}}/verify
 Authorization: Bearer {{missingToken}}
 Content-Type: application/json
 
@@ -436,57 +328,18 @@ Content-Type: application/json
 
 > {%
 client.test("POST_/api/project-configs/{id}/verify_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
-});
-%}
-
-### POST_/api/project-configs/{id}/verify_forbidden_role
-# @name POST__api_project_configs__id__verify_forbidden_role
-POST {{baseUrl}}/api/project-configs/1/verify
-Authorization: Bearer {{studentAccessToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("POST_/api/project-configs/{id}/verify_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
-});
-%}
-
-### POST_/api/project-configs/{id}/verify_invalid_payload
-# @name POST__api_project_configs__id__verify_invalid_payload
-POST {{baseUrl}}/api/project-configs/1/verify
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{"invalid":"payload"}
-
-> {%
-client.test("POST_/api/project-configs/{id}/verify_invalid_payload -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
-});
-%}
-
-### POST_/api/project-configs/{id}/verify_missing_required
-# @name POST__api_project_configs__id__verify_missing_required
-POST {{baseUrl}}/api/project-configs/1/verify
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("POST_/api/project-configs/{id}/verify_missing_required -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### POST_/api/project-configs/{id}/verify_invalid_uuid
 # @name POST__api_project_configs__id__verify_invalid_uuid
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
 POST {{baseUrl}}/api/project-configs/{{invalidUuid}}/verify
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
@@ -496,13 +349,19 @@ Content-Type: application/json
 
 > {%
 client.test("POST_/api/project-configs/{id}/verify_invalid_uuid -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### POST_/api/project-configs/{id}/verify_not_found
 # @name POST__api_project_configs__id__verify_not_found
-POST {{baseUrl}}/api/project-configs/999999999/verify
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+POST {{baseUrl}}/api/project-configs/00000000-0000-0000-0000-000000000999/verify
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
@@ -511,13 +370,95 @@ Content-Type: application/json
 
 > {%
 client.test("POST_/api/project-configs/{id}/verify_not_found -> [404, 401]", function () {
-  client.assert([404, 401].includes(response.status));
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### GET_/api/project-configs/group/{groupId}_happy
+# @name GET__api_project_configs_group__groupId__happy
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+GET {{baseUrl}}/api/project-configs/group/{{fixtureGroupId}}
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/project-configs/group/{groupId}_happy -> [200]", function () {
+  const expectedStatuses = [200];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### GET_/api/project-configs/group/{groupId}_unauthorized
+# @name GET__api_project_configs_group__groupId__unauthorized
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+GET {{baseUrl}}/api/project-configs/group/{{fixtureGroupId}}
+Authorization: Bearer {{missingToken}}
+
+
+
+> {%
+client.test("GET_/api/project-configs/group/{groupId}_unauthorized -> [401]", function () {
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### GET_/api/project-configs/group/{groupId}_invalid_uuid
+# @name GET__api_project_configs_group__groupId__invalid_uuid
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+GET {{baseUrl}}/api/project-configs/group/{{invalidUuid}}
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/project-configs/group/{groupId}_invalid_uuid -> [400, 401]", function () {
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### GET_/api/project-configs/group/{groupId}_not_found
+# @name GET__api_project_configs_group__groupId__not_found
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+GET {{baseUrl}}/api/project-configs/group/999999999
+Authorization: Bearer {{adminAccessToken}}
+
+
+
+> {%
+client.test("GET_/api/project-configs/group/{groupId}_not_found -> [404, 401]", function () {
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### POST_/api/project-configs/admin/{id}/restore_happy
 # @name POST__api_project_configs_admin__id__restore_happy
-POST {{baseUrl}}/api/project-configs/admin/1/restore
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+POST {{baseUrl}}/api/project-configs/admin/{{fixtureDeletableProjectConfigId}}/restore
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
@@ -525,14 +466,20 @@ Content-Type: application/json
 {}
 
 > {%
-client.test("POST_/api/project-configs/admin/{id}/restore_happy -> [200, 401]", function () {
-  client.assert([200, 401].includes(response.status));
+client.test("POST_/api/project-configs/admin/{id}/restore_happy -> [200]", function () {
+  const expectedStatuses = [200];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [200]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### POST_/api/project-configs/admin/{id}/restore_unauthorized
 # @name POST__api_project_configs_admin__id__restore_unauthorized
-POST {{baseUrl}}/api/project-configs/admin/1/restore
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+POST {{baseUrl}}/api/project-configs/admin/{{fixtureDeletableProjectConfigId}}/restore
 Authorization: Bearer {{missingToken}}
 Content-Type: application/json
 
@@ -541,57 +488,18 @@ Content-Type: application/json
 
 > {%
 client.test("POST_/api/project-configs/admin/{id}/restore_unauthorized -> [401]", function () {
-  client.assert([401].includes(response.status));
-});
-%}
-
-### POST_/api/project-configs/admin/{id}/restore_forbidden_role
-# @name POST__api_project_configs_admin__id__restore_forbidden_role
-POST {{baseUrl}}/api/project-configs/admin/1/restore
-Authorization: Bearer {{studentAccessToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("POST_/api/project-configs/admin/{id}/restore_forbidden_role -> [403, 401]", function () {
-  client.assert([403, 401].includes(response.status));
-});
-%}
-
-### POST_/api/project-configs/admin/{id}/restore_invalid_payload
-# @name POST__api_project_configs_admin__id__restore_invalid_payload
-POST {{baseUrl}}/api/project-configs/admin/1/restore
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{"invalid":"payload"}
-
-> {%
-client.test("POST_/api/project-configs/admin/{id}/restore_invalid_payload -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
-});
-%}
-
-### POST_/api/project-configs/admin/{id}/restore_missing_required
-# @name POST__api_project_configs_admin__id__restore_missing_required
-POST {{baseUrl}}/api/project-configs/admin/1/restore
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-
-{}
-
-> {%
-client.test("POST_/api/project-configs/admin/{id}/restore_missing_required -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### POST_/api/project-configs/admin/{id}/restore_invalid_uuid
 # @name POST__api_project_configs_admin__id__restore_invalid_uuid
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
 POST {{baseUrl}}/api/project-configs/admin/{{invalidUuid}}/restore
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
@@ -601,13 +509,19 @@ Content-Type: application/json
 
 > {%
 client.test("POST_/api/project-configs/admin/{id}/restore_invalid_uuid -> [400, 401]", function () {
-  client.assert([400, 401].includes(response.status));
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 
 ### POST_/api/project-configs/admin/{id}/restore_not_found
 # @name POST__api_project_configs_admin__id__restore_not_found
-POST {{baseUrl}}/api/project-configs/admin/999999999/restore
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+POST {{baseUrl}}/api/project-configs/admin/00000000-0000-0000-0000-000000000999/restore
 Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
@@ -616,7 +530,114 @@ Content-Type: application/json
 
 > {%
 client.test("POST_/api/project-configs/admin/{id}/restore_not_found -> [404, 401]", function () {
-  client.assert([404, 401].includes(response.status));
+  const expectedStatuses = [404, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [404, 401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### POST_/api/project-configs_happy
+# @name POST__api_project_configs_happy
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+POST {{baseUrl}}/api/project-configs
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{
+  "groupId": "{{fixtureGroupId}}",
+  "jiraHostUrl": "https://example.atlassian.net",
+  "jiraApiToken": "ATATTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "githubRepoUrl": "https://github.com/example-org/example-repo",
+  "githubToken": "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+}
+
+> {%
+client.test("POST_/api/project-configs_happy -> [201, 409]", function () {
+  const expectedStatuses = [201, 409];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [201, 409]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### POST_/api/project-configs_unauthorized
+# @name POST__api_project_configs_unauthorized
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+POST {{baseUrl}}/api/project-configs
+Authorization: Bearer {{missingToken}}
+Content-Type: application/json
+
+
+{
+  "groupId": "{{fixtureGroupId}}",
+  "jiraHostUrl": "https://example.atlassian.net",
+  "jiraApiToken": "ATATTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "githubRepoUrl": "https://github.com/example-org/example-repo",
+  "githubToken": "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+}
+
+> {%
+client.test("POST_/api/project-configs_unauthorized -> [401]", function () {
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### POST_/api/project-configs_invalid_payload
+# @name POST__api_project_configs_invalid_payload
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+POST {{baseUrl}}/api/project-configs
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{
+  "groupId": 0,
+  "jiraHostUrl": "https://example.atlassian.net",
+  "jiraApiToken": "ATATTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "githubRepoUrl": "https://github.com/example-org/example-repo",
+  "githubToken": "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+}
+
+> {%
+client.test("POST_/api/project-configs_invalid_payload -> [400, 401]", function () {
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### POST_/api/project-configs_missing_required
+# @name POST__api_project_configs_missing_required
+< {% await new Promise((resolve) => setTimeout(resolve, 7000)); %}
+POST {{baseUrl}}/api/project-configs
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+
+{}
+
+> {%
+client.test("POST_/api/project-configs_missing_required -> [400, 401]", function () {
+  const expectedStatuses = [400, 401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+  );
 });
 %}
 

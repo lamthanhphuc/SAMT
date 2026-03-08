@@ -1,0 +1,379 @@
+
+> samt-api-qa@1.0.0 test:smoke
+> httpyac tests/api-smoke.http --all
+
+
+---------------------
+
+=== POST_/api/auth/login_happy ===
+
+POST http://localhost:9080/api/auth/login
+accept-encoding: gzip, deflate, br
+accept: */*
+content-length: 66
+content-type: application/json
+user-agent: httpyac
+
+{
+  "email": "admin@samt.local",
+  "password": "Str0ng@Pass!"
+}
+HTTP/1.1 200  - OK
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 05:58:10 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 600
+x-ratelimit-remaining: 540
+x-ratelimit-replenish-rate: 5
+x-ratelimit-requested-tokens: 60
+x-xss-protection: 0
+
+{
+  "accessToken": "eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiI3YTAwODQ5OC1hYzlkLTQyYjAtOGZjNy02ZjdlMzMyMzQ3ZDMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQ5NDkwLCJleHAiOjE3NzI5NTAzOTB9.Q9OCK-1wizRpxWno35FpGVHbsBPFO0SrKMMluLE5ChtIwNlNmDPtJt-WcZnI-dqUVrAKI82aCDUeSV4Nc_Em2zUAuUJ_ndGcrFAA-wSWql6h13Y8WaiAeiF5m2c02vsrIOInlMG67F62WUuMLarpvBbe1kPHIn4BnrLmVWMW_b9P5XWrxhuWC1eaO0zI-z42TII2qk08QKnGjEiaLGp0JoJTVTZkZsd9QGYqFk9_tXdXkU77odeTpbdQ7z2zMUWgV44bJsA63MW-6EwoOwx3Sk2t5vBuLSf8sm6DhhAOdnSiIsdJAFQbkB-HObq1jp_0zkfhDq5s3FXK_EFm3r8uAw",
+  "refreshToken": "bb0c9d82-d92e-4942-9fb7-fb62b8752873",
+  "tokenType": "Bearer",
+  "expiresIn": 900
+}
+[x] POST_/api/auth/login_happy -> [200]
+
+---------------------
+
+=== POST_/api/auth/login_invalid_payload ===
+
+POST http://localhost:9080/api/auth/login
+accept-encoding: gzip, deflate, br
+accept: */*
+content-length: 50
+content-type: application/json
+user-agent: httpyac
+
+{
+  "email": "",
+  "password": "Str0ng@Pass!"
+}
+HTTP/1.1 400  - Bad Request
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 05:58:10 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 600
+x-ratelimit-remaining: 480
+x-ratelimit-replenish-rate: 5
+x-ratelimit-requested-tokens: 60
+x-xss-protection: 0
+
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": "Email is required"
+}
+[x] POST_/api/auth/login_invalid_payload -> [400]
+
+---------------------
+
+=== POST_/api/auth/refresh_happy ===
+
+POST http://localhost:9080/api/auth/refresh
+accept-encoding: gzip, deflate, br
+accept: */*
+content-length: 62
+content-type: application/json
+user-agent: httpyac
+
+{
+  "refreshToken": "bb0c9d82-d92e-4942-9fb7-fb62b8752873"
+}
+HTTP/1.1 200  - OK
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 05:58:10 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 199
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "accessToken": "eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiJkMTAwOTMxNy0wZjU2LTQxODQtYTYyNy0zYTViMzcyMmRkMTUiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQ5NDkwLCJleHAiOjE3NzI5NTAzOTB9.I218JeafmYs4FQdAx4JR8u-tjjR3bmuQoLe15kUKERhDuZJqzuSMzfjdP8T9LpLSdhKWD3D1iK_OKPDki2niMzNgSrdVlLYyUFJPk0ljRStBSy4cR0D8_ugiBFJbkKIQTkjX6O5pc5DxAuLZlc6qNWHaCSqFeXkf9J8n3d1D5QWmx_x920EIKYBbkpiEgiBI3UuCrAfast6RVEJfr7F38wHid4ApOzUWpSF9stAj9PDswi6ftp2NcqLrNu0nCDR5MomcA8wmc15fUQo__CsO3GUgKfXWH9UVogkEzMuATJvCz4l2TLFZYexop72x8idOPY1BS-4gXiW0ktIeVyihcw",
+  "refreshToken": "66ea7043-ad53-4c8f-9059-4ef4a6513f62",
+  "tokenType": "Bearer",
+  "expiresIn": 900
+}
+[x] POST_/api/auth/refresh_happy -> [200]
+
+---------------------
+
+=== POST_/api/auth/refresh_invalid_payload ===
+
+POST http://localhost:9080/api/auth/refresh
+accept-encoding: gzip, deflate, br
+accept: */*
+content-length: 26
+content-type: application/json
+user-agent: httpyac
+
+{
+  "refreshToken": ""
+}
+HTTP/1.1 400  - Bad Request
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 05:58:10 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 198
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": "Refresh token is required"
+}
+[x] POST_/api/auth/refresh_invalid_payload -> [400]
+
+---------------------
+
+=== POST_/api/auth/logout_happy ===
+
+POST http://localhost:9080/api/auth/logout
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiI3YTAwODQ5OC1hYzlkLTQyYjAtOGZjNy02ZjdlMzMyMzQ3ZDMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQ5NDkwLCJleHAiOjE3NzI5NTAzOTB9.Q9OCK-1wizRpxWno35FpGVHbsBPFO0SrKMMluLE5ChtIwNlNmDPtJt-WcZnI-dqUVrAKI82aCDUeSV4Nc_Em2zUAuUJ_ndGcrFAA-wSWql6h13Y8WaiAeiF5m2c02vsrIOInlMG67F62WUuMLarpvBbe1kPHIn4BnrLmVWMW_b9P5XWrxhuWC1eaO0zI-z42TII2qk08QKnGjEiaLGp0JoJTVTZkZsd9QGYqFk9_tXdXkU77odeTpbdQ7z2zMUWgV44bJsA63MW-6EwoOwx3Sk2t5vBuLSf8sm6DhhAOdnSiIsdJAFQbkB-HObq1jp_0zkfhDq5s3FXK_EFm3r8uAw
+content-length: 62
+content-type: application/json
+user-agent: httpyac
+
+{
+  "refreshToken": "bb0c9d82-d92e-4942-9fb7-fb62b8752873"
+}
+HTTP/1.1 204  - No Content
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+date: Sun, 08 Mar 2026 05:58:10 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 197
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+[x] POST_/api/auth/logout_happy -> [204]
+
+---------------------
+
+=== POST_/api/auth/logout_unauthorized ===
+
+POST http://localhost:9080/api/auth/logout
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer invalid.jwt.token
+content-length: 62
+content-type: application/json
+user-agent: httpyac
+
+{
+  "refreshToken": "bb0c9d82-d92e-4942-9fb7-fb62b8752873"
+}
+HTTP/1.1 401  - Unauthorized
+content-length: 111
+content-type: application/json
+
+{
+  "statusCode": 401,
+  "error": "Unauthorized",
+  "message": "Unauthorized",
+  "timestamp": "2026-03-08T05:58:10.220923318Z"
+}
+[x] POST_/api/auth/logout_unauthorized -> [401]
+
+---------------------
+
+=== POST_/api/auth/logout_invalid_payload ===
+
+POST http://localhost:9080/api/auth/logout
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiI3YTAwODQ5OC1hYzlkLTQyYjAtOGZjNy02ZjdlMzMyMzQ3ZDMiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQ5NDkwLCJleHAiOjE3NzI5NTAzOTB9.Q9OCK-1wizRpxWno35FpGVHbsBPFO0SrKMMluLE5ChtIwNlNmDPtJt-WcZnI-dqUVrAKI82aCDUeSV4Nc_Em2zUAuUJ_ndGcrFAA-wSWql6h13Y8WaiAeiF5m2c02vsrIOInlMG67F62WUuMLarpvBbe1kPHIn4BnrLmVWMW_b9P5XWrxhuWC1eaO0zI-z42TII2qk08QKnGjEiaLGp0JoJTVTZkZsd9QGYqFk9_tXdXkU77odeTpbdQ7z2zMUWgV44bJsA63MW-6EwoOwx3Sk2t5vBuLSf8sm6DhhAOdnSiIsdJAFQbkB-HObq1jp_0zkfhDq5s3FXK_EFm3r8uAw
+content-length: 26
+content-type: application/json
+user-agent: httpyac
+
+{
+  "refreshToken": ""
+}
+HTTP/1.1 400  - Bad Request
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 05:58:10 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 196
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": "Refresh token is required"
+}
+[x] POST_/api/auth/logout_invalid_payload -> [400, 401]
+
+---------------------
+
+=== POST_/api/auth/register_happy ===
+
+POST http://localhost:9080/api/auth/register
+accept-encoding: gzip, deflate, br
+accept: */*
+content-length: 165
+content-type: application/json
+user-agent: httpyac
+
+{
+  "email": "qa.student2@samt.local",
+  "password": "Str0ng@Pass!",
+  "confirmPassword": "Str0ng@Pass!",
+  "fullName": "QA Student Two",
+  "role": "STUDENT"
+}
+HTTP/1.1 409  - Conflict
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 05:58:10 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 195
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "statusCode": 409,
+  "error": "Conflict",
+  "message": "Email already registered"
+}
+[x] POST_/api/auth/register_happy -> [201, 409]
+
+---------------------
+
+=== POST_/api/auth/register_invalid_payload ===
+
+POST http://localhost:9080/api/auth/register
+accept-encoding: gzip, deflate, br
+accept: */*
+content-length: 151
+content-type: application/json
+user-agent: httpyac
+
+{
+  "email": "not-an-email",
+  "password": "Str0ng@Pass!",
+  "confirmPassword": "Str0ng@Pass!",
+  "fullName": "QA api aut",
+  "role": "STUDENT"
+}
+HTTP/1.1 400  - Bad Request
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 05:58:10 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 194
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": "Invalid email format"
+}
+[x] POST_/api/auth/register_invalid_payload -> [400]
+
+---------------------
+
+=== POST_/api/auth/register_missing_required ===
+
+POST http://localhost:9080/api/auth/register
+accept-encoding: gzip, deflate, br
+accept: */*
+content-length: 2
+content-type: application/json
+user-agent: httpyac
+
+{}
+HTTP/1.1 400  - Bad Request
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 05:58:10 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 193
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": "Password is required"
+}
+[x] POST_/api/auth/register_missing_required -> [400]
+
+10 requests processed (10 succeeded)

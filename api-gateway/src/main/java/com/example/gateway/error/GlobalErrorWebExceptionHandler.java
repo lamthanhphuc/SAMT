@@ -9,6 +9,7 @@ import org.springframework.boot.web.reactive.error.ErrorAttributes;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.io.buffer.DataBufferLimitException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerCodecConfigurer;
@@ -20,6 +21,7 @@ import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
+import org.springframework.web.server.MethodNotAllowedException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebInputException;
 import reactor.core.publisher.Mono;
@@ -27,6 +29,7 @@ import reactor.core.publisher.Mono;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Global Error Handler for API Gateway
@@ -77,9 +80,20 @@ public class GlobalErrorWebExceptionHandler extends AbstractErrorWebExceptionHan
         body.put("message", genericMessage);
         body.put("timestamp", Instant.now().toString());
 
-        return ServerResponse.status(status)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body);
+        ServerResponse.BodyBuilder responseBuilder = ServerResponse.status(status)
+            .contentType(MediaType.APPLICATION_JSON);
+
+        if (ex instanceof MethodNotAllowedException methodNotAllowedException) {
+            String allowHeader = methodNotAllowedException.getSupportedMethods().stream()
+                    .map(httpMethod -> httpMethod.name())
+                .sorted()
+                .collect(Collectors.joining(", "));
+            if (!allowHeader.isBlank()) {
+            responseBuilder.header(HttpHeaders.ALLOW, allowHeader);
+            }
+        }
+
+        return responseBuilder.bodyValue(body);
     }
 
     @Override
@@ -109,6 +123,9 @@ public class GlobalErrorWebExceptionHandler extends AbstractErrorWebExceptionHan
         if (ex instanceof AccessDeniedException) {
             return HttpStatus.FORBIDDEN;
         }
+        if (ex instanceof MethodNotAllowedException) {
+            return HttpStatus.METHOD_NOT_ALLOWED;
+        }
         if (ex instanceof ResponseStatusException) {
             ResponseStatusException responseStatusException = (ResponseStatusException) ex;
             HttpStatus resolved = HttpStatus.resolve(responseStatusException.getStatusCode().value());
@@ -132,6 +149,8 @@ public class GlobalErrorWebExceptionHandler extends AbstractErrorWebExceptionHan
                 return "Unauthorized";
             case FORBIDDEN:
                 return "Forbidden";
+            case METHOD_NOT_ALLOWED:
+                return "Method not allowed";
             case NOT_FOUND:
                 return "Not found";
             case PAYLOAD_TOO_LARGE:

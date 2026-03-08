@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites disabled="0" errors="6" failures="1" tests="41" time="5.526863738001339">
+	<testsuite disabled="0" errors="6" failures="1" name="schemathesis" skipped="41" tests="41" time="5.526863738001339" hostname="975907375c3b">
+		<testcase name="POST /api/auth/logout" time="0.111768">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="POST /api/groups" time="0.136278">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="GET /.well-known/jwks.json" time="0.266573">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="POST /api/semesters" time="0.133936">
+			<error type="error">Network Error
+
+Connection failed
+
+    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable</error>
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="GET /api/project-configs/group/{groupId}" time="0.031809">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="GET /api/admin/audit/security-events" time="0.173414">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="POST /api/project-configs/admin/{id}/restore" time="0.075448">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="POST /api/project-configs" time="0.082746">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="GET /api/semesters" time="0.212770">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="GET /api/admin/audit/entity/{entityType}/{entityId}" time="0.203295">
+			<error type="error">Network Error
+
+Connection failed
+
+    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable</error>
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="GET /api/groups" time="0.242369">
+			<error type="error">Network Error
+
+Connection failed
+
+    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable</error>
+			<error type="error">Network Error
+
+Connection failed
+
+    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable</error>
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="GET /api/groups/{groupId}/members" time="0.051037">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="PATCH /api/semesters/{id}/activate" time="0.028025">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="GET /api/admin/audit/actor/{actorId}" time="0.227866">
+			<error type="error">Network Error
+
+Connection failed
+
+    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable</error>
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="GET /api/admin/audit/range" time="0.210925">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="POST /api/admin/users/{userId}/lock" time="0.030285">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="POST /api/groups/{groupId}/members" time="1.808123">
+			<error type="error">Network Error
+
+Connection failed
+
+    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable</error>
+			<error type="error">Network Error
+
+Connection failed
+
+    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable</error>
+			<error type="error">Network Error
+
+Connection failed
+
+    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable</error>
+			<error type="error">Network Error
+
+Connection failed
+
+    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable</error>
+			<error type="error">Network Error
+
+Connection failed
+
+    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable</error>
+			<error type="error">Network Error
+
+Connection failed
+
+    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable</error>
+			<error type="error">Network Error
+
+Connection failed
+
+    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable</error>
+			<error type="error">Network Error
+
+Connection failed
+
+    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable</error>
+			<error type="error">Network Error
+
+Connection failed
+
+    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable</error>
+			<error type="error">Network Error
+
+Connection failed
+
+    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable</error>
+			<error type="error">Network Error
+
+Connection failed
+
+    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable</error>
+			<error type="error">Network Error
+
+Connection failed
+
+    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable</error>
+			<error type="error">Network Error
+
+Connection failed
+
+    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable</error>
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="POST /api/admin/users" time="0.326884">
+			<error type="error">Network Error
+
+Connection failed
+
+    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable</error>
+			<error type="error">Network Error
+
+Connection failed
+
+    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable</error>
+			<error type="error">Network Error
+
+Connection failed
+
+    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable</error>
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="POST /api/project-configs/{id}/verify" time="0.040978">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="GET /api/semesters/active" time="0.059224">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="GET /api/semesters/code/{code}" time="0.078366">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="PATCH /api/groups/{groupId}/lecturer" time="0.025166">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="PUT /api/groups/{groupId}/members/{userId}/promote" time="0.009771">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="GET /api/users/{userId}" time="0.028487">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="PUT /api/groups/{groupId}" time="0.095143">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="POST /api/admin/users/{userId}/restore" time="0.055763">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="PUT /api/groups/{groupId}/members/{userId}/demote" time="0.013729">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="GET /api/users" time="0.474736">
+			<failure type="failure" message="1. Test Case ID: 1xGxIB&#10;&#10;- API accepted schema-violating request&#10;&#10;    Invalid data should have been rejected&#10;    Expected: 400, 401, 403, 404, 406, 422, 428, 5xx&#10;    Invalid component: in query - object with unexpected properties&#10;&#10;[200] OK:&#10;&#10;    `{&quot;content&quot;:[{&quot;id&quot;:75,&quot;email&quot;:&quot;fixture.student1772885063765@samt.local&quot;,&quot;fullName&quot;:&quot;Fixture Student&quot;,&quot;status&quot;:&quot;ACTIVE&quot;,&quot;roles&quot;:[&quot;STUDENT&quot;]},{&quot;id&quot;:4,&quot;email&quot;:&quot;admin@samt.local&quot;,&quot;fullName&quot;:&quot;System Admin&quot;,&quot;status&quot;:&quot;ACTIVE&quot;,&quot;roles&quot;:[&quot;ADMIN&quot;]},{&quot;id&quot;:5,&quot;email&quot;:&quot;lecturer1@samt.local&quot;,&quot;fullName&quot;:&quot;Lecturer One&quot;,&quot;status&quot;:&quot;ACTIVE&quot;,&quot;roles&quot;:[&quot;LECTURER&quot;]},{&quot;id&quot;:86,&quot;email&quot;:&quot;fixture.student1772885544147@samt.local&quot;,&quot;fullName&quot;:&quot;Fixture Student&quot;,&quot;status&quot;:&quot;ACTIVE&quot;,&quot;roles&quot;:[&quot;STUDENT&quot;]},{&quot;id&quot;:9,&quot;email&quot;:&quot;lecturer2@samt.local&quot;,&quot;ful // Output truncated...`&#10;&#10;Reproduce with:&#10;&#10;    curl -X GET -H 'Authorization: [Filtered]' 'http://host.docker.internal:9080/api/users?size=20&amp;x-schemathesis-unknown-property=42'"/>
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="DELETE /api/groups/{groupId}" time="0.020539">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="POST /api/admin/users/{userId}/unlock" time="0.036258">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="GET /api/groups/{groupId}" time="0.021932">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="PUT /api/admin/users/{userId}/external-accounts" time="0.061000">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="GET /api/semesters/{id}" time="0.011176">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="GET /api/project-configs/{id}" time="0.016901">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="PUT /api/users/{userId}" time="0.018691">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="PUT /api/project-configs/{id}" time="0.019115">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="PUT /api/semesters/{id}" time="0.017927">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="DELETE /api/project-configs/{id}" time="0.023405">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="GET /api/users/{userId}/groups" time="0.013868">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="DELETE /api/groups/{groupId}/members/{userId}" time="0.014121">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+		<testcase name="DELETE /api/admin/users/{userId}" time="0.017014">
+			<skipped type="skipped">No examples in schema</skipped>
+		</testcase>
+	</testsuite>
+</testsuites>

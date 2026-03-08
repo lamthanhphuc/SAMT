@@ -83,7 +83,7 @@ public class ProjectConfigController {
      */
     @GetMapping("/{id}")
     public CompletableFuture<ResponseEntity<Map<String, Object>>> getConfig(
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             Authentication authentication) {
         
         Long userId = getUserIdFromAuthentication(authentication);
@@ -92,6 +92,23 @@ public class ProjectConfigController {
         log.info("Getting config {} for user {} (async)", id, userId);
         
         return service.getConfig(id, userId, roles)
+            .thenApply(response -> ResponseEntity.ok(Map.of(
+                "data", response,
+                "timestamp", Instant.now().toString()
+            )));
+    }
+
+    @GetMapping("/group/{groupId}")
+    public CompletableFuture<ResponseEntity<Map<String, Object>>> getConfigByGroupId(
+            @PathVariable("groupId") Long groupId,
+            Authentication authentication) {
+
+        Long userId = getUserIdFromAuthentication(authentication);
+        List<String> roles = getRolesFromAuthentication(authentication);
+
+        log.info("Getting config for group {} and user {} (async)", groupId, userId);
+
+        return service.getConfigByGroupId(groupId, userId, roles)
             .thenApply(response -> ResponseEntity.ok(Map.of(
                 "data", response,
                 "timestamp", Instant.now().toString()
@@ -108,7 +125,7 @@ public class ProjectConfigController {
      */
     @PutMapping("/{id}")
     public CompletableFuture<ResponseEntity<Map<String, Object>>> updateConfig(
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             @Valid @RequestBody UpdateConfigRequest request,
             Authentication authentication) {
         
@@ -134,7 +151,7 @@ public class ProjectConfigController {
      */
     @DeleteMapping("/{id}")
     public CompletableFuture<ResponseEntity<Map<String, Object>>> deleteConfig(
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             Authentication authentication) {
         
         Long userId = getUserIdFromAuthentication(authentication);
@@ -163,7 +180,7 @@ public class ProjectConfigController {
      */
     @PostMapping("/{id}/verify")
     public CompletableFuture<ResponseEntity<Map<String, Object>>> verifyConfig(
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             Authentication authentication) {
         
         Long userId = getUserIdFromAuthentication(authentication);
@@ -190,9 +207,10 @@ public class ProjectConfigController {
      */
     @PostMapping("/admin/{id}/restore")
     public CompletableFuture<ResponseEntity<Map<String, Object>>> restoreConfig(
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             Authentication authentication) {
         
+        Long userId = getUserIdFromAuthentication(authentication);
         List<String> roles = getRolesFromAuthentication(authentication);
         
         // Check ADMIN role (defense in depth - also checked in service)
@@ -209,9 +227,9 @@ public class ProjectConfigController {
             );
         }
         
-        log.warn("Restoring config {} by admin (async)", id);
+        log.warn("Restoring config {} by admin {} (async)", id, userId);
         
-        return CompletableFuture.completedFuture(service.restoreConfig(id, roles))
+        return CompletableFuture.completedFuture(service.restoreConfig(id, userId, roles))
             .thenApply(response -> ResponseEntity.ok(Map.of(
                 "data", response,
                 "timestamp", Instant.now().toString()

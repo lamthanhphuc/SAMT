@@ -1,0 +1,186 @@
+@baseUrl = http://localhost:9080
+@identityBaseUrl = http://localhost:8081
+@adminEmail = admin@samt.local
+@adminPassword = Str0ng@Pass!
+@lecturerEmail = qa.lecturer@samt.local
+@lecturerPassword = Str0ng@Pass!
+@studentEmail = qa.student@samt.local
+@studentPassword = Str0ng@Pass!
+@student2Password = Str0ng@Pass!
+@adminLifecyclePassword = Str0ng@Pass!
+@statefulMemberPassword = Str0ng@Pass!
+
+### Admin login
+# @name adminLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+> {%
+client.test("admin login", function () {
+  client.assert(response.status === 200);
+  client.assert(response.body.accessToken);
+  client.global.set("adminAccessToken", response.body.accessToken);
+  client.global.set("adminRefreshToken", response.body.refreshToken || "");
+  client.global.set("adminToken", response.body.accessToken);
+  client.global.set("fixtureAdminAccessToken", response.body.accessToken);
+  const runId = Date.now();
+  client.global.set("fixtureJiraAccountId", `QAJIRA${runId}XYZ`);
+  client.global.set("fixtureGithubUsername", `qaadmin${runId}`);
+  client.global.set("student2Email", `qa.student2+${Date.now()}@samt.local`);
+  client.global.set("adminLifecycleEmail", `qa.admin.lifecycle+${Date.now()}@samt.local`);
+  client.global.set("statefulMemberEmail", `qa.stateful.member+${Date.now()}@samt.local`);
+});
+%}
+
+### Ensure qa lecturer exists
+# @name ensureLecturer
+POST {{baseUrl}}/api/admin/users
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+{
+  "email": "{{lecturerEmail}}",
+  "password": "{{lecturerPassword}}",
+  "fullName": "QA Lecturer",
+  "role": "LECTURER"
+}
+
+> {%
+client.test("ensure qa lecturer", function () {
+  client.assert([201, 409].includes(response.status));
+  if (response.status === 201 && response.body?.user?.id) {
+    client.global.set("fixtureLecturerId", String(response.body.user.id));
+  }
+});
+%}
+
+### Ensure qa student exists
+# @name ensureStudent
+POST {{baseUrl}}/api/admin/users
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+{
+  "email": "{{studentEmail}}",
+  "password": "{{studentPassword}}",
+  "fullName": "QA Student",
+  "role": "STUDENT"
+}
+
+> {%
+client.test("ensure qa student", function () {
+  client.assert([201, 409].includes(response.status));
+});
+%}
+
+### Ensure qa student2 exists
+# @name ensureStudent2
+POST {{baseUrl}}/api/admin/users
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+{
+  "email": "{{student2Email}}",
+  "password": "{{student2Password}}",
+  "fullName": "QA Student Two",
+  "role": "STUDENT"
+}
+
+> {%
+client.test("ensure qa student2", function () {
+  client.assert(response.status === 201);
+  client.assert(response.body?.user?.id);
+  client.global.set("fixtureStudent2Id", String(response.body.user.id));
+});
+%}
+
+### Ensure admin lifecycle user exists
+# @name ensureAdminLifecycleUser
+POST {{baseUrl}}/api/admin/users
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+{
+  "email": "{{adminLifecycleEmail}}",
+  "password": "{{adminLifecyclePassword}}",
+  "fullName": "QA Admin Lifecycle",
+  "role": "STUDENT"
+}
+
+> {%
+client.test("ensure admin lifecycle user", function () {
+  client.assert(response.status === 201);
+  client.assert(response.body?.user?.id);
+  client.global.set("fixtureAdminLifecycleUserId", String(response.body.user.id));
+});
+%}
+
+### Ensure stateful member user exists
+# @name ensureStatefulMemberUser
+POST {{baseUrl}}/api/admin/users
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+{
+  "email": "{{statefulMemberEmail}}",
+  "password": "{{statefulMemberPassword}}",
+  "fullName": "QA Stateful Member",
+  "role": "STUDENT"
+}
+
+> {%
+client.test("ensure stateful member user", function () {
+  client.assert(response.status === 201);
+  client.assert(response.body?.user?.id);
+  client.global.set("fixtureStatefulMemberUserId", String(response.body.user.id));
+});
+%}
+
+### Lecturer login
+# @name lecturerLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{lecturerEmail}}",
+  "password": "{{lecturerPassword}}"
+}
+
+> {%
+client.test("lecturer login", function () {
+  client.assert(response.status === 200);
+  client.assert(response.body.accessToken);
+  const lecturerPayload = JSON.parse(Buffer.from(response.body.accessToken.split('.')[1], 'base64url').toString('utf8'));
+  client.global.set("lecturerAccessToken", response.body.accessToken);
+  client.global.set("fixtureLecturerAccessToken", response.body.accessToken);
+  client.global.set("fixtureLecturerId", client.global.get("fixtureLecturerId") || lecturerPayload.sub);
+});
+%}
+
+### Student login
+# @name studentLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{studentEmail}}",
+  "password": "{{studentPassword}}"
+}
+
+> {%
+client.test("student login", function () {
+  client.assert(response.status === 200);
+  client.assert(response.body.accessToken);
+  const studentPayload = JSON.parse(Buffer.from(response.body.accessToken.split('.')[1], 'base64url').toString('utf8'));
+  client.global.set("studentAccessToken", response.body.accessToken);
+  client.global.set("studentToken", response.body.accessToken);
+  client.global.set("fixtureStudentAccessToken", response.body.accessToken);
+  client.global.set("fixtureUserId", studentPayload.sub);
+});
+%}
+

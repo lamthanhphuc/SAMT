@@ -1,0 +1,56 @@
+{
+  "workspacePath": "E:/Bin/SAMT",
+  "generatedAt": "2026-03-08T06:09:24.301Z",
+  "validationConstraintFiles": 15,
+  "iterations": [
+    {
+      "iteration": 1,
+      "status": "passed",
+      "stages": [
+        {
+          "id": "openapi",
+          "command": "npm run openapi:generate",
+          "status": 0,
+          "outputFile": "E:/Bin/SAMT/.self-heal/reports/iteration-1-openapi.log"
+        },
+        {
+          "id": "generate",
+          "command": "npm run tests:generate",
+          "status": 0,
+          "outputFile": "E:/Bin/SAMT/.self-heal/reports/iteration-1-generate.log"
+        },
+        {
+          "id": "smoke",
+          "command": "npm run test:smoke",
+          "status": 0,
+          "outputFile": "E:/Bin/SAMT/.self-heal/reports/iteration-1-smoke.log"
+        },
+        {
+          "id": "regression",
+          "command": "npm run tests:regression",
+          "status": 0,
+          "outputFile": "E:/Bin/SAMT/.self-heal/reports/iteration-1-regression.log"
+        },
+        {
+          "id": "contract",
+          "command": "npm run tests:contract",
+          "status": 0,
+          "outputFile": "E:/Bin/SAMT/.self-heal/reports/iteration-1-contract.log"
+        }
+      ],
+      "diagnostics": [],
+      "repairs": []
+    }
+  ],
+  "coverageStats": {
+    "generated": 1103,
+    "passed": 1103,
+    "skipped": 265
+  },
+  "finalStatus": "passed",
+  "unexpected500": false,
+  "diagnosticSummary": {
+    "total": 0,
+    "byCategory": {}
+  }
+}

@@ -10,6 +10,8 @@ server:
 spring:
   application:
     name: project-config-service
+  mvc:
+    dispatch-trace-request: true
 
   lifecycle:
     timeout-per-shutdown-phase: 30s

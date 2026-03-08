@@ -3,6 +3,12 @@ package com.samt.projectconfig.client.grpc;
 import com.example.user_groupservice.grpc.*;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.samt.projectconfig.exception.BadRequestException;
+import com.samt.projectconfig.exception.ForbiddenException;
+import com.samt.projectconfig.exception.GatewayTimeoutException;
+import com.samt.projectconfig.exception.GroupNotFoundException;
+import com.samt.projectconfig.exception.ServiceUnavailableException;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.grpc.Deadline;
 import io.grpc.Metadata;
@@ -13,7 +19,9 @@ import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -231,11 +239,11 @@ public class UserGroupServiceGrpcClient {
      * @throws ForbiddenException if user is not a member (async)
      */
     @CircuitBreaker(name = "userGroupService", fallbackMethod = "checkGroupMembershipFallback")
-    public CompletableFuture<CheckGroupLeaderResponse> checkGroupMembership(Long groupId, Long userId) {
+    public CompletableFuture<CheckGroupMemberResponse> checkGroupMembership(Long groupId, Long userId) {
         log.debug("Async checking group membership: groupId={}, userId={}", groupId, userId);
         
         try {
-            CheckGroupLeaderRequest leaderRequest = CheckGroupLeaderRequest.newBuilder()
+            CheckGroupMemberRequest memberRequest = CheckGroupMemberRequest.newBuilder()
                 .setGroupId(groupId.toString())
                 .setUserId(userId.toString())
                 .build();
@@ -253,17 +261,16 @@ public class UserGroupServiceGrpcClient {
                 stub = stub.withInterceptors(MetadataUtils.newAttachHeadersInterceptor(metadata));
             }
             
-            ListenableFuture<CheckGroupLeaderResponse> future = stub.checkGroupLeader(leaderRequest);
+            ListenableFuture<CheckGroupMemberResponse> future = stub.checkGroupMember(memberRequest);
             
             return toCompletableFuture(future)
                 .thenApply(response -> {
-                    if (response.getIsLeader()) {
-                        log.debug("User is group leader (auto-member): groupId={}, userId={}", groupId, userId);
+                    if (response.getIsMember()) {
+                        log.debug("User is group member: groupId={}, userId={}, role={}", groupId, userId, response.getRole());
                         return response;
                     }
                     
-                    // Not leader - deny access for now
-                    log.warn("User is not group leader: groupId={}, userId={}", groupId, userId);
+                    log.warn("User is not group member: groupId={}, userId={}", groupId, userId);
                     throw new com.samt.projectconfig.exception.ForbiddenException(
                         "User " + userId + " is not authorized to access group " + groupId + " configuration"
                     );
@@ -293,14 +300,7 @@ public class UserGroupServiceGrpcClient {
      * @return Failed CompletableFuture
      */
     private CompletableFuture<VerifyGroupResponse> verifyGroupExistsFallback(Long groupId, Exception ex) {
-        log.error("Circuit breaker OPEN for verifyGroupExists: groupId={} - {} - {}", 
-            groupId, ex.getClass().getSimpleName(), ex.getMessage());
-        
-        return CompletableFuture.failedFuture(
-            new com.samt.projectconfig.exception.ServiceUnavailableException(
-                "User-Group Service is temporarily unavailable (circuit breaker OPEN)"
-            )
-        );
+        return propagateFallbackFailure("verifyGroupExists", "groupId=" + groupId, ex);
     }
     
     /**
@@ -313,14 +313,7 @@ public class UserGroupServiceGrpcClient {
      * @return Failed CompletableFuture
      */
     private CompletableFuture<CheckGroupLeaderResponse> checkGroupLeaderFallback(Long groupId, Long userId, Exception ex) {
-        log.error("Circuit breaker OPEN for checkGroupLeader: groupId={} userId={} - {} - {}", 
-            groupId, userId, ex.getClass().getSimpleName(), ex.getMessage());
-        
-        return CompletableFuture.failedFuture(
-            new com.samt.projectconfig.exception.ServiceUnavailableException(
-                "User-Group Service is temporarily unavailable (circuit breaker OPEN)"
-            )
-        );
+        return propagateFallbackFailure("checkGroupLeader", "groupId=" + groupId + " userId=" + userId, ex);
     }
     
     /**
@@ -332,15 +325,40 @@ public class UserGroupServiceGrpcClient {
      * @param ex Exception that triggered circuit breaker
      * @return Failed CompletableFuture
      */
-    private CompletableFuture<CheckGroupLeaderResponse> checkGroupMembershipFallback(Long groupId, Long userId, Exception ex) {
-        log.error("Circuit breaker OPEN for checkGroupMembership: groupId={} userId={} - {} - {}", 
-            groupId, userId, ex.getClass().getSimpleName(), ex.getMessage());
-        
+    private CompletableFuture<CheckGroupMemberResponse> checkGroupMembershipFallback(Long groupId, Long userId, Exception ex) {
+        return propagateFallbackFailure("checkGroupMembership", "groupId=" + groupId + " userId=" + userId, ex);
+    }
+
+    private <T> CompletableFuture<T> propagateFallbackFailure(String operation, String context, Exception ex) {
+        Throwable cause = unwrap(ex);
+
+        if (cause instanceof RuntimeException runtimeException && !(cause instanceof CallNotPermittedException)) {
+            log.warn("gRPC fallback propagating {} failure for {}: {} - {}",
+                operation,
+                context,
+                cause.getClass().getSimpleName(),
+                cause.getMessage());
+            return CompletableFuture.failedFuture(runtimeException);
+        }
+
+        log.error("Circuit breaker OPEN for {}: {} - {} - {}",
+            operation,
+            context,
+            cause.getClass().getSimpleName(),
+            cause.getMessage());
+
         return CompletableFuture.failedFuture(
-            new com.samt.projectconfig.exception.ServiceUnavailableException(
-                "User-Group Service is temporarily unavailable (circuit breaker OPEN)"
-            )
+            new ServiceUnavailableException("User-Group Service is temporarily unavailable (circuit breaker OPEN)")
         );
+    }
+
+    private Throwable unwrap(Throwable throwable) {
+        Throwable current = throwable;
+        while ((current instanceof CompletionException || current instanceof ExecutionException)
+            && current.getCause() != null) {
+            current = current.getCause();
+        }
+        return current;
     }
     
     /**

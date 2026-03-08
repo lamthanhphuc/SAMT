@@ -3,6 +3,7 @@ package com.samt.projectconfig.dto.request;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -12,6 +13,7 @@ import jakarta.validation.constraints.Size;
 public record CreateConfigRequest(
     
     @NotNull(message = "Group ID is required")
+    @Positive(message = "Group ID must be greater than 0")
     Long groupId,
     
     @NotBlank(message = "Jira host URL is required")

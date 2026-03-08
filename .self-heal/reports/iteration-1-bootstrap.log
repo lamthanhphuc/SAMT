@@ -1,0 +1,363 @@
+
+> samt-api-qa@1.0.0 tests:bootstrap
+> httpyac tests/bootstrap.http --all
+
+
+---------------------
+
+=== Admin login ===
+
+POST http://localhost:9080/api/auth/login
+accept-encoding: gzip, deflate, br
+accept: */*
+content-length: 66
+content-type: application/json
+user-agent: httpyac
+
+{
+  "email": "admin@samt.local",
+  "password": "Str0ng@Pass!"
+}
+HTTP/1.1 200  - OK
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:24:58 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 600
+x-ratelimit-remaining: 430
+x-ratelimit-replenish-rate: 5
+x-ratelimit-requested-tokens: 60
+x-xss-protection: 0
+
+{
+  "accessToken": "eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiJkYTc0ZWFjMi04YzE2LTQ1OTEtOWRkYi0zMjg2NjA0YmJkNjAiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzODk4LCJleHAiOjE3NzI5NDQ3OTh9.LCWlu9J3dQMmH-opNFWQTwgWPoVCb41qY-tBEAO6dMrhdK4hiMain_tUW-yh-pbCnezQCP9jgbXzEf2El-p8A_mWPRtDbmZmxMQ_q-tN35RquB2lCohcIFbleBV7QcnyYJotrsope7X0cZ-cyHgCWHDglgEpn6dedVTC3NK0ESK-e4fnVRdHuroMWbRFGtbyvUF7W8dzYFmG-CpaGu7PXbW32sZKtlnycE8wMQ-rh1hA1qpdFwDeFnwxNqBBYU0eC7SwMhqM906oH2zDHEQhYIjEnGxx6wfY-JuVDbqdMdBRMNMddYZslZ4rLHeW7R6d-nNIIL1Apl7xDIi8oAyUbg",
+  "refreshToken": "9021d645-2664-4306-b98b-6fe63850d214",
+  "tokenType": "Bearer",
+  "expiresIn": 900
+}
+[x] admin login
+
+---------------------
+
+=== Ensure qa lecturer exists ===
+
+POST http://localhost:9080/api/admin/users
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiJkYTc0ZWFjMi04YzE2LTQ1OTEtOWRkYi0zMjg2NjA0YmJkNjAiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzODk4LCJleHAiOjE3NzI5NDQ3OTh9.LCWlu9J3dQMmH-opNFWQTwgWPoVCb41qY-tBEAO6dMrhdK4hiMain_tUW-yh-pbCnezQCP9jgbXzEf2El-p8A_mWPRtDbmZmxMQ_q-tN35RquB2lCohcIFbleBV7QcnyYJotrsope7X0cZ-cyHgCWHDglgEpn6dedVTC3NK0ESK-e4fnVRdHuroMWbRFGtbyvUF7W8dzYFmG-CpaGu7PXbW32sZKtlnycE8wMQ-rh1hA1qpdFwDeFnwxNqBBYU0eC7SwMhqM906oH2zDHEQhYIjEnGxx6wfY-JuVDbqdMdBRMNMddYZslZ4rLHeW7R6d-nNIIL1Apl7xDIi8oAyUbg
+content-length: 125
+content-type: application/json
+user-agent: httpyac
+
+{
+  "email": "qa.lecturer@samt.local",
+  "password": "Str0ng@Pass!",
+  "fullName": "QA Lecturer",
+  "role": "LECTURER"
+}
+HTTP/1.1 409  - Conflict
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:24:58 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 199
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "statusCode": 409,
+  "error": "Conflict",
+  "message": "Email already registered"
+}
+[x] ensure qa lecturer
+
+---------------------
+
+=== Ensure qa student exists ===
+
+POST http://localhost:9080/api/admin/users
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiJkYTc0ZWFjMi04YzE2LTQ1OTEtOWRkYi0zMjg2NjA0YmJkNjAiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzODk4LCJleHAiOjE3NzI5NDQ3OTh9.LCWlu9J3dQMmH-opNFWQTwgWPoVCb41qY-tBEAO6dMrhdK4hiMain_tUW-yh-pbCnezQCP9jgbXzEf2El-p8A_mWPRtDbmZmxMQ_q-tN35RquB2lCohcIFbleBV7QcnyYJotrsope7X0cZ-cyHgCWHDglgEpn6dedVTC3NK0ESK-e4fnVRdHuroMWbRFGtbyvUF7W8dzYFmG-CpaGu7PXbW32sZKtlnycE8wMQ-rh1hA1qpdFwDeFnwxNqBBYU0eC7SwMhqM906oH2zDHEQhYIjEnGxx6wfY-JuVDbqdMdBRMNMddYZslZ4rLHeW7R6d-nNIIL1Apl7xDIi8oAyUbg
+content-length: 122
+content-type: application/json
+user-agent: httpyac
+
+{
+  "email": "qa.student@samt.local",
+  "password": "Str0ng@Pass!",
+  "fullName": "QA Student",
+  "role": "STUDENT"
+}
+HTTP/1.1 409  - Conflict
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:24:58 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 198
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "statusCode": 409,
+  "error": "Conflict",
+  "message": "Email already registered"
+}
+[x] ensure qa student
+
+---------------------
+
+=== Ensure qa student2 exists ===
+
+POST http://localhost:9080/api/admin/users
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiJkYTc0ZWFjMi04YzE2LTQ1OTEtOWRkYi0zMjg2NjA0YmJkNjAiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzODk4LCJleHAiOjE3NzI5NDQ3OTh9.LCWlu9J3dQMmH-opNFWQTwgWPoVCb41qY-tBEAO6dMrhdK4hiMain_tUW-yh-pbCnezQCP9jgbXzEf2El-p8A_mWPRtDbmZmxMQ_q-tN35RquB2lCohcIFbleBV7QcnyYJotrsope7X0cZ-cyHgCWHDglgEpn6dedVTC3NK0ESK-e4fnVRdHuroMWbRFGtbyvUF7W8dzYFmG-CpaGu7PXbW32sZKtlnycE8wMQ-rh1hA1qpdFwDeFnwxNqBBYU0eC7SwMhqM906oH2zDHEQhYIjEnGxx6wfY-JuVDbqdMdBRMNMddYZslZ4rLHeW7R6d-nNIIL1Apl7xDIi8oAyUbg
+content-length: 141
+content-type: application/json
+user-agent: httpyac
+
+{
+  "email": "qa.student2+1772943898337@samt.local",
+  "password": "Str0ng@Pass!",
+  "fullName": "QA Student Two",
+  "role": "STUDENT"
+}
+HTTP/1.1 201  - Created
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:24:58 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 197
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "message": "User created successfully",
+  "user": {
+    "id": 423,
+    "email": "qa.student2+1772943898337@samt.local",
+    "fullName": "QA Student Two",
+    "role": "STUDENT",
+    "status": "ACTIVE",
+    "jiraAccountId": null,
+    "githubUsername": null,
+    "createdAt": "2026-03-08T04:24:58Z"
+  },
+  "temporaryPassword": "Str0ng@Pass!"
+}
+[x] ensure qa student2
+
+---------------------
+
+=== Ensure admin lifecycle user exists ===
+
+POST http://localhost:9080/api/admin/users
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiJkYTc0ZWFjMi04YzE2LTQ1OTEtOWRkYi0zMjg2NjA0YmJkNjAiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzODk4LCJleHAiOjE3NzI5NDQ3OTh9.LCWlu9J3dQMmH-opNFWQTwgWPoVCb41qY-tBEAO6dMrhdK4hiMain_tUW-yh-pbCnezQCP9jgbXzEf2El-p8A_mWPRtDbmZmxMQ_q-tN35RquB2lCohcIFbleBV7QcnyYJotrsope7X0cZ-cyHgCWHDglgEpn6dedVTC3NK0ESK-e4fnVRdHuroMWbRFGtbyvUF7W8dzYFmG-CpaGu7PXbW32sZKtlnycE8wMQ-rh1hA1qpdFwDeFnwxNqBBYU0eC7SwMhqM906oH2zDHEQhYIjEnGxx6wfY-JuVDbqdMdBRMNMddYZslZ4rLHeW7R6d-nNIIL1Apl7xDIi8oAyUbg
+content-length: 152
+content-type: application/json
+user-agent: httpyac
+
+{
+  "email": "qa.admin.lifecycle+1772943898337@samt.local",
+  "password": "Str0ng@Pass!",
+  "fullName": "QA Admin Lifecycle",
+  "role": "STUDENT"
+}
+HTTP/1.1 201  - Created
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:24:58 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 196
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "message": "User created successfully",
+  "user": {
+    "id": 424,
+    "email": "qa.admin.lifecycle+1772943898337@samt.local",
+    "fullName": "QA Admin Lifecycle",
+    "role": "STUDENT",
+    "status": "ACTIVE",
+    "jiraAccountId": null,
+    "githubUsername": null,
+    "createdAt": "2026-03-08T04:24:58Z"
+  },
+  "temporaryPassword": "Str0ng@Pass!"
+}
+[x] ensure admin lifecycle user
+
+---------------------
+
+=== Ensure stateful member user exists ===
+
+POST http://localhost:9080/api/admin/users
+accept-encoding: gzip, deflate, br
+accept: */*
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiJkYTc0ZWFjMi04YzE2LTQ1OTEtOWRkYi0zMjg2NjA0YmJkNjAiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjQiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzODk4LCJleHAiOjE3NzI5NDQ3OTh9.LCWlu9J3dQMmH-opNFWQTwgWPoVCb41qY-tBEAO6dMrhdK4hiMain_tUW-yh-pbCnezQCP9jgbXzEf2El-p8A_mWPRtDbmZmxMQ_q-tN35RquB2lCohcIFbleBV7QcnyYJotrsope7X0cZ-cyHgCWHDglgEpn6dedVTC3NK0ESK-e4fnVRdHuroMWbRFGtbyvUF7W8dzYFmG-CpaGu7PXbW32sZKtlnycE8wMQ-rh1hA1qpdFwDeFnwxNqBBYU0eC7SwMhqM906oH2zDHEQhYIjEnGxx6wfY-JuVDbqdMdBRMNMddYZslZ4rLHeW7R6d-nNIIL1Apl7xDIi8oAyUbg
+content-length: 152
+content-type: application/json
+user-agent: httpyac
+
+{
+  "email": "qa.stateful.member+1772943898337@samt.local",
+  "password": "Str0ng@Pass!",
+  "fullName": "QA Stateful Member",
+  "role": "STUDENT"
+}
+HTTP/1.1 201  - Created
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:24:58 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 200
+x-ratelimit-remaining: 195
+x-ratelimit-replenish-rate: 100
+x-ratelimit-requested-tokens: 1
+x-xss-protection: 0
+
+{
+  "message": "User created successfully",
+  "user": {
+    "id": 425,
+    "email": "qa.stateful.member+1772943898337@samt.local",
+    "fullName": "QA Stateful Member",
+    "role": "STUDENT",
+    "status": "ACTIVE",
+    "jiraAccountId": null,
+    "githubUsername": null,
+    "createdAt": "2026-03-08T04:24:58Z"
+  },
+  "temporaryPassword": "Str0ng@Pass!"
+}
+[x] ensure stateful member user
+
+---------------------
+
+=== Lecturer login ===
+
+POST http://localhost:9080/api/auth/login
+accept-encoding: gzip, deflate, br
+accept: */*
+content-length: 72
+content-type: application/json
+user-agent: httpyac
+
+{
+  "email": "qa.lecturer@samt.local",
+  "password": "Str0ng@Pass!"
+}
+HTTP/1.1 200  - OK
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:24:58 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 600
+x-ratelimit-remaining: 370
+x-ratelimit-replenish-rate: 5
+x-ratelimit-requested-tokens: 60
+x-xss-protection: 0
+
+{
+  "accessToken": "eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiJhNjU3YzdhNC01ZWJkLTRlYzYtOWRmZC0wOGIxZjQ5NmMxNjYiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjIzNSIsImVtYWlsIjoicWEubGVjdHVyZXJAc2FtdC5sb2NhbCIsInJvbGVzIjpbIkxFQ1RVUkVSIl0sInRva2VuX3R5cGUiOiJBQ0NFU1MiLCJpYXQiOjE3NzI5NDM4OTgsImV4cCI6MTc3Mjk0NDc5OH0.cCBDZ2WF8CYWlh4f5NwYi-wTXsiZ__utX_gzcg0F07WwHl516m-wHMzKzpnG3NVcr6HNZf_l3tTvTTJR8Qyk7lbg1KL6DNusX9T5GgJI3zDKuFLtPlJcRgdSr3GlavMPx9dm3RBNJZBc8Pb02jYWxjGyjKRqmoDPqT9dnoHORONlNMmVOt71SnSipJRuDVV1AOXDNLS8gh7-CNs4B8GhaDvlmRBdqGODjIwsKKIzFXyIN868WOr71LaFevrMIDj3cd0rzUh4kbOTFSxWWO8iNzmn21gyttqNNGTfom16PM3dl0LWDPJPRD9nMjg6FMKwyUAO5SEqebZ11YiJp9m21g",
+  "refreshToken": "457e37ca-dabf-4f89-87af-fc5c3868b489",
+  "tokenType": "Bearer",
+  "expiresIn": 900
+}
+[x] lecturer login
+
+---------------------
+
+=== Student login ===
+
+POST http://localhost:9080/api/auth/login
+accept-encoding: gzip, deflate, br
+accept: */*
+content-length: 71
+content-type: application/json
+user-agent: httpyac
+
+{
+  "email": "qa.student@samt.local",
+  "password": "Str0ng@Pass!"
+}
+HTTP/1.1 200  - OK
+cache-control: no-cache, no-store, max-age=0, must-revalidate
+content-type: application/json
+date: Sun, 08 Mar 2026 04:24:58 GMT
+expires: 0
+pragma: no-cache
+referrer-policy: no-referrer
+transfer-encoding: chunked
+vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-ratelimit-burst-capacity: 600
+x-ratelimit-remaining: 310
+x-ratelimit-replenish-rate: 5
+x-ratelimit-requested-tokens: 60
+x-xss-protection: 0
+
+{
+  "accessToken": "eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiJhYWJjYWM4MS02ZWRjLTRiZDUtYTRjNi1kZDQ0YTdkZWFhNmIiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjIzNiIsImVtYWlsIjoicWEuc3R1ZGVudEBzYW10LmxvY2FsIiwicm9sZXMiOlsiU1RVREVOVCJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzcyOTQzODk4LCJleHAiOjE3NzI5NDQ3OTh9.eT9k5A6d7fVQ_1wusIYjqH9UfRByoXjHY69wppKNI9PxiK1lYswxodtsxbZXrM4Ul4f4cfNPYiv5kF6Dn4b02zi7u69uC9KUGHzdJndfgOQS5W6qRBl9x9jWG-GvM_N6jwuHuafM-dGDl91a2Wd9VldfhYPByAQMViZIODg77weOawkinpId_nh6CHKqbfd2ImAPWQm12V2wQFxqBqIPRvKV3KbiHYjvRShvIzo5G0yagsF64WpSNenCaiVKs-Yz7FsByHv-SIg7aS_KAtNjtQCob2i9WBNDJTJdXUdpcgOg86R22Iljq2wm330Uy9h9ulhlpKXZoM-j40Tpkk_VEQ",
+  "refreshToken": "1b35eb17-fa46-4cf3-b124-28b6d20b7451",
+  "tokenType": "Bearer",
+  "expiresIn": 900
+}
+[x] student login
+
+8 requests processed (8 succeeded)

@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -48,6 +49,9 @@ public class GroupServiceImpl implements GroupService {
     public GroupResponse createGroup(CreateGroupRequest request) {
         log.info("Creating group: groupName={}, semesterId={}", 
                 request.getGroupName(), request.getSemesterId());
+
+        Semester semester = semesterRepository.findById(request.getSemesterId())
+                .orElseThrow(() -> ResourceNotFoundException.semesterNotFound(request.getSemesterId()));
         
         // Check group name uniqueness in semester
         if (groupRepository.existsByGroupNameAndSemesterId(
@@ -88,21 +92,8 @@ public class GroupServiceImpl implements GroupService {
         
         Group savedGroup = groupRepository.save(group);
         log.info("Group created successfully: groupId={}", savedGroup.getId());
-        
-        // Fetch lecturer info for response
-        GetUserResponse lecturerInfo = identityServiceClient.getUser(request.getLecturerId());
-        
-        // Resolve semester code from local database
-        String semesterCode = resolveSemesterCode(savedGroup.getSemesterId());
-        
-        return GroupResponse.builder()
-                .id(savedGroup.getId())
-                .groupName(savedGroup.getGroupName())
-                .semesterId(savedGroup.getSemesterId())
-                .semesterCode(semesterCode)
-                .lecturerId(savedGroup.getLecturerId())
-                .lecturerName(lecturerInfo.getFullName())
-                .build();
+
+        return toGroupResponse(savedGroup, semester.getSemesterCode());
     }
     
     @Override
@@ -120,15 +111,12 @@ public class GroupServiceImpl implements GroupService {
                 .map(m -> m.getId().getUserId())
                 .toList();
         
-        GetUsersResponse usersResponse = identityServiceClient.getUsers(userIds);
+        Map<Long, GetUserResponse> usersById = loadUsersById(userIds, "getUsers[getGroupById]");
         
         // Map user info to member list
         List<GroupDetailResponse.MemberInfo> members = memberships.stream()
                 .map(m -> {
-                    GetUserResponse userInfo = usersResponse.getUsersList().stream()
-                            .filter(u -> Long.parseLong(u.getUserId()) == m.getId().getUserId())
-                            .findFirst()
-                            .orElse(null);
+                    GetUserResponse userInfo = usersById.get(m.getId().getUserId());
                     
                     return GroupDetailResponse.MemberInfo.builder()
                             .userId(m.getId().getUserId())
@@ -140,7 +128,7 @@ public class GroupServiceImpl implements GroupService {
                 .collect(Collectors.toList());
         
         // Fetch lecturer info
-        GetUserResponse lecturerInfo = identityServiceClient.getUser(group.getLecturerId());
+        GetUserResponse lecturerInfo = loadLecturerInfo(group.getLecturerId(), "getUser[getGroupById]");
         
         // Resolve semester code from local database
         String semesterCode = resolveSemesterCode(group.getSemesterId());
@@ -271,21 +259,8 @@ public class GroupServiceImpl implements GroupService {
         
         Group savedGroup = groupRepository.save(group);
         log.info("Group updated successfully: groupId={}", groupId);
-        
-        // Fetch lecturer info for response
-        GetUserResponse lecturerInfo = identityServiceClient.getUser(request.getLecturerId());
-        
-        // Resolve semester code from local database
-        String semesterCode = resolveSemesterCode(savedGroup.getSemesterId());
-        
-        return GroupResponse.builder()
-                .id(savedGroup.getId())
-                .groupName(savedGroup.getGroupName())
-                .semesterId(savedGroup.getSemesterId())
-                .semesterCode(semesterCode)
-                .lecturerId(savedGroup.getLecturerId())
-                .lecturerName(lecturerInfo.getFullName())
-                .build();
+
+        return toGroupResponse(savedGroup, resolveSemesterCode(savedGroup.getSemesterId()));
     }
     
     @Override
@@ -361,22 +336,9 @@ public class GroupServiceImpl implements GroupService {
         group.setLecturerId(request.getLecturerId());
         groupRepository.save(group);
         
-        // 4. Fetch new lecturer info for response
-        GetUserResponse lecturerInfo = identityServiceClient.getUser(request.getLecturerId());
-        
         log.info("UC27 - Group lecturer updated successfully: groupId={}", groupId);
-        
-        // Resolve semester code from local database
-        String semesterCode = resolveSemesterCode(group.getSemesterId());
-        
-        return GroupResponse.builder()
-                .id(group.getId())
-                .groupName(group.getGroupName())
-                .semesterId(group.getSemesterId())
-                .semesterCode(semesterCode)
-                .lecturerId(group.getLecturerId())
-                .lecturerName(lecturerInfo.getFullName())
-                .build();
+
+        return toGroupResponse(group, resolveSemesterCode(group.getSemesterId()));
     }
     
     /**
@@ -391,5 +353,61 @@ public class GroupServiceImpl implements GroupService {
                 .orElseThrow(() -> ResourceNotFoundException.semesterNotFound(semesterId));
         return semester.getSemesterCode();
     }
+
+        private GroupResponse toGroupResponse(Group group, String semesterCode) {
+                GetUserResponse lecturerInfo = loadLecturerInfo(group.getLecturerId(), "getUser[groupResponse]");
+
+                return GroupResponse.builder()
+                                .id(group.getId())
+                                .groupName(group.getGroupName())
+                                .semesterId(group.getSemesterId())
+                                .semesterCode(semesterCode)
+                                .lecturerId(group.getLecturerId())
+                                .lecturerName(resolveLecturerName(lecturerInfo))
+                                .build();
+        }
+
+        private GetUserResponse loadLecturerInfo(Long lecturerId, String operationName) {
+                try {
+                        return grpcExceptionHandler.handleGrpcCall(
+                                        () -> identityServiceClient.getUser(lecturerId),
+                                        operationName);
+                } catch (ServiceUnavailableException | GatewayTimeoutException ex) {
+                        log.warn("Identity dependency unavailable while loading lecturer {}: {}", lecturerId, ex.getMessage());
+                        return null;
+                }
+        }
+
+        private Map<Long, GetUserResponse> loadUsersById(List<Long> userIds, String operationName) {
+                if (userIds == null || userIds.isEmpty()) {
+                        return Map.of();
+                }
+
+                try {
+                        GetUsersResponse response = grpcExceptionHandler.handleGrpcCall(
+                                        () -> identityServiceClient.getUsers(userIds),
+                                        operationName);
+
+                        return response.getUsersList().stream()
+                                        .collect(Collectors.toMap(
+                                                        user -> Long.parseLong(user.getUserId()),
+                                                        user -> user,
+                                                        (left, right) -> left
+                                        ));
+                } catch (ServiceUnavailableException | GatewayTimeoutException ex) {
+                        log.warn("Identity dependency unavailable while loading users {}: {}", userIds, ex.getMessage());
+                        return Map.of();
+                }
+        }
+
+        private String resolveLecturerName(GetUserResponse lecturerInfo) {
+                if (lecturerInfo == null) {
+                        return "<Identity Service Unavailable>";
+                }
+                if (lecturerInfo.getDeleted()) {
+                        return "<Deleted User>";
+                }
+                return lecturerInfo.getFullName();
+        }
     
 }
