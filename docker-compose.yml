@@ -28,6 +28,8 @@ services:
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
       - identity_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
     networks:
       - samt-network
     deploy:
@@ -57,6 +59,8 @@ services:
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
       - core_data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
     networks:
       - samt-network
     deploy:
@@ -86,6 +90,8 @@ services:
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
       - projectconfig_data:/var/lib/postgresql/data
+    ports:
+      - "5435:5432"
     networks:
       - samt-network
     deploy:
@@ -115,6 +121,8 @@ services:
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
       - usergroup_data:/var/lib/postgresql/data
+    ports:
+      - "5436:5432"
     networks:
       - samt-network
     deploy:
@@ -144,6 +152,8 @@ services:
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
       - sync_data:/var/lib/postgresql/data
+    ports:
+      - "5437:5432"
     networks:
       - samt-network
     deploy:

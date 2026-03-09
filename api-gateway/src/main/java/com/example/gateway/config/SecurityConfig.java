@@ -1,5 +1,6 @@
 package com.example.gateway.config;
 
+import com.example.gateway.security.PublicEndpointPaths;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -37,10 +38,7 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .pathMatchers("/.well-known/jwks.json").permitAll()
                         .pathMatchers("/.well-known/internal-jwks.json").permitAll()
-                        .pathMatchers("/identity/v3/api-docs/**", "/identity/v3/api-docs").permitAll()
-                        .pathMatchers("/user-group/v3/api-docs/**", "/user-group/v3/api-docs").permitAll()
-                        .pathMatchers("/project-config/v3/api-docs/**", "/project-config/v3/api-docs").permitAll()
-                        .pathMatchers("/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .pathMatchers(PublicEndpointPaths.SWAGGER_WHITELIST).permitAll()
                         .pathMatchers("/api/admin/**").hasRole("ADMIN")
                         .pathMatchers(
                                 "/api/auth/register",
@@ -65,10 +63,7 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .pathMatchers("/.well-known/jwks.json").permitAll()
                         .pathMatchers("/.well-known/internal-jwks.json").permitAll()
-                        .pathMatchers("/identity/v3/api-docs/**", "/identity/v3/api-docs").permitAll()
-                        .pathMatchers("/user-group/v3/api-docs/**", "/user-group/v3/api-docs").permitAll()
-                        .pathMatchers("/project-config/v3/api-docs/**", "/project-config/v3/api-docs").permitAll()
-                        .pathMatchers("/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .pathMatchers(PublicEndpointPaths.SWAGGER_WHITELIST).permitAll()
                         .pathMatchers("/api/admin/**").hasRole("ADMIN")
                         .pathMatchers(
                                 "/api/auth/register",

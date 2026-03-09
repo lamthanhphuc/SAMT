@@ -35,49 +35,49 @@ public class GatewayRoutesConfig {
                         .path("/identity/v3/api-docs/**", "/identity/v3/api-docs")
                         .filters(f -> f
                                 .stripPrefix(1)
-                                .addRequestHeader("X-Forwarded-Prefix", "/identity"))
+                                .preserveHostHeader())
                         .uri(identityServiceUri))
 
                 .route("user-group-swagger", r -> r
                         .path("/user-group/v3/api-docs/**", "/user-group/v3/api-docs")
                         .filters(f -> f
                                 .stripPrefix(1)
-                                .addRequestHeader("X-Forwarded-Prefix", "/user-group"))
+                                .preserveHostHeader())
                         .uri(userGroupServiceUri))
 
                 .route("project-config-swagger", r -> r
                         .path("/project-config/v3/api-docs/**", "/project-config/v3/api-docs")
                         .filters(f -> f
                                 .stripPrefix(1)
-                                .addRequestHeader("X-Forwarded-Prefix", "/project-config"))
+                                .preserveHostHeader())
                         .uri(projectConfigServiceUri))
 
                 .route("sync-swagger", r -> r
                         .path("/sync/v3/api-docs/**", "/sync/v3/api-docs")
                         .filters(f -> f
                                 .stripPrefix(1)
-                                .addRequestHeader("X-Forwarded-Prefix", "/sync"))
+                                .preserveHostHeader())
                         .uri(syncServiceUri))
 
                 .route("analysis-swagger", r -> r
                         .path("/analysis/v3/api-docs/**", "/analysis/v3/api-docs")
                         .filters(f -> f
                                 .stripPrefix(1)
-                                .addRequestHeader("X-Forwarded-Prefix", "/analysis"))
+                                .preserveHostHeader())
                         .uri(analysisServiceUri))
 
                 .route("report-swagger", r -> r
                         .path("/report/v3/api-docs/**", "/report/v3/api-docs")
                         .filters(f -> f
                                 .stripPrefix(1)
-                                .addRequestHeader("X-Forwarded-Prefix", "/report"))
+                                .preserveHostHeader())
                         .uri(reportServiceUri))
 
                 .route("notification-swagger", r -> r
                         .path("/notification/v3/api-docs/**", "/notification/v3/api-docs")
                         .filters(f -> f
                                 .stripPrefix(1)
-                                .addRequestHeader("X-Forwarded-Prefix", "/notification"))
+                                .preserveHostHeader())
                         .uri(notificationServiceUri))
 
                 // ========================================

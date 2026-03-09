@@ -1,5 +1,6 @@
 package com.example.gateway.filter;
 
+import com.example.gateway.security.PublicEndpointPaths;
 import org.springframework.core.Ordered;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
@@ -100,31 +101,7 @@ public class JwtAuthenticationFilter implements WebFilter, Ordered {
     }
 
     private boolean isPublicEndpoint(String path) {
-        if ("/api/auth/register".equals(path)
-                || "/api/auth/login".equals(path)
-                || "/api/auth/refresh".equals(path)
-                || "/actuator/health".equals(path)) {
-            return true;
-        }
-
-        if (path.startsWith("/identity/v3/api-docs")
-                || path.startsWith("/user-group/v3/api-docs")
-                || path.startsWith("/project-config/v3/api-docs")
-                || path.startsWith("/sync/v3/api-docs")
-                || path.startsWith("/analysis/v3/api-docs")
-                || path.startsWith("/report/v3/api-docs")
-                || path.startsWith("/notification/v3/api-docs")
-                || "/swagger-ui.html".equals(path)
-                || path.startsWith("/swagger-ui/")) {
-            return true;
-        }
-
-        if ("/.well-known/internal-jwks.json".equals(path)
-                || "/.well-known/jwks.json".equals(path)) {
-            return true;
-        }
-
-        return false;
+        return PublicEndpointPaths.isPublicPath(path);
     }
 
     private Mono<Void> unauthorized(ServerWebExchange exchange) {
