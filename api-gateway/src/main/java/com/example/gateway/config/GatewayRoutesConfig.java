@@ -150,7 +150,6 @@ public class GatewayRoutesConfig {
                         .path("/api/sync/**")
                         .filters(f -> f
                                 .filter(rateLimitGatewayFilter.globalRateLimit("sync-service"))
-                                .stripPrefix(2)
                                 .addRequestHeader("X-Forwarded-Host", "gateway")
                                 .circuitBreaker(c -> c
                                         .setName("syncServiceCircuitBreaker")

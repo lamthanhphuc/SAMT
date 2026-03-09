@@ -22,7 +22,9 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -70,6 +72,7 @@ public class JiraVerificationService {
      * - 5xx/timeout/network errors: Propagated to trigger circuit breaker
      * 
      * @param jiraHostUrl Jira host URL (e.g., https://domain.atlassian.net)
+     * @param jiraEmail Jira account email for Atlassian Cloud Basic auth
      * @param jiraApiToken Decrypted Jira API token
      * @return CompletableFuture of JiraResult with verification status
      */
@@ -77,7 +80,7 @@ public class JiraVerificationService {
     @Retry(name = "verificationRetry")
     @Bulkhead(name = "jiraVerification", type = Bulkhead.Type.SEMAPHORE)
     @CircuitBreaker(name = "jiraVerification", fallbackMethod = "jiraFallback")
-    public CompletableFuture<JiraResult> verifyAsync(String jiraHostUrl, String jiraApiToken) {
+    public CompletableFuture<JiraResult> verifyAsync(String jiraHostUrl, String jiraEmail, String jiraApiToken) {
         Instant testedAt = Instant.now();
         
         try {
@@ -86,7 +89,7 @@ public class JiraVerificationService {
             
             // Prepare headers
             HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", "Bearer " + jiraApiToken);
+            headers.setBasicAuth(buildBasicAuth(jiraEmail, jiraApiToken));
             headers.set("Accept", "application/json");
             
             HttpEntity<String> request = new HttpEntity<>(headers);
@@ -105,10 +108,10 @@ public class JiraVerificationService {
             String userEmail;
             try {
                 JsonNode jsonResponse = objectMapper.readTree(response.getBody());
-                userEmail = jsonResponse.path("emailAddress").asText("unknown");
+                userEmail = jsonResponse.path("emailAddress").asText(jiraEmail);
             } catch (Exception jsonEx) {
                 log.warn("Failed to parse Jira response: {}", jsonEx.getMessage());
-                userEmail = "unknown";
+                userEmail = jiraEmail;
             }
             
             log.info("Jira verification successful for {} (response time: <{}s)", 
@@ -135,6 +138,7 @@ public class JiraVerificationService {
                     .message("Authentication failed")
                     .error(e.getStatusCode() + " " + errorMessage)
                     .testedAt(testedAt)
+                    .userEmail(jiraEmail)
                     .build());
             }
             
@@ -163,11 +167,12 @@ public class JiraVerificationService {
      * - Timeout: Request exceeded time limit
      * 
      * @param jiraHostUrl Jira host URL
+     * @param jiraEmail Jira account email
      * @param jiraApiToken API token (not logged for security)
      * @param ex Exception that triggered fallback
      * @return CompletableFuture of JiraResult with appropriate failure status
      */
-    private CompletableFuture<JiraResult> jiraFallback(String jiraHostUrl, String jiraApiToken, Exception ex) {
+    private CompletableFuture<JiraResult> jiraFallback(String jiraHostUrl, String jiraEmail, String jiraApiToken, Exception ex) {
         log.error("Jira verification fallback triggered for {}: {} - {}", 
             jiraHostUrl, ex.getClass().getSimpleName(), ex.getMessage());
         
@@ -194,7 +199,13 @@ public class JiraVerificationService {
             .message("Verification failed - Service temporarily unavailable")
             .error(failureReason)
             .testedAt(Instant.now())
+            .userEmail(jiraEmail)
             .build());
+    }
+
+    private String buildBasicAuth(String jiraEmail, String jiraApiToken) {
+        return Base64.getEncoder()
+            .encodeToString((jiraEmail + ":" + jiraApiToken).getBytes(StandardCharsets.UTF_8));
     }
     
     /**

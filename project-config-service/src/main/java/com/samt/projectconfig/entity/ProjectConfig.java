@@ -37,6 +37,9 @@ public class ProjectConfig {
     // Jira Configuration
     @Column(name = "jira_host_url", nullable = false, length = 255)
     private String jiraHostUrl;
+
+    @Column(name = "jira_email", length = 255)
+    private String jiraEmail;
     
     /**
      * Encrypted Jira API token.

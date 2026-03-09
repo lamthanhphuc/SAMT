@@ -15,9 +15,10 @@ public record ConfigResponse(
     UUID id,
     Long groupId,
     String jiraHostUrl,
+    String jiraEmail,
     String jiraApiToken,  // MASKED: "***ab12"
     String githubRepoUrl,
-    String githubToken,   // MASKED: "ghp_***xyz9"
+    String githubToken,   // MASKED: "ghp_***xyz9" or "github_pat_***xyz9"
     String state,
     
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")

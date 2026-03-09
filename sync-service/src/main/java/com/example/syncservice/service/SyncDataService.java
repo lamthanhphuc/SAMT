@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Service for database operations with transactional boundaries.
@@ -38,11 +39,13 @@ public class SyncDataService {
      * Transaction duration: <100ms
      */
     @Transactional
-    public SyncJob createSyncJob(Long projectConfigId, SyncJob.JobType jobType, String correlationId) {
+    public SyncJob createSyncJob(UUID projectConfigId, SyncJob.JobType jobType, String correlationId) {
         SyncJob job = SyncJob.builder()
                 .projectConfigId(projectConfigId)
                 .jobType(jobType)
                 .status(SyncJob.JobStatus.RUNNING)
+            .recordsFetched(0)
+            .recordsSaved(0)
                 .correlationId(correlationId)
                 .build();
         job.markAsStarted(correlationId);

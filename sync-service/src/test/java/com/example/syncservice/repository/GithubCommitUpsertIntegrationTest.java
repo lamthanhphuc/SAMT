@@ -17,6 +17,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
@@ -69,7 +70,7 @@ class GithubCommitUpsertIntegrationTest {
     @Test
     void testRetryIdempotency_NoDuplicates_NoExceptions() {
         // GIVEN: Historical commits (made 3 days ago)
-        Long projectConfigId = 1L;
+        UUID projectConfigId = UUID.randomUUID();
         LocalDateTime historicalCommitDate = LocalDateTime.of(2026, 2, 19, 15, 30);
         
         List<GithubCommit> syncData = List.of(
@@ -112,7 +113,7 @@ class GithubCommitUpsertIntegrationTest {
     @Test
     void testCommittedDateAccuracy_ActualCommitTime_NotSyncTime() {
         // GIVEN: Commit made 5 days ago
-        Long projectConfigId = 2L;
+        UUID projectConfigId = UUID.randomUUID();
         LocalDateTime actualCommitDate = LocalDateTime.of(2026, 2, 17, 10, 15, 30);
         LocalDateTime syncTime = LocalDateTime.now();
         
@@ -144,7 +145,7 @@ class GithubCommitUpsertIntegrationTest {
     @Test
     void testUpdateScenario_MessageUpdated_CommittedDatePreserved() {
         // GIVEN: Initial commit
-        Long projectConfigId = 3L;
+        UUID projectConfigId = UUID.randomUUID();
         LocalDateTime commitDate = LocalDateTime.of(2026, 2, 15, 14, 20);
         
         GithubCommit initialCommit = buildGithubCommit(projectConfigId, "update123", 
@@ -180,7 +181,7 @@ class GithubCommitUpsertIntegrationTest {
      */
     @Test
     void testMultipleRetries_DataIntegrityMaintained() {
-        Long projectConfigId = 4L;
+        UUID projectConfigId = UUID.randomUUID();
         LocalDateTime commitDate = LocalDateTime.of(2026, 2, 10, 16, 0);
         String commitSha = "retry999";
         
@@ -214,7 +215,7 @@ class GithubCommitUpsertIntegrationTest {
     @Test
     void testNullCommittedDateHandling_NoConstraintViolation_FallbackApplied() {
         // GIVEN: Commit with null committedDate (edge case)
-        Long projectConfigId = 5L;
+        UUID projectConfigId = UUID.randomUUID();
         GithubCommit commitWithNull = GithubCommit.builder()
             .projectConfigId(projectConfigId)
             .commitSha("null123")
@@ -251,7 +252,7 @@ class GithubCommitUpsertIntegrationTest {
     @Test
     void testCircuitBreakerRecovery_NoConstraintViolations() {
         // GIVEN: Partial sync before failure
-        Long projectConfigId = 6L;
+        UUID projectConfigId = UUID.randomUUID();
         LocalDateTime commitDate = LocalDateTime.of(2026, 2, 20, 9, 0);
         
         List<GithubCommit> partialSync = List.of(
@@ -283,7 +284,7 @@ class GithubCommitUpsertIntegrationTest {
     @Test
     void testLargeBatch_AllInserted_RetryNoDuplicates() {
         // GIVEN: 50 commits
-        Long projectConfigId = 7L;
+        UUID projectConfigId = UUID.randomUUID();
         LocalDateTime baseTime = LocalDateTime.of(2026, 2, 22, 8, 0);
         
         List<GithubCommit> largeBatch = new java.util.ArrayList<>();
@@ -305,7 +306,7 @@ class GithubCommitUpsertIntegrationTest {
             .isEqualTo(50);
     }
 
-    private GithubCommit buildGithubCommit(Long projectConfigId, String commitSha, 
+    private GithubCommit buildGithubCommit(UUID projectConfigId, String commitSha,
                                           String message, LocalDateTime committedDate) {
         GithubCommit commit = GithubCommit.builder()
             .projectConfigId(projectConfigId)

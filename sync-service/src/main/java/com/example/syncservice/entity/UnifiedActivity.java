@@ -3,6 +3,8 @@ package com.example.syncservice.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.UUID;
+
 /**
  * Unified activity entity normalizing data from Jira and GitHub.
  * Provides consistent schema for analytics and reporting.
@@ -31,8 +33,8 @@ public class UnifiedActivity extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "project_config_id", nullable = false)
-    private Long projectConfigId;
+    @Column(name = "project_config_id", nullable = false, columnDefinition = "uuid")
+    private UUID projectConfigId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "source", nullable = false, length = 20)
@@ -45,7 +47,7 @@ public class UnifiedActivity extends BaseEntity {
     @Column(name = "external_id", nullable = false)
     private String externalId;
 
-    @Column(name = "title", nullable = false, length = 500)
+    @Column(name = "title", nullable = false, length = 1000)
     private String title;
 
     @Column(name = "description", columnDefinition = "TEXT")

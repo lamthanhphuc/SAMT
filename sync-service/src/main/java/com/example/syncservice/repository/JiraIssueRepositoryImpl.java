@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * Implementation of custom UPSERT operations for JiraIssue.
  * Uses native PostgreSQL ON CONFLICT for idempotent writes.
- * 
+ *
  * CRITICAL: Ensures no constraint violations on sync retry or circuit breaker recovery.
  * PERFORMANCE: True batch UPSERT with multi-row INSERT (single roundtrip per batch).
  */

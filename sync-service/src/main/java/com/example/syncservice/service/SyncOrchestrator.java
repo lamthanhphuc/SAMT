@@ -56,7 +56,7 @@ public class SyncOrchestrator {
             log.info("Starting full sync: correlationId={}", correlationId);
 
             // Fetch verified config IDs via gRPC (OUTSIDE transaction)
-            List<Long> configIds = projectConfigGrpcClient.listVerifiedConfigIds();
+            List<UUID> configIds = projectConfigGrpcClient.listVerifiedConfigIds();
             log.info("Found {} verified configs to sync", configIds.size());
 
             if (configIds.isEmpty()) {
@@ -67,7 +67,7 @@ public class SyncOrchestrator {
             // Submit async jobs for each config
             List<CompletableFuture<SyncResultDto>> futures = new ArrayList<>();
             int rejectionCount = 0;
-            for (Long configId : configIds) {
+            for (UUID configId : configIds) {
                 try {
                     futures.add(syncJiraIssuesAsync(configId));
                 } catch (java.util.concurrent.RejectedExecutionException e) {
@@ -112,7 +112,7 @@ public class SyncOrchestrator {
      * 6. Update sync job status (transaction)
      */
     @Async("syncTaskExecutor")
-    public CompletableFuture<SyncResultDto> syncJiraIssuesAsync(Long projectConfigId) {
+    public CompletableFuture<SyncResultDto> syncJiraIssuesAsync(UUID projectConfigId) {
         long startTime = System.currentTimeMillis();
         String correlationId = MDC.get("correlationId");
         if (correlationId == null) {
@@ -139,8 +139,8 @@ public class SyncOrchestrator {
             // CRITICAL: Fallback may be triggered here, setting degraded flag
             List<JiraIssueDto> issueDtos = jiraClient.fetchIssues(
                     config.getJiraHostUrl(),
+                    config.getJiraEmail(),
                     config.getJiraApiToken(),
-                    config.getJiraProjectKey(),
                     100);
 
             // Check if fallback was triggered (degraded execution)
@@ -231,7 +231,7 @@ public class SyncOrchestrator {
      * Similar flow to syncJiraIssuesAsync.
      */
     @Async("syncTaskExecutor")
-    public CompletableFuture<SyncResultDto> syncGithubCommitsAsync(Long projectConfigId) {
+    public CompletableFuture<SyncResultDto> syncGithubCommitsAsync(UUID projectConfigId) {
         long startTime = System.currentTimeMillis();
         String correlationId = MDC.get("correlationId");
         if (correlationId == null) {
@@ -258,7 +258,7 @@ public class SyncOrchestrator {
             // CRITICAL: Fallback may be triggered here, setting degraded flag
             List<GithubCommitDto> commitDtos = githubClient.fetchCommits(
                     config.getGithubRepoUrl(),
-                    config.getGithubAccessToken(),
+                    config.getGithubToken(),
                     100);
 
             // Check if fallback was triggered (degraded execution)

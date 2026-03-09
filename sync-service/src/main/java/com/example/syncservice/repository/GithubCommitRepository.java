@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Repository for GithubCommit entity.
@@ -14,7 +15,7 @@ import java.util.Optional;
 @Repository
 public interface GithubCommitRepository extends JpaRepository<GithubCommit, Long>, GithubCommitRepositoryCustom {
 
-    List<GithubCommit> findByProjectConfigIdAndDeletedAtIsNull(Long projectConfigId);
+    List<GithubCommit> findByProjectConfigIdAndDeletedAtIsNull(UUID projectConfigId);
 
-    Optional<GithubCommit> findByProjectConfigIdAndCommitSha(Long projectConfigId, String commitSha);
+    Optional<GithubCommit> findByProjectConfigIdAndCommitSha(UUID projectConfigId, String commitSha);
 }

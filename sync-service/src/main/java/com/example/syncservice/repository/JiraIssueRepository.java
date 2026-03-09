@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Repository for JiraIssue entity.
@@ -14,7 +15,7 @@ import java.util.Optional;
 @Repository
 public interface JiraIssueRepository extends JpaRepository<JiraIssue, Long>, JiraIssueRepositoryCustom {
 
-    List<JiraIssue> findByProjectConfigIdAndDeletedAtIsNull(Long projectConfigId);
+    List<JiraIssue> findByProjectConfigIdAndDeletedAtIsNull(UUID projectConfigId);
 
-    Optional<JiraIssue> findByProjectConfigIdAndIssueKey(Long projectConfigId, String issueKey);
+    Optional<JiraIssue> findByProjectConfigIdAndIssueKey(UUID projectConfigId, String issueKey);
 }

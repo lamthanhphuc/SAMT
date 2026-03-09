@@ -15,6 +15,7 @@ public record DecryptedTokensResponse(
     UUID configId,
     Long groupId,
     String jiraHostUrl,
+    String jiraEmail,
     String jiraApiToken,  // DECRYPTED raw token
     String githubRepoUrl,
     String githubToken,   // DECRYPTED raw token

@@ -1,5 +1,6 @@
 package com.samt.projectconfig.service;
 
+
 import com.samt.projectconfig.dto.VerificationStatus;
 import com.samt.projectconfig.dto.request.CreateConfigRequest;
 import com.samt.projectconfig.dto.request.UpdateConfigRequest;
@@ -124,6 +125,7 @@ public class ProjectConfigService {
             ProjectConfig config = ProjectConfig.builder()
                 .groupId(request.groupId())
                 .jiraHostUrl(request.jiraHostUrl())
+                .jiraEmail(request.jiraEmail())
                 .jiraApiTokenEncrypted(encryptedJiraToken)
                 .githubRepoUrl(request.githubRepoUrl())
                 .githubTokenEncrypted(encryptedGithubToken)
@@ -302,6 +304,11 @@ public class ProjectConfigService {
             // Apply partial updates
             if (request.jiraHostUrl() != null) {
                 config.setJiraHostUrl(request.jiraHostUrl());
+                credentialsUpdated = true;
+            }
+
+            if (request.jiraEmail() != null) {
+                config.setJiraEmail(request.jiraEmail());
                 credentialsUpdated = true;
             }
             
@@ -489,7 +496,11 @@ public class ProjectConfigService {
             log.info("Starting PARALLEL async external API verification for config {} (NO blocking)", id);
             
             CompletableFuture<VerificationResponse.JiraResult> jiraFuture = 
-                jiraVerificationService.verifyAsync(decrypted.jiraHostUrl(), decrypted.jiraToken());
+                jiraVerificationService.verifyAsync(
+                    decrypted.jiraHostUrl(),
+                    decrypted.jiraEmail(),
+                    decrypted.jiraToken()
+                );
             
             CompletableFuture<VerificationResponse.GitHubResult> githubFuture = 
                 githubVerificationService.verifyAsync(decrypted.githubRepoUrl(), decrypted.githubToken());
@@ -527,6 +538,7 @@ public class ProjectConfigService {
         return new ConfigDecryptionResult(
             config.getGroupId(),
             config.getJiraHostUrl(),
+            requireJiraEmail(config),
             jiraToken,
             config.getGithubRepoUrl(),
             githubToken
@@ -580,6 +592,7 @@ public class ProjectConfigService {
     protected record ConfigDecryptionResult(
         Long groupId,
         String jiraHostUrl,
+        String jiraEmail,
         String jiraToken,
         String githubRepoUrl,
         String githubToken
@@ -662,25 +675,16 @@ public class ProjectConfigService {
     public DecryptedTokensResponse getDecryptedTokens(UUID id) {
         ProjectConfig config = repository.findById(id)
             .orElseThrow(() -> new ConfigNotFoundException(id));
-        
-        // SEC-INTERNAL-04: Only return VERIFIED configs
-        if (!"VERIFIED".equals(config.getState())) {
-            throw new ForbiddenException("Configuration not verified (state: " + config.getState() + ")");
-        }
-        
-        // Decrypt tokens
-        String jiraToken = decryptToken(config.getId(), "Jira", config.getJiraApiTokenEncrypted());
-        String githubToken = decryptToken(config.getId(), "GitHub", config.getGithubTokenEncrypted());
-        
-        return DecryptedTokensResponse.builder()
-            .configId(config.getId())
-            .groupId(config.getGroupId())
-            .jiraHostUrl(config.getJiraHostUrl())
-            .jiraApiToken(jiraToken)
-            .githubRepoUrl(config.getGithubRepoUrl())
-            .githubToken(githubToken)
-            .state(config.getState())
-            .build();
+
+        return toDecryptedTokensResponse(config);
+    }
+
+    /**
+     * List all verified configurations for internal gRPC consumers.
+     */
+    @Transactional(readOnly = true)
+    public List<ProjectConfig> listVerifiedConfigs() {
+        return repository.findByState("VERIFIED");
     }
     
     /**
@@ -694,6 +698,7 @@ public class ProjectConfigService {
             .id(config.getId())
             .groupId(config.getGroupId())
             .jiraHostUrl(config.getJiraHostUrl())
+            .jiraEmail(config.getJiraEmail())
             .jiraApiToken(maskingService.maskJiraToken(jiraTokenDecrypted))
             .githubRepoUrl(config.getGithubRepoUrl())
             .githubToken(maskingService.maskGithubToken(githubTokenDecrypted))
@@ -702,6 +707,26 @@ public class ProjectConfigService {
             .invalidReason(config.getInvalidReason())
             .createdAt(config.getCreatedAt())
             .updatedAt(config.getUpdatedAt())
+            .build();
+    }
+
+    private DecryptedTokensResponse toDecryptedTokensResponse(ProjectConfig config) {
+        if (!"VERIFIED".equals(config.getState())) {
+            throw new ForbiddenException("Configuration not verified (state: " + config.getState() + ")");
+        }
+
+        String jiraToken = decryptToken(config.getId(), "Jira", config.getJiraApiTokenEncrypted());
+        String githubToken = decryptToken(config.getId(), "GitHub", config.getGithubTokenEncrypted());
+
+        return DecryptedTokensResponse.builder()
+            .configId(config.getId())
+            .groupId(config.getGroupId())
+            .jiraHostUrl(config.getJiraHostUrl())
+            .jiraEmail(config.getJiraEmail())
+            .jiraApiToken(jiraToken)
+            .githubRepoUrl(config.getGithubRepoUrl())
+            .githubToken(githubToken)
+            .state(config.getState())
             .build();
     }
 
@@ -727,6 +752,17 @@ public class ProjectConfigService {
                 ex
             );
         }
+    }
+
+    private String requireJiraEmail(ProjectConfig config) {
+        String jiraEmail = config.getJiraEmail();
+        if (jiraEmail == null || jiraEmail.isBlank()) {
+            throw new ConflictException(
+                "Stored Jira email for configuration " + config.getId()
+                    + " is missing. Update the Jira credentials and retry verification."
+            );
+        }
+        return jiraEmail;
     }
     
     private String buildErrorMessage(VerificationResponse.JiraResult jira, 

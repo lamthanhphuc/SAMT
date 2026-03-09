@@ -69,3 +69,6 @@ logs/
 .cache/
 dependency-check-data/
 node_modules/
+
+# Temporary locally built application jars
+.tmp-*.jar

@@ -1,5 +1,6 @@
 package com.samt.projectconfig.dto.request;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -23,6 +24,11 @@ public record CreateConfigRequest(
         message = "Invalid Jira host URL format. Must be https://domain.atlassian.net or custom Jira domain"
     )
     String jiraHostUrl,
+
+    @NotBlank(message = "Jira email is required")
+    @Email(message = "Invalid Jira email format")
+    @Size(max = 255, message = "Jira email must not exceed 255 characters")
+    String jiraEmail,
     
     @NotBlank(message = "Jira API token is required")
     @Size(min = 100, max = 500, message = "Jira API token must be between 100-500 characters")
@@ -43,8 +49,8 @@ public record CreateConfigRequest(
     @NotBlank(message = "GitHub token is required")
     @Size(min = 40, max = 255, message = "GitHub token must be between 40-255 characters")
     @Pattern(
-        regexp = "^ghp_[A-Za-z0-9]{36,}$",
-        message = "Invalid GitHub token format. Must start with 'ghp_'"
+        regexp = "^(ghp_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]+)$",
+        message = "Invalid GitHub token format. Must start with 'ghp_' or 'github_pat_'"
     )
     String githubToken
 ) {}

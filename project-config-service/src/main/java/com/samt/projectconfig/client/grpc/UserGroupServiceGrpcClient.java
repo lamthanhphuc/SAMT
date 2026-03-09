@@ -1,8 +1,15 @@
 package com.samt.projectconfig.client.grpc;
 
-import com.example.user_groupservice.grpc.*;
+
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.samt.projectconfig.client.grpc.CheckGroupLeaderRequest;
+import com.samt.projectconfig.client.grpc.CheckGroupLeaderResponse;
+import com.samt.projectconfig.client.grpc.CheckGroupMemberRequest;
+import com.samt.projectconfig.client.grpc.CheckGroupMemberResponse;
+import com.samt.projectconfig.client.grpc.UserGroupGrpcServiceGrpc;
+import com.samt.projectconfig.client.grpc.VerifyGroupRequest;
+import com.samt.projectconfig.client.grpc.VerifyGroupResponse;
 import com.samt.projectconfig.exception.BadRequestException;
 import com.samt.projectconfig.exception.ForbiddenException;
 import com.samt.projectconfig.exception.GatewayTimeoutException;

@@ -1,22 +1,22 @@
 package com.example.syncservice.client.grpc;
 
-import com.example.grpc.projectconfig.InternalGetDecryptedConfigRequest;
-import com.example.grpc.projectconfig.InternalGetDecryptedConfigResponse;
-import com.example.grpc.projectconfig.InternalListVerifiedConfigsRequest;
-import com.example.grpc.projectconfig.InternalListVerifiedConfigsResponse;
-import com.example.grpc.projectconfig.ProjectConfigInternalServiceGrpc;
 import com.example.syncservice.dto.ProjectConfigDto;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
-import io.grpc.ManagedChannel;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Component;
+import com.example.syncservice.client.grpc.InternalGetDecryptedConfigRequest;
+import com.example.syncservice.client.grpc.InternalGetDecryptedConfigResponse;
+import com.example.syncservice.client.grpc.InternalListVerifiedConfigsRequest;
+import com.example.syncservice.client.grpc.InternalListVerifiedConfigsResponse;
+import com.example.syncservice.client.grpc.ProjectConfigInternalServiceGrpc;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -45,12 +45,12 @@ public class ProjectConfigGrpcClient {
      */
     @Retry(name = "grpcRetry")
     @CircuitBreaker(name = "grpcCircuitBreaker")
-    public ProjectConfigDto getDecryptedConfig(Long configId) {
+    public ProjectConfigDto getDecryptedConfig(UUID configId) {
         log.debug("Fetching decrypted config for configId={}", configId);
 
         try {
             InternalGetDecryptedConfigRequest request = InternalGetDecryptedConfigRequest.newBuilder()
-                    .setConfigId(configId)
+                    .setConfigId(configId.toString())
                     .build();
 
             InternalGetDecryptedConfigResponse response = projectConfigStub
@@ -88,7 +88,7 @@ public class ProjectConfigGrpcClient {
      */
     @Retry(name = "grpcRetry")
     @CircuitBreaker(name = "grpcCircuitBreaker")
-    public List<Long> listVerifiedConfigIds() {
+    public List<UUID> listVerifiedConfigIds() {
         log.debug("Fetching list of verified configs");
 
         try {
@@ -99,8 +99,8 @@ public class ProjectConfigGrpcClient {
                     .withDeadlineAfter(10, TimeUnit.SECONDS)
                     .internalListVerifiedConfigs(request);
 
-            List<Long> configIds = response.getConfigsList().stream()
-                    .map(config -> config.getConfigId())
+                List<UUID> configIds = response.getConfigsList().stream()
+                    .map(config -> UUID.fromString(config.getConfigId()))
                     .collect(Collectors.toList());
 
             log.info("Found {} verified configs", configIds.size());
@@ -121,13 +121,13 @@ public class ProjectConfigGrpcClient {
      */
     private ProjectConfigDto mapToDto(InternalGetDecryptedConfigResponse response) {
         return ProjectConfigDto.builder()
-                .configId(response.getConfigId())
+            .configId(UUID.fromString(response.getConfigId()))
                 .groupId(response.getGroupId())
                 .jiraHostUrl(response.getJiraHostUrl())
+            .jiraEmail(response.getJiraEmail())
                 .jiraApiToken(response.getJiraApiToken())
-                .jiraProjectKey(response.getJiraProjectKey())
                 .githubRepoUrl(response.getGithubRepoUrl())
-                .githubAccessToken(response.getGithubAccessToken())
+            .githubToken(response.getGithubToken())
                 .state(response.getState())
                 .build();
     }

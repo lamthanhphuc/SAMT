@@ -8,23 +8,19 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * DTO representing the result of a sync operation.
- * Used for tracking metrics and logging.
+ * Aggregated result for manual full sync of a single project config.
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SyncResultDto {
+public class SyncAllResultDto {
 
-    private Long syncJobId;
     private UUID projectConfigId;
-    private String jobType;
     private boolean success;
-    private boolean degraded;  // TRUE if fallback triggered (partial failure)
-    private int recordsFetched;
-    private int recordsSaved;
+    private boolean degraded;
     private long durationMs;
-    private String errorMessage;
     private String correlationId;
+    private SyncResultDto jira;
+    private SyncResultDto github;
 }

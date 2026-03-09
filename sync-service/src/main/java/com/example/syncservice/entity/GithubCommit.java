@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * GitHub commit entity storing raw commit data.
@@ -26,8 +27,8 @@ public class GithubCommit extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "project_config_id", nullable = false)
-    private Long projectConfigId;
+        @Column(name = "project_config_id", nullable = false, columnDefinition = "uuid")
+        private UUID projectConfigId;
 
     @Column(name = "commit_sha", nullable = false, length = 40)
     private String commitSha;

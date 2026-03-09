@@ -28,6 +28,7 @@ springdoc:
     enabled: true
   swagger-ui:
     enabled: true
+    persist-authorization: true
 
 grpc:
   server:

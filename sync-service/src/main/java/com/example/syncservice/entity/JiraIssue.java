@@ -3,6 +3,8 @@ package com.example.syncservice.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.UUID;
+
 /**
  * Jira issue entity storing raw Jira data.
  * Denormalized for detailed Jira-specific querying.
@@ -24,8 +26,8 @@ public class JiraIssue extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "project_config_id", nullable = false)
-    private Long projectConfigId;
+        @Column(name = "project_config_id", nullable = false, columnDefinition = "uuid")
+        private UUID projectConfigId;
 
     @Column(name = "issue_key", nullable = false, length = 50)
     private String issueKey;

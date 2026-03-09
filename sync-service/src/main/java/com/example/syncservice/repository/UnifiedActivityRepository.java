@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Repository for UnifiedActivity entity.
@@ -20,18 +21,18 @@ public interface UnifiedActivityRepository extends JpaRepository<UnifiedActivity
     /**
      * Find all activities for a project config.
      */
-    List<UnifiedActivity> findByProjectConfigIdAndDeletedAtIsNull(Long projectConfigId);
+        List<UnifiedActivity> findByProjectConfigIdAndDeletedAtIsNull(UUID projectConfigId);
 
     /**
      * Find activities by source and project config.
      */
     List<UnifiedActivity> findByProjectConfigIdAndSourceAndDeletedAtIsNull(
-            Long projectConfigId, UnifiedActivity.ActivitySource source);
+            UUID projectConfigId, UnifiedActivity.ActivitySource source);
 
     /**
      * Count activities created after a specific date.
      */
     @Query("SELECT COUNT(ua) FROM UnifiedActivity ua WHERE ua.projectConfigId = :configId " +
             "AND ua.createdAt > :since AND ua.deletedAt IS NULL")
-    Long countRecentActivities(@Param("configId") Long configId, @Param("since") LocalDateTime since);
+        Long countRecentActivities(@Param("configId") UUID configId, @Param("since") LocalDateTime since);
 }

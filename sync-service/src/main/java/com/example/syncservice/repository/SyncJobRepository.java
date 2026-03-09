@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Repository for SyncJob entity.
@@ -20,7 +21,7 @@ public interface SyncJobRepository extends JpaRepository<SyncJob, Long> {
     /**
      * Find all sync jobs for a specific project config.
      */
-    List<SyncJob> findByProjectConfigIdAndDeletedAtIsNull(Long projectConfigId);
+        List<SyncJob> findByProjectConfigIdAndDeletedAtIsNull(UUID projectConfigId);
 
     /**
      * Find recent sync jobs.
@@ -35,7 +36,7 @@ public interface SyncJobRepository extends JpaRepository<SyncJob, Long> {
     @Query("SELECT sj FROM SyncJob sj WHERE sj.projectConfigId = :configId " +
             "AND sj.jobType = :jobType AND sj.status = 'COMPLETED' " +
             "AND sj.deletedAt IS NULL ORDER BY sj.completedAt DESC LIMIT 1")
-    Optional<SyncJob> findLastSuccessfulSync(@Param("configId") Long configId,
+        Optional<SyncJob> findLastSuccessfulSync(@Param("configId") UUID configId,
                                               @Param("jobType") SyncJob.JobType jobType);
 
     /**

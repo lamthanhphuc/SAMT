@@ -1,17 +1,11 @@
 syntax = "proto3";
 
-option java_package = "com.example.syncservice.client.grpc";
+option java_package = "com.samt.projectconfig.client.grpc";
 option java_multiple_files = true;
 option java_outer_classname = "ProjectConfigProto";
 
-// Internal service for inter-service communication
-// Only accessible to authorized internal services (Sync Service)
 service ProjectConfigInternalService {
-  // Get decrypted configuration (with API tokens)
-  // Only Sync Service can call this method
   rpc InternalGetDecryptedConfig(InternalGetDecryptedConfigRequest) returns (InternalGetDecryptedConfigResponse);
-  
-  // List all verified configs (for batch sync)
   rpc InternalListVerifiedConfigs(InternalListVerifiedConfigsRequest) returns (InternalListVerifiedConfigsResponse);
 }
 
@@ -23,15 +17,14 @@ message InternalGetDecryptedConfigResponse {
   string config_id = 1;
   int64 group_id = 2;
   string jira_host_url = 3;
-  string jira_api_token = 4;           // DECRYPTED
+  string jira_api_token = 4;
   string jira_email = 5;
   string github_repo_url = 6;
-  string github_token = 7;             // DECRYPTED
-  string state = 8;                    // VERIFIED, DRAFT, INVALID
+  string github_token = 7;
+  string state = 8;
 }
 
 message InternalListVerifiedConfigsRequest {
-  // Empty - returns all VERIFIED configs
 }
 
 message InternalListVerifiedConfigsResponse {

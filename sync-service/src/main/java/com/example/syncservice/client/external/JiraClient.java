@@ -14,7 +14,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -43,44 +46,60 @@ public class JiraClient {
     }
 
     /**
-     * Fetch issues from Jira project.
-     * 
-     * Query: project = {projectKey} AND updated >= startAt
-     * 
+         * Fetch issues visible to the configured Jira account.
+         *
      * @param hostUrl Jira host URL (e.g., https://company.atlassian.net)
+         * @param email Jira email used for Atlassian Cloud Basic auth
      * @param apiToken Jira API token (Basic auth)
-     * @param projectKey Jira project key (e.g., SWP391)
      * @param maxResults Max results per request (default 100)
      * @return List of Jira issues
      */
     @Retry(name = "jiraRetry", fallbackMethod = "fetchIssuesFallback")
     @CircuitBreaker(name = "jiraCircuitBreaker", fallbackMethod = "fetchIssuesFallback")
     @RateLimiter(name = "jiraRateLimiter")
-    public List<JiraIssueDto> fetchIssues(String hostUrl, String apiToken, String projectKey, int maxResults) {
-        log.debug("Fetching Jira issues for project={}, hostUrl={}", projectKey, hostUrl);
+        public List<JiraIssueDto> fetchIssues(String hostUrl, String email, String apiToken, int maxResults) {
+        log.debug("Fetching Jira issues for hostUrl={} using email={}", hostUrl, email);
 
         String authHeader = "Basic " + java.util.Base64.getEncoder()
-                .encodeToString(("x:" + apiToken).getBytes());
+            .encodeToString((email + ":" + apiToken).getBytes(StandardCharsets.UTF_8));
 
-        String jql = String.format("project = %s ORDER BY updated DESC", projectKey);
+        String jql = "updated IS NOT EMPTY ORDER BY updated DESC";
+        List<String> fields = List.of(
+            "summary",
+            "description",
+            "issuetype",
+            "status",
+            "assignee",
+            "reporter",
+            "priority",
+            "created",
+            "updated"
+        );
+        Map<String, Object> requestBody = new LinkedHashMap<>();
+        requestBody.put("jql", jql);
+        requestBody.put("maxResults", maxResults);
+        requestBody.put("fields", fields);
+        requestBody.put("fieldsByKeys", false);
 
         try {
-            Map<String, Object> response = jiraWebClient.get()
+            Map<String, Object> response = jiraWebClient.post()
                     .uri(uriBuilder -> uriBuilder
                             .scheme("https")
                             .host(extractHost(hostUrl))
-                            .path("/rest/api/3/search")
-                            .queryParam("jql", jql)
-                            .queryParam("maxResults", maxResults)
-                            .queryParam("fields", "summary,description,issuetype,status,assignee,reporter,priority,created,updated")
+                            .path("/rest/api/3/search/jql")
                             .build())
                     .header("Authorization", authHeader)
                     .header("Accept", "application/json")
+                .header("Content-Type", "application/json")
+                .bodyValue(requestBody)
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, clientResponse -> {
                         if (clientResponse.statusCode() == HttpStatus.TOO_MANY_REQUESTS) {
                             log.warn("Jira rate limit exceeded (429)");
                             return Mono.error(new RateLimitExceededException("Jira rate limit exceeded"));
+                        } else if (clientResponse.statusCode() == HttpStatus.GONE) {
+                            log.error("Jira search endpoint deprecated or unavailable (410)");
+                            return Mono.error(new JiraClientException("Jira search endpoint unavailable. Verify /rest/api/3/search/jql support.", null));
                         } else if (clientResponse.statusCode() == HttpStatus.UNAUTHORIZED) {
                             log.error("Jira authentication failed (401)");
                             return Mono.error(new AuthenticationException("Jira API token invalid"));
@@ -99,21 +118,21 @@ public class JiraClient {
             List<Map<String, Object>> issues = (List<Map<String, Object>>) response.get("issues");
             
             if (issues == null || issues.isEmpty()) {
-                log.info("No issues found for project={}", projectKey);
+                log.info("No issues found for Jira account={}", email);
                 return List.of();
             }
 
-            log.info("Fetched {} issues from Jira project={}", issues.size(), projectKey);
+            log.info("Fetched {} issues from Jira account={}", issues.size(), email);
             return convertToJiraIssueDtos(issues);
 
         } catch (RateLimitExceededException e) {
-            log.error("Jira rate limit exceeded for project={}", projectKey);
+            log.error("Jira rate limit exceeded for email={}", email);
             throw e;
         } catch (AuthenticationException e) {
-            log.error("Jira authentication failed for project={}", projectKey);
+            log.error("Jira authentication failed for email={}", email);
             throw e;
         } catch (Exception e) {
-            log.error("Error fetching Jira issues for project={}: {}", projectKey, e.getMessage(), e);
+            log.error("Error fetching Jira issues for email={}: {}", email, e.getMessage(), e);
             throw new JiraClientException("Failed to fetch Jira issues: " + e.getMessage(), e);
         }
     }
@@ -138,7 +157,7 @@ public class JiraClient {
 
         JiraIssueDto.Fields dtoFields = new JiraIssueDto.Fields();
         dtoFields.setSummary((String) fields.get("summary"));
-        dtoFields.setDescription((String) fields.get("description"));
+        dtoFields.setDescription(extractDescription(fields.get("description")));
         dtoFields.setCreated((String) fields.get("created"));
         dtoFields.setUpdated((String) fields.get("updated"));
 
@@ -189,9 +208,9 @@ public class JiraClient {
      * 
      * CRITICAL: Sets degraded execution flag for orchestrator to detect.
      */
-    private List<JiraIssueDto> fetchIssuesFallback(String hostUrl, String apiToken, String projectKey, int maxResults, Throwable throwable) {
-        String errorMsg = String.format("Jira API unavailable for project=%s, host=%s: %s", 
-                projectKey, hostUrl, throwable.getMessage());
+    private List<JiraIssueDto> fetchIssuesFallback(String hostUrl, String email, String apiToken, int maxResults, Throwable throwable) {
+        String errorMsg = String.format("Jira API unavailable for email=%s, host=%s: %s",
+                email, hostUrl, throwable.getMessage());
         
         log.warn("⚠️ FALLBACK TRIGGERED: {}", errorMsg, throwable);
         
@@ -207,6 +226,40 @@ public class JiraClient {
      */
     private String extractHost(String url) {
         return url.replace("https://", "").replace("http://", "").split("/")[0];
+    }
+
+    @SuppressWarnings("unchecked")
+    private String extractDescription(Object descriptionValue) {
+        if (descriptionValue == null) {
+            return null;
+        }
+        if (descriptionValue instanceof String text) {
+            return text;
+        }
+        if (descriptionValue instanceof Map<?, ?> map) {
+            List<String> fragments = new ArrayList<>();
+            collectTextFragments((Map<String, Object>) map, fragments);
+            String joined = String.join("\n", fragments).trim();
+            return joined.isEmpty() ? descriptionValue.toString() : joined;
+        }
+        return descriptionValue.toString();
+    }
+
+    @SuppressWarnings("unchecked")
+    private void collectTextFragments(Map<String, Object> node, List<String> fragments) {
+        Object text = node.get("text");
+        if (text instanceof String value && !value.isBlank()) {
+            fragments.add(value);
+        }
+
+        Object content = node.get("content");
+        if (content instanceof List<?> children) {
+            for (Object child : children) {
+                if (child instanceof Map<?, ?> childMap) {
+                    collectTextFragments((Map<String, Object>) childMap, fragments);
+                }
+            }
+        }
     }
 
     // Custom exceptions

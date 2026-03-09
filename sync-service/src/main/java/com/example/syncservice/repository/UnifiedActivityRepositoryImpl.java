@@ -23,6 +23,11 @@ import java.util.List;
 public class UnifiedActivityRepositoryImpl implements UnifiedActivityRepositoryCustom {
 
     private static final int MAX_BATCH_SIZE = 500;
+    private static final int TITLE_MAX_LENGTH = 1000;
+    private static final int EXTERNAL_ID_MAX_LENGTH = 255;
+    private static final int AUTHOR_EMAIL_MAX_LENGTH = 255;
+    private static final int AUTHOR_NAME_MAX_LENGTH = 255;
+    private static final int STATUS_MAX_LENGTH = 50;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -82,23 +87,52 @@ public class UnifiedActivityRepositoryImpl implements UnifiedActivityRepositoryC
         Timestamp nowTimestamp = Timestamp.valueOf(now);
 
         for (UnifiedActivity activity : batch) {
+            Timestamp createdAt = activity.getCreatedAt() != null
+                    ? Timestamp.valueOf(activity.getCreatedAt())
+                    : nowTimestamp;
+            Timestamp updatedAt = activity.getUpdatedAt() != null
+                    ? Timestamp.valueOf(activity.getUpdatedAt())
+                    : nowTimestamp;
+
             query.setParameter(paramIndex++, activity.getProjectConfigId());
             query.setParameter(paramIndex++, activity.getSource().name());
             query.setParameter(paramIndex++, activity.getActivityType().name());
-            query.setParameter(paramIndex++, activity.getExternalId());
-            query.setParameter(paramIndex++, activity.getTitle());
+            query.setParameter(paramIndex++, safeRequired(activity.getExternalId(), "missing-external-id", EXTERNAL_ID_MAX_LENGTH));
+            query.setParameter(paramIndex++, safeRequired(activity.getTitle(), "[untitled]", TITLE_MAX_LENGTH));
             query.setParameter(paramIndex++, activity.getDescription());
-            query.setParameter(paramIndex++, activity.getAuthorEmail());
-            query.setParameter(paramIndex++, activity.getAuthorName());
-            query.setParameter(paramIndex++, activity.getStatus());
-            query.setParameter(paramIndex++, activity.getCreatedAt() != null 
-                ? Timestamp.valueOf(activity.getCreatedAt()) 
-                : nowTimestamp);
-            query.setParameter(paramIndex++, nowTimestamp);
+            query.setParameter(paramIndex++, truncate(activity.getAuthorEmail(), AUTHOR_EMAIL_MAX_LENGTH));
+            query.setParameter(paramIndex++, truncate(activity.getAuthorName(), AUTHOR_NAME_MAX_LENGTH));
+            query.setParameter(paramIndex++, truncate(activity.getStatus(), STATUS_MAX_LENGTH));
+            query.setParameter(paramIndex++, createdAt);
+            query.setParameter(paramIndex++, updatedAt);
             query.setParameter(paramIndex++, activity.getCreatedBy());
             query.setParameter(paramIndex++, activity.getUpdatedBy());
         }
 
         return query.executeUpdate();
+    }
+
+    private String safeRequired(String value, String fallback, int maxLength) {
+        String normalized = normalize(value);
+        if (normalized == null) {
+            return fallback;
+        }
+        return truncate(normalized, maxLength);
+    }
+
+    private String truncate(String value, int maxLength) {
+        String normalized = normalize(value);
+        if (normalized == null) {
+            return null;
+        }
+        return normalized.length() <= maxLength ? normalized : normalized.substring(0, maxLength);
+    }
+
+    private String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

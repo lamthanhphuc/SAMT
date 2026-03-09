@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.example.user_groupservice.grpc";
+
+service UserGroupGrpcService {
+  rpc VerifyGroupExists(VerifyGroupRequest) returns (VerifyGroupResponse);
+  rpc CheckGroupLeader(CheckGroupLeaderRequest) returns (CheckGroupLeaderResponse);
+  rpc CheckGroupMember(CheckGroupMemberRequest) returns (CheckGroupMemberResponse);
+  rpc GetGroup(GetGroupRequest) returns (GetGroupResponse);
+}
+
+message VerifyGroupRequest {
+  string group_id = 1;
+}
+
+message VerifyGroupResponse {
+  bool exists = 1;
+  bool deleted = 2;
+  string message = 3;
+}
+
+message CheckGroupLeaderRequest {
+  string group_id = 1;
+  string user_id = 2;
+}
+
+message CheckGroupLeaderResponse {
+  bool is_leader = 1;
+  string message = 2;
+}
+
+message CheckGroupMemberRequest {
+  string group_id = 1;
+  string user_id = 2;
+}
+
+message CheckGroupMemberResponse {
+  bool is_member = 1;
+  string role = 2;
+  string message = 3;
+}
+
+message GetGroupRequest {
+  string group_id = 1;
+}
+
+message GetGroupResponse {
+  string group_id = 1;
+  string group_name = 2;
+  string semester = 3;
+  string lecturer_id = 4;
+  string created_at = 5;
+  string updated_at = 6;
+}

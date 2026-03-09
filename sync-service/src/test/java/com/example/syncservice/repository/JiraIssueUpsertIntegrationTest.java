@@ -17,6 +17,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
@@ -69,7 +70,7 @@ class JiraIssueUpsertIntegrationTest {
     @Test
     void testRetryIdempotency_NoDuplicates_NoExceptions_RowCountUnchanged() {
         // GIVEN: External Jira API data with timestamp T1
-        Long projectConfigId = 1L;
+        UUID projectConfigId = UUID.randomUUID();
         LocalDateTime externalCreatedAt = LocalDateTime.of(2026, 1, 15, 10, 0);
         LocalDateTime externalUpdatedAt_T1 = LocalDateTime.of(2026, 2, 20, 14, 30);
         
@@ -113,7 +114,7 @@ class JiraIssueUpsertIntegrationTest {
     @Test
     void testExternalTimestampPreserved_UpdatedAtFromJiraAPI_NotSyncTime() {
         // GIVEN: Jira issue with external timestamp (3 days ago)
-        Long projectConfigId = 2L;
+        UUID projectConfigId = UUID.randomUUID();
         LocalDateTime externalUpdatedAt = LocalDateTime.of(2026, 2, 19, 10, 15, 30);
         LocalDateTime syncTime = LocalDateTime.now();
         
@@ -142,7 +143,7 @@ class JiraIssueUpsertIntegrationTest {
     @Test
     void testUpdateScenario_DataUpdated_UpdatedAtChanged_CreatedAtPreserved() {
         // GIVEN: Initial sync with T1
-        Long projectConfigId = 3L;
+        UUID projectConfigId = UUID.randomUUID();
         LocalDateTime createdAt = LocalDateTime.of(2026, 1, 10, 9, 0);
         LocalDateTime updatedAt_T1 = LocalDateTime.of(2026, 2, 15, 10, 0);
         
@@ -185,7 +186,7 @@ class JiraIssueUpsertIntegrationTest {
     @Test
     void testCircuitBreakerRecovery_PartialFailureThenRetry_NoConstraintViolations() {
         // GIVEN: Partial sync before circuit breaker opened
-        Long projectConfigId = 4L;
+        UUID projectConfigId = UUID.randomUUID();
         LocalDateTime timestamp = LocalDateTime.of(2026, 2, 22, 10, 0);
         
         List<JiraIssue> partialSync = List.of(
@@ -217,7 +218,7 @@ class JiraIssueUpsertIntegrationTest {
     @Test
     void testNullTimestampHandling_NoConstraintViolation_FallbackApplied() {
         // GIVEN: Issue with null timestamps (edge case)
-        Long projectConfigId = 5L;
+        UUID projectConfigId = UUID.randomUUID();
         JiraIssue issueWithNullTimestamps = JiraIssue.builder()
             .projectConfigId(projectConfigId)
             .issueKey("NULL-001")
@@ -257,7 +258,7 @@ class JiraIssueUpsertIntegrationTest {
     @Test
     void testLargeBatch_AllInserted_RetryNoDuplicates() {
         // GIVEN: 100 Jira issues
-        Long projectConfigId = 6L;
+        UUID projectConfigId = UUID.randomUUID();
         LocalDateTime timestamp = LocalDateTime.of(2026, 2, 22, 12, 0);
         
         List<JiraIssue> largeBatch = new java.util.ArrayList<>();
@@ -279,7 +280,7 @@ class JiraIssueUpsertIntegrationTest {
             .isEqualTo(100);
     }
 
-    private JiraIssue buildJiraIssue(Long projectConfigId, String issueKey, String issueId, 
+    private JiraIssue buildJiraIssue(UUID projectConfigId, String issueKey, String issueId,
                                      String summary, LocalDateTime createdAt, LocalDateTime updatedAt) {
         JiraIssue issue = JiraIssue.builder()
             .projectConfigId(projectConfigId)

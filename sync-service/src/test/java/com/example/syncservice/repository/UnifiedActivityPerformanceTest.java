@@ -18,6 +18,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -99,7 +100,7 @@ class UnifiedActivityPerformanceTest {
      */
     @Test
     void testPerformance_500Records_Under400ms() {
-        List<UnifiedActivity> activities = generateActivities(1L, 500);
+        List<UnifiedActivity> activities = generateActivities(UUID.randomUUID(), 500);
         
         long startTime = System.currentTimeMillis();
         int affected = unifiedActivityRepository.upsertBatch(activities);
@@ -116,7 +117,7 @@ class UnifiedActivityPerformanceTest {
      */
     @Test
     void testPerformance_1000Records_Under800ms() {
-        List<UnifiedActivity> activities = generateActivities(1L, 1000);
+        List<UnifiedActivity> activities = generateActivities(UUID.randomUUID(), 1000);
         
         long startTime = System.currentTimeMillis();
         int affected = unifiedActivityRepository.upsertBatch(activities);
@@ -133,7 +134,7 @@ class UnifiedActivityPerformanceTest {
      */
     @Test
     void testBatching_Over500Records_SplitsIntoBatches() {
-        List<UnifiedActivity> activities = generateActivities(1L, 1200);
+        List<UnifiedActivity> activities = generateActivities(UUID.randomUUID(), 1200);
         
         long startTime = System.currentTimeMillis();
         int affected = unifiedActivityRepository.upsertBatch(activities);
@@ -150,7 +151,7 @@ class UnifiedActivityPerformanceTest {
      */
     @Test
     void testIdempotency_RetryWithSameData_NoException() {
-        List<UnifiedActivity> activities = generateActivities(1L, 100);
+        List<UnifiedActivity> activities = generateActivities(UUID.randomUUID(), 100);
         
         int firstRun = unifiedActivityRepository.upsertBatch(activities);
         int secondRun = unifiedActivityRepository.upsertBatch(activities);
@@ -175,7 +176,7 @@ class UnifiedActivityPerformanceTest {
         
         List<CompletableFuture<Void>> futures = IntStream.range(0, 5)
             .mapToObj(i -> CompletableFuture.runAsync(() -> {
-                List<UnifiedActivity> activities = generateActivities((long) (i + 1), 200);
+                List<UnifiedActivity> activities = generateActivities(UUID.randomUUID(), 200);
                 int affected = unifiedActivityRepository.upsertBatch(activities);
                 assertThat(affected).isEqualTo(200);
             }, executor))
@@ -195,7 +196,7 @@ class UnifiedActivityPerformanceTest {
      */
     @Test
     void testConcurrentRetry_SameProject_NoDeadlock() throws Exception {
-        Long projectId = 1L;
+        UUID projectId = UUID.randomUUID();
         List<UnifiedActivity> activities = generateActivities(projectId, 100);
         
         // First insert
@@ -229,7 +230,7 @@ class UnifiedActivityPerformanceTest {
      */
     @Test
     void testNoHangingLocks_AfterBatchUpsert() {
-        List<UnifiedActivity> activities = generateActivities(1L, 500);
+        List<UnifiedActivity> activities = generateActivities(UUID.randomUUID(), 500);
         unifiedActivityRepository.upsertBatch(activities);
         
         String sql = "SELECT COUNT(*) FROM pg_locks WHERE NOT granted";
@@ -240,7 +241,7 @@ class UnifiedActivityPerformanceTest {
         System.out.println("✅ NO HANGING LOCKS: All locks released after transaction");
     }
 
-    private List<UnifiedActivity> generateActivities(Long projectConfigId, int count) {
+    private List<UnifiedActivity> generateActivities(UUID projectConfigId, int count) {
         List<UnifiedActivity> activities = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
         

@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * Implementation of custom UPSERT operations for GithubCommit.
  * Uses native PostgreSQL ON CONFLICT for idempotent writes.
- * 
+ *
  * CRITICAL: Ensures no constraint violations on sync retry or circuit breaker recovery.
  * PERFORMANCE: True batch UPSERT with multi-row INSERT (single roundtrip per batch).
  */
@@ -62,7 +62,7 @@ public class GithubCommitRepositoryImpl implements GithubCommitRepositoryCustom 
     private int executeBatchUpsert(List<GithubCommit> batch) {
         StringBuilder sql = new StringBuilder("""
                 INSERT INTO github_commits (
-                    project_config_id, commit_sha, message,
+                    project_config_id, commit_sha, commit_message, message,
                     author_name, author_email, author_login,
                     committed_date,
                     additions, deletions, files_changed, total_changes,
@@ -72,7 +72,7 @@ public class GithubCommitRepositoryImpl implements GithubCommitRepositoryCustom 
 
         // Build multi-row VALUES clause: (?, ?, ...), (?, ?, ...), ...
         for (int i = 0; i < batch.size(); i++) {
-            sql.append("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            sql.append("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             if (i < batch.size() - 1) {
                 sql.append(",\n");
             }
@@ -82,6 +82,7 @@ public class GithubCommitRepositoryImpl implements GithubCommitRepositoryCustom 
                 
                 ON CONFLICT (project_config_id, commit_sha)
                 DO UPDATE SET
+                    commit_message = EXCLUDED.commit_message,
                     message = EXCLUDED.message,
                     author_name = EXCLUDED.author_name,
                     author_email = EXCLUDED.author_email,
@@ -104,6 +105,7 @@ public class GithubCommitRepositoryImpl implements GithubCommitRepositoryCustom 
         for (GithubCommit commit : batch) {
             query.setParameter(paramIndex++, commit.getProjectConfigId());
             query.setParameter(paramIndex++, commit.getCommitSha());
+            query.setParameter(paramIndex++, commit.getMessage());
             query.setParameter(paramIndex++, commit.getMessage());
             query.setParameter(paramIndex++, commit.getAuthorName());
             query.setParameter(paramIndex++, commit.getAuthorEmail());
@@ -132,18 +134,19 @@ public class GithubCommitRepositoryImpl implements GithubCommitRepositoryCustom 
         // Map entity field names to actual database column names
         String sql = """
                 INSERT INTO github_commits (
-                    project_config_id, commit_sha, message,
+                    project_config_id, commit_sha, commit_message, message,
                     author_name, author_email, committed_date,
                     additions, deletions, files_changed,
                     created_at, updated_at
                 ) VALUES (
-                    :projectConfigId, :commitSha, :commitMessage,
+                    :projectConfigId, :commitSha, :commitMessage, :message,
                     :authorName, :authorEmail, :committedDate,
                     :additions, :deletions, :filesChanged,
                     :createdAt, :updatedAt
                 )
                 ON CONFLICT (project_config_id, commit_sha)
                 DO UPDATE SET
+                    commit_message = EXCLUDED.commit_message,
                     message = EXCLUDED.message,
                     author_name = EXCLUDED.author_name,
                     author_email = EXCLUDED.author_email,
@@ -158,6 +161,7 @@ public class GithubCommitRepositoryImpl implements GithubCommitRepositoryCustom 
         query.setParameter("projectConfigId", commit.getProjectConfigId());
         query.setParameter("commitSha", commit.getCommitSha());
         query.setParameter("commitMessage", commit.getMessage());
+        query.setParameter("message", commit.getMessage());
         query.setParameter("authorName", commit.getAuthorName());
         query.setParameter("authorEmail", commit.getAuthorEmail());
         query.setParameter("committedDate", Timestamp.valueOf(

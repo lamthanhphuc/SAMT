@@ -11,8 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.UUID;
 
 /**
  * Adapter for converting external API DTOs to entities.
@@ -24,50 +23,68 @@ import java.util.List;
 public class DataMapper {
 
     private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_DATE_TIME;
+    private static final int UNIFIED_ACTIVITY_TITLE_MAX_LENGTH = 1000;
+    private static final int AUTHOR_EMAIL_MAX_LENGTH = 255;
+    private static final int AUTHOR_NAME_MAX_LENGTH = 255;
+    private static final int STATUS_MAX_LENGTH = 50;
     
     private final SyncMetrics syncMetrics;
 
     /**
      * Convert Jira issue to UnifiedActivity.
      */
-    public UnifiedActivity jiraIssueToUnifiedActivity(JiraIssueDto dto, Long projectConfigId) {
+    public UnifiedActivity jiraIssueToUnifiedActivity(JiraIssueDto dto, UUID projectConfigId) {
         UnifiedActivity.ActivityType activityType = mapJiraIssueTypeToActivityType(
                 dto.getFields().getIssueType() != null ? dto.getFields().getIssueType().getName() : null);
 
-        return UnifiedActivity.builder()
+        String externalId = firstNonBlank(dto.getKey(), dto.getId(), "jira-unknown");
+        UnifiedActivity activity = UnifiedActivity.builder()
                 .projectConfigId(projectConfigId)
                 .source(UnifiedActivity.ActivitySource.JIRA)
                 .activityType(activityType)
-                .externalId(dto.getKey())
-                .title(dto.getFields().getSummary())
-                .description(dto.getFields().getDescription())
-                .authorEmail(dto.getFields().getReporter() != null ? dto.getFields().getReporter().getEmailAddress() : null)
-                .authorName(dto.getFields().getReporter() != null ? dto.getFields().getReporter().getDisplayName() : null)
-                .status(dto.getFields().getStatus() != null ? dto.getFields().getStatus().getName() : null)
+            .externalId(externalId)
+            .title(requiredValue(dto.getFields().getSummary(), dto.getKey(), UNIFIED_ACTIVITY_TITLE_MAX_LENGTH))
+            .description(trimToNull(dto.getFields().getDescription()))
+            .authorEmail(truncate(dto.getFields().getReporter() != null ? dto.getFields().getReporter().getEmailAddress() : null, AUTHOR_EMAIL_MAX_LENGTH))
+            .authorName(truncate(dto.getFields().getReporter() != null ? dto.getFields().getReporter().getDisplayName() : null, AUTHOR_NAME_MAX_LENGTH))
+            .status(truncate(dto.getFields().getStatus() != null ? dto.getFields().getStatus().getName() : null, STATUS_MAX_LENGTH))
                 .build();
+        activity.setCreatedAt(parseIsoDateTime(dto.getFields().getCreated(), "createdAt", externalId));
+        activity.setUpdatedAt(parseIsoDateTime(dto.getFields().getUpdated(), "updatedAt", externalId));
+        return activity;
     }
 
     /**
      * Convert GitHub commit to UnifiedActivity.
      */
-    public UnifiedActivity githubCommitToUnifiedActivity(GithubCommitDto dto, Long projectConfigId) {
-        return UnifiedActivity.builder()
+    public UnifiedActivity githubCommitToUnifiedActivity(GithubCommitDto dto, UUID projectConfigId) {
+        String commitMessage = dto.getCommit() != null ? dto.getCommit().getMessage() : null;
+        String commitDateRaw = dto.getCommit() != null && dto.getCommit().getAuthor() != null
+            ? dto.getCommit().getAuthor().getDate()
+            : null;
+        String externalId = firstNonBlank(dto.getSha(), "missing-sha");
+        String title = firstLine(commitMessage);
+
+        UnifiedActivity activity = UnifiedActivity.builder()
                 .projectConfigId(projectConfigId)
                 .source(UnifiedActivity.ActivitySource.GITHUB)
                 .activityType(UnifiedActivity.ActivityType.COMMIT)
-                .externalId(dto.getSha())
-                .title(dto.getCommit().getMessage())
-                .description(buildCommitDescription(dto))
-                .authorEmail(dto.getCommit().getAuthor() != null ? dto.getCommit().getAuthor().getEmail() : null)
-                .authorName(dto.getCommit().getAuthor() != null ? dto.getCommit().getAuthor().getName() : null)
-                .status("committed")
+            .externalId(externalId)
+            .title(requiredValue(title, externalId, UNIFIED_ACTIVITY_TITLE_MAX_LENGTH))
+            .description(buildCommitDescription(dto))
+            .authorEmail(truncate(dto.getCommit().getAuthor() != null ? dto.getCommit().getAuthor().getEmail() : null, AUTHOR_EMAIL_MAX_LENGTH))
+            .authorName(truncate(dto.getCommit().getAuthor() != null ? dto.getCommit().getAuthor().getName() : null, AUTHOR_NAME_MAX_LENGTH))
+            .status("committed")
                 .build();
+        activity.setCreatedAt(parseIsoDateTime(commitDateRaw, "committedDate", externalId));
+        activity.setUpdatedAt(parseIsoDateTime(commitDateRaw, "committedDate", externalId));
+        return activity;
     }
 
     /**
      * Convert Jira issue to JiraIssue entity (denormalized storage).
      */
-    public JiraIssue jiraIssueDtoToEntity(JiraIssueDto dto, Long projectConfigId) {
+    public JiraIssue jiraIssueDtoToEntity(JiraIssueDto dto, UUID projectConfigId) {
         // Increment records parsed BEFORE mapping to ensure accurate denominator
         syncMetrics.recordRecordParsed();
         
@@ -100,17 +117,17 @@ public class DataMapper {
     /**
      * Convert GitHub commit to GithubCommit entity (denormalized storage).
      */
-    public GithubCommit githubCommitDtoToEntity(GithubCommitDto dto, Long projectConfigId) {
+    public GithubCommit githubCommitDtoToEntity(GithubCommitDto dto, UUID projectConfigId) {
     // Increment records parsed BEFORE mapping to ensure accurate denominator
     syncMetrics.recordRecordParsed();
     
     GithubCommit commit = GithubCommit.builder()
             .projectConfigId(projectConfigId)
-            .commitSha(dto.getSha())
-            .message(dto.getCommit() != null ? dto.getCommit().getMessage() : null)
-            .authorEmail(dto.getCommit() != null && dto.getCommit().getAuthor() != null ? dto.getCommit().getAuthor().getEmail() : null)
-            .authorName(dto.getCommit() != null && dto.getCommit().getAuthor() != null ? dto.getCommit().getAuthor().getName() : null)
-            .authorLogin(dto.getAuthor() != null ? dto.getAuthor().getLogin() : null)
+            .commitSha(firstNonBlank(dto.getSha(), "missing-sha"))
+            .message(firstNonBlank(trimToNull(dto.getCommit() != null ? dto.getCommit().getMessage() : null), "(no commit message)"))
+            .authorEmail(truncate(dto.getCommit() != null && dto.getCommit().getAuthor() != null ? dto.getCommit().getAuthor().getEmail() : null, AUTHOR_EMAIL_MAX_LENGTH))
+            .authorName(truncate(dto.getCommit() != null && dto.getCommit().getAuthor() != null ? dto.getCommit().getAuthor().getName() : null, AUTHOR_NAME_MAX_LENGTH))
+            .authorLogin(truncate(dto.getAuthor() != null ? dto.getAuthor().getLogin() : null, AUTHOR_NAME_MAX_LENGTH))
             .additions(dto.getStats() != null && dto.getStats().getAdditions() != null ? dto.getStats().getAdditions() : 0)
             .deletions(dto.getStats() != null && dto.getStats().getDeletions() != null ? dto.getStats().getDeletions() : 0)
             .totalChanges(dto.getStats() != null && dto.getStats().getTotal() != null ? dto.getStats().getTotal() : 0)
@@ -152,12 +169,61 @@ public class DataMapper {
      * Build commit description from stats.
      */
     private String buildCommitDescription(GithubCommitDto dto) {
-        if (dto.getStats() == null) {
+        String message = dto.getCommit() != null ? trimToNull(dto.getCommit().getMessage()) : null;
+        String stats = null;
+        if (dto.getStats() != null) {
+            int additions = dto.getStats().getAdditions() != null ? dto.getStats().getAdditions() : 0;
+            int deletions = dto.getStats().getDeletions() != null ? dto.getStats().getDeletions() : 0;
+            stats = String.format("+%d -%d lines", additions, deletions);
+        }
+
+        if (message == null) {
+            return stats;
+        }
+        if (stats == null) {
+            return message;
+        }
+        return message + "\n\n" + stats;
+    }
+
+    private String firstLine(String value) {
+        String normalized = trimToNull(value);
+        if (normalized == null) {
             return null;
         }
-        return String.format("+%d -%d lines", 
-                dto.getStats().getAdditions(), 
-                dto.getStats().getDeletions());
+        int newline = normalized.indexOf('\n');
+        return newline >= 0 ? normalized.substring(0, newline).trim() : normalized;
+    }
+
+    private String requiredValue(String primary, String fallback, int maxLength) {
+        String value = firstNonBlank(primary, fallback, "[untitled]");
+        return truncate(value, maxLength);
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            String normalized = trimToNull(value);
+            if (normalized != null) {
+                return normalized;
+            }
+        }
+        return null;
+    }
+
+    private String truncate(String value, int maxLength) {
+        String normalized = trimToNull(value);
+        if (normalized == null) {
+            return null;
+        }
+        return normalized.length() <= maxLength ? normalized : normalized.substring(0, maxLength);
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     /**
