@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -37,6 +38,7 @@ public class IdentityServiceClient {
      * Get user by ID from Identity Service.
      */
     public GetUserResponse getUser(Long userId) {
+        validateUserId(userId, "getUser");
         log.debug("Fetching user from Identity Service: {}", userId);
 
         try {
@@ -57,6 +59,7 @@ public class IdentityServiceClient {
      * Get user's system role from Identity Service.
      */
     public GetUserRoleResponse getUserRole(Long userId) {
+        validateUserId(userId, "getUserRole");
         log.debug("Fetching user role from Identity Service: {}", userId);
 
         try {
@@ -77,6 +80,7 @@ public class IdentityServiceClient {
      * Verify user exists and is active in Identity Service.
      */
     public VerifyUserResponse verifyUserExists(Long userId) {
+        validateUserId(userId, "verifyUserExists");
         log.debug("Verifying user exists: {}", userId);
 
         try {
@@ -126,6 +130,10 @@ public class IdentityServiceClient {
      * Update user profile via Identity Service (UC22 - proxy pattern).
      */
     public UpdateUserResponse updateUser(Long userId, String fullName) {
+        validateUserId(userId, "updateUser");
+        if (!StringUtils.hasText(fullName)) {
+            throw new IllegalArgumentException("fullName must not be blank");
+        }
         log.debug("Updating user profile via Identity Service: {}", userId);
 
         try {
@@ -164,6 +172,12 @@ public class IdentityServiceClient {
         } catch (StatusRuntimeException e) {
             log.error("Failed to list users: {}", e.getStatus());
             throw e;
+        }
+    }
+
+    private void validateUserId(Long userId, String operation) {
+        if (userId == null || userId <= 0) {
+            throw new IllegalArgumentException("Invalid userId for " + operation + ": " + userId);
         }
     }
 }

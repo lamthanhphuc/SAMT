@@ -112,41 +112,19 @@ public class UserServiceImpl implements UserService {
                 "listUsers"
         );
 
-        // Convert sang DTO
+        // Identity Service already applies filters and pagination.
         List<UserResponse> users = response.getUsersList().stream()
                 .map(UserGrpcMapper::toUserResponse)
                 .toList();
-
-        // Filter theo status (nếu có)
-        if (status != null && !status.isBlank()) {
-            String statusUpper = status.toUpperCase();
-            users = users.stream()
-                    .filter(u -> u.getStatus().equalsIgnoreCase(statusUpper))
-                    .toList();
-        }
-
-        // Filter theo role (nếu có)
-        if (role != null && !role.isBlank()) {
-            String roleUpper = role.toUpperCase();
-            users = users.stream()
-                    .filter(u -> u.getRoles().contains(roleUpper))
-                    .toList();
-        }
-
-        // Manual pagination
-        int start = page * size;
-        int end = Math.min(start + size, users.size());
-
-        List<UserResponse> pageContent =
-                (start < users.size()) ? users.subList(start, end) : List.of();
+        long totalElements = response.getTotalElements();
+        int totalPages = size <= 0 ? 0 : (int) Math.ceil((double) totalElements / size);
 
         return PageResponse.<UserResponse>builder()
-                .content(pageContent)
+                .content(users)
                 .page(page)
                 .size(size)
-                .totalElements(users.size())
-                .totalPages(size == 0 ? 0 :
-                        (int) Math.ceil((double) users.size() / size))
+                .totalElements(totalElements)
+                .totalPages(totalPages)
                 .build();
     }
 

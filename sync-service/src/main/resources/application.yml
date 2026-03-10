@@ -151,7 +151,10 @@ resilience4j:
         exponential-backoff-multiplier: 2
         randomization-factor: 0.5
         retry-exceptions:
-          - io.grpc.StatusRuntimeException
+          - com.example.syncservice.client.grpc.ProjectConfigGrpcClient$GrpcClientException
+        ignore-exceptions:
+          - com.example.syncservice.client.grpc.ProjectConfigGrpcClient$NonRetryableGrpcClientException
+          - com.example.syncservice.exception.ConfigNotFoundException
 
   circuitbreaker:
     instances:

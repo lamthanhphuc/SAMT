@@ -127,6 +127,10 @@ resilience4j:
       analysisApi:
         max-attempts: 3
         wait-duration: 300ms
+        retry-exceptions:
+          - com.example.reportservice.service.AiClient$TransientAiUpstreamException
+        ignore-exceptions:
+          - com.example.reportservice.web.UpstreamServiceException
   circuitbreaker:
     instances:
       syncGrpc:

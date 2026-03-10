@@ -16,6 +16,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
@@ -51,8 +52,12 @@ public class AiClient {
                             AiResponse.class);
 
             if (!response.getStatusCode().is2xxSuccessful()) {
-            throw new UpstreamServiceException(
-                        "AI Service error: " + response.getStatusCode());
+                HttpStatusCode status = response.getStatusCode();
+                String message = "AI Service error: " + status;
+                if (status.is5xxServerError() || status.value() == 429) {
+                    throw new TransientAiUpstreamException(message);
+                }
+                throw new UpstreamServiceException(message);
             }
 
             AiResponse body = response.getBody();
@@ -63,10 +68,17 @@ public class AiClient {
 
             return body.getSrsContent();
 
+        } catch (HttpStatusCodeException e) {
+            HttpStatusCode status = e.getStatusCode();
+            String message = "AI Service HTTP error: " + status;
+            if (status.is5xxServerError() || status.value() == 429) {
+                throw new TransientAiUpstreamException(message, e);
+            }
+            throw new UpstreamServiceException(message, e);
         } catch (RestClientException e) {
 
             log.error("Failed to call AI Service", e);
-            throw new UpstreamServiceException("AI Service unavailable");
+            throw new TransientAiUpstreamException("AI Service unavailable", e);
         }
     }
 
@@ -82,5 +94,15 @@ public class AiClient {
         }
 
         throw new UpstreamServiceException("Missing caller JWT for internal AI call");
+    }
+
+    public static class TransientAiUpstreamException extends UpstreamServiceException {
+        public TransientAiUpstreamException(String message) {
+            super(message);
+        }
+
+        public TransientAiUpstreamException(String message, Throwable cause) {
+            super(message, cause);
+        }
     }
 }

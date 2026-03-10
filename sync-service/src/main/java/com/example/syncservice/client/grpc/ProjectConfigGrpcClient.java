@@ -18,6 +18,7 @@ import com.example.syncservice.client.grpc.ProjectConfigInternalServiceGrpc;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.UUID;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -65,19 +66,23 @@ public class ProjectConfigGrpcClient {
         } catch (StatusRuntimeException e) {
             log.error("gRPC error fetching config {}: {} - {}", 
                     configId, e.getStatus().getCode(), e.getStatus().getDescription());
-            
-            if (e.getStatus().getCode() == Status.Code.NOT_FOUND) {
+
+            Status.Code code = e.getStatus().getCode();
+            if (code == Status.Code.NOT_FOUND) {
                 throw new ConfigNotFoundException(configId);
-            } else if (e.getStatus().getCode() == Status.Code.PERMISSION_DENIED) {
-                throw new GrpcClientException("Service authentication failed", e);
-            } else if (e.getStatus().getCode() == Status.Code.DEADLINE_EXCEEDED) {
-                throw new GrpcClientException("gRPC timeout: " + configId, e);
             }
-            
-            throw new GrpcClientException("gRPC error: " + e.getStatus(), e);
+            if (code == Status.Code.PERMISSION_DENIED || code == Status.Code.UNAUTHENTICATED) {
+                throw new NonRetryableGrpcClientException("Service authentication failed", e);
+            }
+            if (code == Status.Code.INVALID_ARGUMENT || code == Status.Code.FAILED_PRECONDITION) {
+                throw new NonRetryableGrpcClientException("Invalid request for config " + configId, e);
+            }
+
+            // Transient transport/server failures are retryable by resilience4j.
+            throw new GrpcClientException("Transient gRPC failure: " + e.getStatus(), e);
         } catch (Exception e) {
             log.error("Unexpected error fetching config {}: {}", configId, e.getMessage(), e);
-            throw new GrpcClientException("Unexpected error: " + e.getMessage(), e);
+            throw new NonRetryableGrpcClientException("Unexpected error: " + e.getMessage(), e);
         }
     }
 
@@ -101,7 +106,8 @@ public class ProjectConfigGrpcClient {
                     .internalListVerifiedConfigs(request);
 
                 List<UUID> configIds = response.getConfigsList().stream()
-                    .map(config -> UUID.fromString(config.getConfigId()))
+                    .map(config -> parseConfigId(config.getConfigId()))
+                    .filter(Objects::nonNull)
                     .collect(Collectors.toList());
 
             log.info("Found {} verified configs", configIds.size());
@@ -110,10 +116,23 @@ public class ProjectConfigGrpcClient {
         } catch (StatusRuntimeException e) {
             log.error("gRPC error listing configs: {} - {}", 
                     e.getStatus().getCode(), e.getStatus().getDescription());
-            throw new GrpcClientException("gRPC error: " + e.getStatus(), e);
+            Status.Code code = e.getStatus().getCode();
+            if (code == Status.Code.PERMISSION_DENIED || code == Status.Code.UNAUTHENTICATED) {
+                throw new NonRetryableGrpcClientException("Service authentication failed", e);
+            }
+            throw new GrpcClientException("Transient gRPC failure: " + e.getStatus(), e);
         } catch (Exception e) {
             log.error("Unexpected error listing configs: {}", e.getMessage(), e);
-            throw new GrpcClientException("Unexpected error: " + e.getMessage(), e);
+            throw new NonRetryableGrpcClientException("Unexpected error: " + e.getMessage(), e);
+        }
+    }
+
+    private UUID parseConfigId(String rawConfigId) {
+        try {
+            return UUID.fromString(rawConfigId);
+        } catch (IllegalArgumentException ex) {
+            log.warn("Skipping malformed configId from gRPC response: {}", rawConfigId);
+            return null;
         }
     }
 
@@ -142,6 +161,12 @@ public class ProjectConfigGrpcClient {
         }
 
         public GrpcClientException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
+    public static class NonRetryableGrpcClientException extends GrpcClientException {
+        public NonRetryableGrpcClientException(String message, Throwable cause) {
             super(message, cause);
         }
     }
