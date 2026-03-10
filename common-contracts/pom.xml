@@ -23,6 +23,11 @@
     <dependencies>
         <!-- Pure model layer (DTOs, events, generated gRPC stubs) -->
 
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+        </dependency>
+
         <!-- Lombok (compile-time only) -->
         <dependency>
             <groupId>org.projectlombok</groupId>
