@@ -89,30 +89,21 @@ public class GatewayRoutesConfig {
                         .filters(f -> f
                                 .filter(rateLimitGatewayFilter.loginRateLimit("identity-login"))
                                 .stripPrefix(2)
-                                .addRequestHeader("X-Forwarded-Host", "gateway")
-                                .circuitBreaker(c -> c
-                                        .setName("identityServiceCircuitBreaker")
-                                        .setFallbackUri("forward:/__gateway/fallback/identity")))
+                                .addRequestHeader("X-Forwarded-Host", "gateway"))
                         .uri(identityServiceUri))
 
                 .route("identity-auth-login", r -> r
                         .path("/api/auth/login")
                         .filters(f -> f
-                                .filter(rateLimitGatewayFilter.loginRateLimit("identity-auth-login"))
-                                .addRequestHeader("X-Forwarded-Host", "gateway")
-                                .circuitBreaker(c -> c
-                                        .setName("identityServiceCircuitBreaker")
-                                        .setFallbackUri("forward:/__gateway/fallback/identity")))
+                                .filter(rateLimitGatewayFilter.globalRateLimit("identity-auth-login"))
+                                .addRequestHeader("X-Forwarded-Host", "gateway"))
                         .uri(identityServiceUri))
 
                 .route("identity-auth-api", r -> r
                         .path("/api/auth/**", "/api/admin/**")
                         .filters(f -> f
                                 .filter(rateLimitGatewayFilter.globalRateLimit("identity-auth-api"))
-                                .addRequestHeader("X-Forwarded-Host", "gateway")
-                                .circuitBreaker(c -> c
-                                        .setName("identityServiceCircuitBreaker")
-                                        .setFallbackUri("forward:/__gateway/fallback/identity")))
+                                .addRequestHeader("X-Forwarded-Host", "gateway"))
                         .uri(identityServiceUri))
 
                 .route("identity-service-api", r -> r
@@ -140,20 +131,14 @@ public class GatewayRoutesConfig {
                         .path("/api/project-configs/**")
                         .filters(f -> f
                                 .filter(rateLimitGatewayFilter.globalRateLimit("project-config-service"))
-                                .addRequestHeader("X-Forwarded-Host", "gateway")
-                                .circuitBreaker(c -> c
-                                        .setName("projectConfigServiceCircuitBreaker")
-                                        .setFallbackUri("forward:/__gateway/fallback/project-config")))
+                                .addRequestHeader("X-Forwarded-Host", "gateway"))
                         .uri(projectConfigServiceUri))
 
                 .route("sync-service-api", r -> r
                         .path("/api/sync/**")
                         .filters(f -> f
                                 .filter(rateLimitGatewayFilter.globalRateLimit("sync-service"))
-                                .addRequestHeader("X-Forwarded-Host", "gateway")
-                                .circuitBreaker(c -> c
-                                        .setName("syncServiceCircuitBreaker")
-                                        .setFallbackUri("forward:/__gateway/fallback/sync")))
+                                .addRequestHeader("X-Forwarded-Host", "gateway"))
                         .uri(syncServiceUri))
 
                 .route("analysis-service-api", r -> r

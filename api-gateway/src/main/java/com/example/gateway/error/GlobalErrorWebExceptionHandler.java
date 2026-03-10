@@ -1,6 +1,11 @@
 package com.example.gateway.error;
 
+import com.example.common.api.ApiResponse;
+import com.example.common.api.ApiResponseFactory;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.netty.channel.ConnectTimeoutException;
+import io.netty.handler.timeout.ReadTimeoutException;
+import reactor.netty.http.client.PrematureCloseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.web.reactive.error.AbstractErrorWebExceptionHandler;
@@ -26,9 +31,8 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebInputException;
 import reactor.core.publisher.Mono;
 
-import java.time.Instant;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.net.ConnectException;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 /**
@@ -70,18 +74,22 @@ public class GlobalErrorWebExceptionHandler extends AbstractErrorWebExceptionHan
         Throwable ex = getError(request);
         HttpStatus status = resolveStatus(ex);
         String genericMessage = genericMessage(status);
+        String correlationId = GatewayErrorResponseWriter.resolveCorrelationId(request.headers().firstHeader(GatewayErrorResponseWriter.HEADER_NAME));
 
         // ✅ PRODUCTION-SAFE: Log only generic info with correlation ID
-        logger.warn("Gateway error handled. Status={}, Path={}", status.value(), request.path());
+        logger.warn("Gateway error handled. Status={}, Path={}, CorrelationId={}", status.value(), request.path(), correlationId);
 
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("statusCode", status.value());
-        body.put("error", status.getReasonPhrase());
-        body.put("message", genericMessage);
-        body.put("timestamp", Instant.now().toString());
+        ApiResponse<Void> body = ApiResponseFactory.error(
+            status.value(),
+            status.getReasonPhrase(),
+            genericMessage,
+            request.path(),
+            correlationId
+        );
 
         ServerResponse.BodyBuilder responseBuilder = ServerResponse.status(status)
-            .contentType(MediaType.APPLICATION_JSON);
+            .contentType(MediaType.APPLICATION_JSON)
+            .header(GatewayErrorResponseWriter.HEADER_NAME, correlationId);
 
         if (ex instanceof MethodNotAllowedException methodNotAllowedException) {
             String allowHeader = methodNotAllowedException.getSupportedMethods().stream()
@@ -108,6 +116,9 @@ public class GlobalErrorWebExceptionHandler extends AbstractErrorWebExceptionHan
      * ✅ Default to 500 for unmapped exceptions (NO null return)
      */
     private HttpStatus resolveStatus(Throwable ex) {
+        if (isUpstreamUnavailable(ex)) {
+            return HttpStatus.SERVICE_UNAVAILABLE;
+        }
         if (ex instanceof DataBufferLimitException) {
             return HttpStatus.PAYLOAD_TOO_LARGE;
         }
@@ -135,6 +146,21 @@ public class GlobalErrorWebExceptionHandler extends AbstractErrorWebExceptionHan
         }
         // ✅ CRITICAL: Default case - NEVER return null
         return HttpStatus.INTERNAL_SERVER_ERROR;
+    }
+
+    private boolean isUpstreamUnavailable(Throwable ex) {
+        Throwable current = ex;
+        while (current != null) {
+            if (current instanceof ConnectException
+                || current instanceof ConnectTimeoutException
+                || current instanceof ReadTimeoutException
+                || current instanceof TimeoutException
+                || current instanceof PrematureCloseException) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     /**

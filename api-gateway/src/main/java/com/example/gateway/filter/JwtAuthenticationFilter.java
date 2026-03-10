@@ -1,14 +1,14 @@
 package com.example.gateway.filter;
 
+import com.example.gateway.error.GatewayErrorResponseWriter;
+import com.example.gateway.security.ExchangeAttributeSecurityContextRepository;
 import com.example.gateway.security.PublicEndpointPaths;
 import org.springframework.core.Ordered;
-import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
@@ -19,9 +19,6 @@ import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.util.Arrays;
 import java.util.List;
 
 @Component  // ENABLED FOR HEADER SPOOFING PREVENTION
@@ -31,11 +28,11 @@ public class JwtAuthenticationFilter implements WebFilter, Ordered {
     public static final String AUTHENTICATED_JWT_ATTRIBUTE = "gateway.authenticatedJwt";
 
     private final ReactiveJwtDecoder jwtDecoder;
-    private final boolean prodProfile;
+    private final GatewayErrorResponseWriter errorResponseWriter;
 
-    public JwtAuthenticationFilter(ReactiveJwtDecoder jwtDecoder, Environment environment) {
+    public JwtAuthenticationFilter(ReactiveJwtDecoder jwtDecoder, GatewayErrorResponseWriter errorResponseWriter) {
         this.jwtDecoder = jwtDecoder;
-        this.prodProfile = Arrays.asList(environment.getActiveProfiles()).contains("prod");
+        this.errorResponseWriter = errorResponseWriter;
     }
 
     @Override
@@ -48,6 +45,12 @@ public class JwtAuthenticationFilter implements WebFilter, Ordered {
         String path = exchange.getRequest().getURI().getPath();
         if (isPublicEndpoint(path)) {
             return chain.filter(exchange);
+        }
+
+        Object authenticatedMarker = exchange.getAttribute(AUTHENTICATED_MARKER_ATTRIBUTE);
+        Object authenticatedJwt = exchange.getAttribute(AUTHENTICATED_JWT_ATTRIBUTE);
+        if (Boolean.TRUE.equals(authenticatedMarker) && authenticatedJwt instanceof Jwt cachedJwt) {
+            return authenticateAndContinue(exchange, chain, cachedJwt);
         }
 
         String token = resolveBearerToken(exchange.getRequest());
@@ -84,9 +87,11 @@ public class JwtAuthenticationFilter implements WebFilter, Ordered {
                 null,
                 authorities
         );
+        SecurityContextImpl securityContext = new SecurityContextImpl(authentication);
 
         exchange.getAttributes().put(AUTHENTICATED_MARKER_ATTRIBUTE, Boolean.TRUE);
         exchange.getAttributes().put(AUTHENTICATED_JWT_ATTRIBUTE, jwt);
+        exchange.getAttributes().put(ExchangeAttributeSecurityContextRepository.ATTRIBUTE_NAME, securityContext);
 
         return chain.filter(exchange)
                 .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
@@ -105,21 +110,6 @@ public class JwtAuthenticationFilter implements WebFilter, Ordered {
     }
 
     private Mono<Void> unauthorized(ServerWebExchange exchange) {
-        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-        exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
-        String body = JsonErrorBodies.unauthorized();
-        byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
-        return exchange.getResponse().writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(bytes)));
-    }
-
-    private static final class JsonErrorBodies {
-        private JsonErrorBodies() {
-        }
-
-        private static String unauthorized() {
-            return "{\"statusCode\":401,\"error\":\"Unauthorized\",\"message\":\"Unauthorized\",\"timestamp\":\""
-                    + Instant.now().toString()
-                    + "\"}";
-        }
+        return errorResponseWriter.write(exchange, 401, "Unauthorized", "Unauthorized");
     }
 }

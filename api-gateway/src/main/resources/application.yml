@@ -80,11 +80,12 @@ spring:
             - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
 
           httpclient:
-            connect-timeout: 3000
-            response-timeout: 30s
+            connect-timeout: 2000
+            response-timeout: 25s
             pool:
-              max-connections: 500
+              max-connections: 2000
               max-idle-time: 20s
+              max-life-time: 120s
               acquire-timeout: 45000
 
           globalcors:
@@ -117,25 +118,62 @@ gateway:
 rate:
   limit:
     global:
-      requests-per-second: 100
-      burst-capacity: 200
+      requests-per-second: 400
+      burst-capacity: 800
     login:
       requests-per-minute: 5
       burst-capacity: 10
 
 resilience4j:
   circuitbreaker:
-    instances:
-      gatewayDefaultCircuitBreaker:
-        failure-rate-threshold: 50
+    configs:
+      gatewayRoute:
+        failure-rate-threshold: 90
+        slow-call-rate-threshold: 100
+        slow-call-duration-threshold: 20s
         sliding-window-type: COUNT_BASED
-        sliding-window-size: 10
-        minimum-number-of-calls: 5
-        wait-duration-in-open-state: 30s
-  timelimiter:
+        sliding-window-size: 500
+        minimum-number-of-calls: 200
+        permitted-number-of-calls-in-half-open-state: 20
+        wait-duration-in-open-state: 5s
     instances:
       gatewayDefaultCircuitBreaker:
-        timeout-duration: 30s
+        base-config: gatewayRoute
+      identityServiceCircuitBreaker:
+        base-config: gatewayRoute
+      userGroupServiceCircuitBreaker:
+        base-config: gatewayRoute
+      projectConfigServiceCircuitBreaker:
+        base-config: gatewayRoute
+      syncServiceCircuitBreaker:
+        base-config: gatewayRoute
+      analysisServiceCircuitBreaker:
+        base-config: gatewayRoute
+      reportServiceCircuitBreaker:
+        base-config: gatewayRoute
+      notificationServiceCircuitBreaker:
+        base-config: gatewayRoute
+  timelimiter:
+    configs:
+      gatewayRoute:
+        timeout-duration: 25s
+    instances:
+      gatewayDefaultCircuitBreaker:
+        base-config: gatewayRoute
+      identityServiceCircuitBreaker:
+        base-config: gatewayRoute
+      userGroupServiceCircuitBreaker:
+        base-config: gatewayRoute
+      projectConfigServiceCircuitBreaker:
+        base-config: gatewayRoute
+      syncServiceCircuitBreaker:
+        base-config: gatewayRoute
+      analysisServiceCircuitBreaker:
+        base-config: gatewayRoute
+      reportServiceCircuitBreaker:
+        base-config: gatewayRoute
+      notificationServiceCircuitBreaker:
+        base-config: gatewayRoute
 
 springdoc:
   api-docs:

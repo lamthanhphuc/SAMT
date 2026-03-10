@@ -13,7 +13,6 @@ import com.nimbusds.jwt.SignedJWT;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.mock.env.MockEnvironment;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -150,8 +149,10 @@ class JwtClaimsValidationWebTestClientTest {
             OAuth2TokenValidator<Jwt> tokenTypeValidator = new JwtTokenTypeValidator("ACCESS");
             decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(issuerValidator, audienceValidator, tokenTypeValidator));
 
-            MockEnvironment env = new MockEnvironment();
-            JwtAuthenticationFilter jwtFilter = new JwtAuthenticationFilter(decoder, env);
+                        JwtAuthenticationFilter jwtFilter = new JwtAuthenticationFilter(
+                                decoder,
+                                new com.example.gateway.error.GatewayErrorResponseWriter(new com.fasterxml.jackson.databind.ObjectMapper())
+                        );
 
             WebHandler terminalOk = exchange -> {
                 exchange.getResponse().setStatusCode(HttpStatus.OK);

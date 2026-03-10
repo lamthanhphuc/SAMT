@@ -29,7 +29,7 @@ public final class PublicEndpointPaths {
     }
 
     public static boolean isPublicPath(String path) {
-        return isAuthPath(path) || isWellKnownPath(path) || isSwaggerPath(path);
+        return isAuthPath(path) || isWellKnownPath(path) || isSwaggerPath(path) || isFallbackPath(path);
     }
 
     private static boolean isAuthPath(String path) {
@@ -58,5 +58,9 @@ public final class PublicEndpointPaths {
                 || path.startsWith("/analysis/v3/api-docs")
                 || path.startsWith("/report/v3/api-docs")
                 || path.startsWith("/notification/v3/api-docs");
+    }
+
+    private static boolean isFallbackPath(String path) {
+        return path.startsWith("/__gateway/fallback/");
     }
 }

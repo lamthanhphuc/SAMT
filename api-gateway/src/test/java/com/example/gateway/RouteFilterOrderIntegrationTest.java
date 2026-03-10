@@ -1,15 +1,16 @@
 package com.example.gateway;
 
+import com.example.gateway.error.GatewayErrorResponseWriter;
 import com.example.gateway.filter.JwtAuthenticationFilter;
 import com.example.gateway.filter.RedisRateLimitGatewayFilter;
 import com.example.gateway.filter.UnsupportedHttpMethodWebFilter;
 import com.example.gateway.security.InternalJwtIssuer;
 import com.example.gateway.security.InternalJwtWebFilter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
 import org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter;
-import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -26,17 +27,17 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 public class RouteFilterOrderIntegrationTest {
 
     @Test
     void order_jwt_before_internal_jwt_forwarding() {
         ReactiveJwtDecoder jwtDecoder = mock(ReactiveJwtDecoder.class);
-        Environment environment = mock(Environment.class);
-        when(environment.getActiveProfiles()).thenReturn(new String[0]);
 
-        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtDecoder, environment);
+        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(
+            jwtDecoder,
+            new GatewayErrorResponseWriter(new ObjectMapper())
+        );
         UnsupportedHttpMethodWebFilter unsupportedHttpMethodWebFilter = new UnsupportedHttpMethodWebFilter();
         InternalJwtWebFilter internalJwtWebFilter = new InternalJwtWebFilter(mock(InternalJwtIssuer.class));
 
@@ -72,10 +73,11 @@ public class RouteFilterOrderIntegrationTest {
     @Test
     void authFail_withoutToken_returns401_and_stops_chain() {
         ReactiveJwtDecoder jwtDecoder = mock(ReactiveJwtDecoder.class);
-        Environment environment = mock(Environment.class);
-        when(environment.getActiveProfiles()).thenReturn(new String[0]);
 
-        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtDecoder, environment);
+        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(
+            jwtDecoder,
+            new GatewayErrorResponseWriter(new ObjectMapper())
+        );
         InternalJwtWebFilter internalJwtWebFilter = new InternalJwtWebFilter(mock(InternalJwtIssuer.class));
 
         MockServerWebExchange exchange = MockServerWebExchange.from(
