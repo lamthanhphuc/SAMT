@@ -172,6 +172,68 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  postgres-analysis:
+    image: postgres:15-alpine@sha256:fceb6f86328c36f2438fae3b851b0cc57c4a7e69a58c866d9ce24281f2cf0c9c
+    container_name: postgres-analysis
+    env_file: .env
+    environment:
+      POSTGRES_DB: ${DB_ANALYSIS_NAME:-samt_analysis}
+      POSTGRES_USER: ${POSTGRES_USER:?⚠️ POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?⚠️ POSTGRES_PASSWORD is required}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - analysis_data:/var/lib/postgresql/data
+    ports:
+      - "5438:5432"
+    networks:
+      - samt-network
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  postgres-report:
+    image: postgres:15-alpine@sha256:fceb6f86328c36f2438fae3b851b0cc57c4a7e69a58c866d9ce24281f2cf0c9c
+    container_name: postgres-report
+    env_file: .env
+    environment:
+      POSTGRES_DB: ${DB_REPORT_NAME:-samt_report}
+      POSTGRES_USER: ${POSTGRES_USER:?⚠️ POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?⚠️ POSTGRES_PASSWORD is required}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - report_data:/var/lib/postgresql/data
+    ports:
+      - "5439:5432"
+    networks:
+      - samt-network
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
   kafka:
     image: confluentinc/cp-kafka:7.6.0@sha256:24cdd3a7fa89d2bed150560ebea81ff1943badfa61e51d66bb541a6b0d7fb047
     container_name: kafka
@@ -280,7 +342,9 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - create .env file}
-      JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+      JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms384m -Xmx768m -Dreactor.netty.ioWorkerCount=8 -Dreactor.netty.ioSelectCount=2}
+      RATE_LIMIT_GLOBAL_REQUESTS_PER_SECOND: ${RATE_LIMIT_GLOBAL_REQUESTS_PER_SECOND:-400}
+      RATE_LIMIT_GLOBAL_BURST_CAPACITY: ${RATE_LIMIT_GLOBAL_BURST_CAPACITY:-800}
       # Internal JWT signing key (required - mounted from host)
       GATEWAY_INTERNAL_JWT_PRIVATE_KEY_PEM_PATH: /certs/gateway-internal-jwt-private.pkcs8.pem
       GATEWAY_INTERNAL_JWT_KID: ${GATEWAY_INTERNAL_JWT_KID:-gw-local-1}
@@ -366,6 +430,8 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - create .env file}
       JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+      DB_POOL_SIZE: ${IDENTITY_DB_POOL_SIZE:-30}
+      DB_POOL_MIN_IDLE: ${IDENTITY_DB_POOL_MIN_IDLE:-10}
       # Identity JWT signing key (required - mounted from host)
       JWT_PRIVATE_KEY_PATH: /certs/identity-jwt-private.pkcs8.pem
       JWT_KEY_ID: ${JWT_KEY_ID:-identity-local-1}
@@ -484,7 +550,14 @@ services:
       DATABASE_URL: jdbc:postgresql://postgres-projectconfig:5432/${DB_PROJECTCONFIG_NAME:-projectconfig_db}
       DATABASE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-      JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+      JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms384m -Xmx768m}
+      DB_POOL_SIZE: ${PROJECT_CONFIG_DB_POOL_SIZE:-30}
+      DB_POOL_MIN_IDLE: ${PROJECT_CONFIG_DB_POOL_MIN_IDLE:-10}
+      VERIFICATION_ASYNC_CORE_POOL: ${VERIFICATION_ASYNC_CORE_POOL:-24}
+      VERIFICATION_ASYNC_MAX_POOL: ${VERIFICATION_ASYNC_MAX_POOL:-48}
+      VERIFICATION_ASYNC_QUEUE_CAPACITY: ${VERIFICATION_ASYNC_QUEUE_CAPACITY:-300}
+      VERIFICATION_ASYNC_KEEP_ALIVE_SECONDS: ${VERIFICATION_ASYNC_KEEP_ALIVE_SECONDS:-60}
+      GRPC_USER_GROUP_DEADLINE_MS: ${GRPC_USER_GROUP_DEADLINE_MS:-5000}
       # SECURITY DEFAULTS: TLS/mTLS by default. Override explicitly for local dev if needed.
       GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-true}
       GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE: ${GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE:-TLS}
@@ -539,7 +612,12 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - create .env file}
-      JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+      JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms384m -Xmx768m}
+      DB_POOL_SIZE: ${SYNC_DB_POOL_SIZE:-30}
+      DB_POOL_MIN_IDLE: ${SYNC_DB_POOL_MIN_IDLE:-10}
+      SYNC_ASYNC_CORE_POOL: ${SYNC_ASYNC_CORE_POOL:-24}
+      SYNC_ASYNC_MAX_POOL: ${SYNC_ASYNC_MAX_POOL:-48}
+      SYNC_ASYNC_QUEUE_CAPACITY: ${SYNC_ASYNC_QUEUE_CAPACITY:-300}
       # SECURITY DEFAULTS: TLS/mTLS by default. Override explicitly for local dev if needed.
       GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-true}
       GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE: ${GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE:-TLS}
@@ -589,7 +667,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
       SERVER_PORT: ${ANALYSIS_SERVICE_PORT:-8087}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-core:5432/${DB_CORE_NAME:-samt_core}?serverTimezone=UTC
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-analysis:5432/${DB_ANALYSIS_NAME:-samt_analysis}?serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SPRING_DATA_REDIS_HOST: redis
@@ -601,7 +679,7 @@ services:
     expose:
       - "${ANALYSIS_SERVICE_PORT:-8087}"
     depends_on:
-      postgres-core:
+      postgres-analysis:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -640,7 +718,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
       SERVER_PORT: ${REPORT_SERVICE_PORT:-8088}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-core:5432/${DB_CORE_NAME:-samt_core}?serverTimezone=UTC
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-report:5432/${DB_REPORT_NAME:-samt_report}?serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SPRING_DATA_REDIS_HOST: redis
@@ -652,7 +730,7 @@ services:
     expose:
       - "${REPORT_SERVICE_PORT:-8088}"
     depends_on:
-      postgres-core:
+      postgres-report:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -753,6 +831,10 @@ volumes:
   usergroup_data:
     driver: local
   sync_data:
+    driver: local
+  analysis_data:
+    driver: local
+  report_data:
     driver: local
   redis_data:
     driver: local
