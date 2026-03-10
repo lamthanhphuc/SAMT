@@ -1,16 +1,20 @@
 package com.example.identityservice.controller;
 
+import com.example.common.api.ApiResponseFactory;
 import com.example.identityservice.dto.*;
 import com.example.identityservice.entity.AuditLog;
 import com.example.identityservice.entity.User;
 import com.example.identityservice.repository.AuditLogRepository;
 import com.example.identityservice.service.UserAdminService;
+import com.example.identityservice.web.CorrelationIdFilter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.slf4j.MDC;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -73,8 +77,9 @@ public class AdminController {
             }
     )
     @PostMapping("/users")
-    public ResponseEntity<AdminCreateUserResponse> createUser(
-            @Valid @RequestBody AdminCreateUserRequest request) {
+    public ResponseEntity<com.example.common.api.ApiResponse<AdminCreateUserResponse>> createUser(
+            @Valid @RequestBody AdminCreateUserRequest request,
+            HttpServletRequest servletRequest) {
         
         User createdUser = userAdminService.createUser(
                 request.email(),
@@ -83,13 +88,15 @@ public class AdminController {
                 request.role()
         );
         
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(AdminCreateUserResponse.of(
-                        "User created successfully",
-                        UserDto.fromEntity(createdUser),
-                        request.password() // Return temporary password for admin to share
-                ));
+                return success(
+                        HttpStatus.CREATED,
+                        AdminCreateUserResponse.of(
+                                "User created successfully",
+                                UserDto.fromEntity(createdUser),
+                                request.password()
+                        ),
+                        servletRequest
+                );
     }
 
     /**
@@ -113,12 +120,13 @@ public class AdminController {
             }
     )
     @DeleteMapping("/users/{userId}")
-    public ResponseEntity<AdminActionResponse> deleteUser(
-            @Parameter(description = "User ID") @PathVariable("userId") Long userId) {
+    public ResponseEntity<com.example.common.api.ApiResponse<AdminActionResponse>> deleteUser(
+            @Parameter(description = "User ID") @PathVariable("userId") Long userId,
+            HttpServletRequest servletRequest) {
         
         userAdminService.softDeleteUser(userId);
         
-        return ResponseEntity.ok(AdminActionResponse.of("User deleted successfully", userId));
+                return success(HttpStatus.OK, AdminActionResponse.of("User deleted successfully", userId), servletRequest);
     }
 
     /**
@@ -140,12 +148,13 @@ public class AdminController {
             }
     )
     @PostMapping("/users/{userId}/restore")
-    public ResponseEntity<AdminActionResponse> restoreUser(
-            @Parameter(description = "User ID") @PathVariable("userId") Long userId) {
+    public ResponseEntity<com.example.common.api.ApiResponse<AdminActionResponse>> restoreUser(
+            @Parameter(description = "User ID") @PathVariable("userId") Long userId,
+            HttpServletRequest servletRequest) {
         
         userAdminService.restoreUser(userId);
         
-        return ResponseEntity.ok(AdminActionResponse.of("User restored successfully", userId));
+                return success(HttpStatus.OK, AdminActionResponse.of("User restored successfully", userId), servletRequest);
     }
 
     /**
@@ -169,13 +178,14 @@ public class AdminController {
             }
     )
     @PostMapping("/users/{userId}/lock")
-    public ResponseEntity<AdminActionResponse> lockUser(
+    public ResponseEntity<com.example.common.api.ApiResponse<AdminActionResponse>> lockUser(
             @Parameter(description = "User ID") @PathVariable("userId") Long userId,
-            @Parameter(description = "Reason for locking") @RequestParam( value = "reason", required = false) String reason) {
+            @Parameter(description = "Reason for locking") @RequestParam( value = "reason", required = false) String reason,
+            HttpServletRequest servletRequest) {
         
         userAdminService.lockUser(userId, reason);
         
-        return ResponseEntity.ok(AdminActionResponse.of("User locked successfully", userId));
+                return success(HttpStatus.OK, AdminActionResponse.of("User locked successfully", userId), servletRequest);
     }
 
     /**
@@ -197,12 +207,13 @@ public class AdminController {
             }
     )
     @PostMapping("/users/{userId}/unlock")
-    public ResponseEntity<AdminActionResponse> unlockUser(
-            @Parameter(description = "User ID") @PathVariable("userId") Long userId) {
+    public ResponseEntity<com.example.common.api.ApiResponse<AdminActionResponse>> unlockUser(
+            @Parameter(description = "User ID") @PathVariable("userId") Long userId,
+            HttpServletRequest servletRequest) {
         
         userAdminService.unlockUser(userId);
         
-        return ResponseEntity.ok(AdminActionResponse.of("User unlocked successfully", userId));
+                return success(HttpStatus.OK, AdminActionResponse.of("User unlocked successfully", userId), servletRequest);
     }
 
     /**
@@ -228,9 +239,10 @@ public class AdminController {
             }
     )
     @PutMapping("/users/{userId}/external-accounts")
-    public ResponseEntity<ExternalAccountsResponse> updateExternalAccounts(
+    public ResponseEntity<com.example.common.api.ApiResponse<ExternalAccountsResponse>> updateExternalAccounts(
             @Parameter(description = "User ID") @PathVariable("userId") Long userId,
-            @Valid @RequestBody ExternalAccountsRequest request) {
+            @Valid @RequestBody ExternalAccountsRequest request,
+            HttpServletRequest servletRequest) {
         
         User updatedUser = userAdminService.updateExternalAccounts(
                 userId,
@@ -238,11 +250,13 @@ public class AdminController {
                 request.githubUsername()
         );
         
-        return ResponseEntity.ok(
-                ExternalAccountsResponse.of(
-                        "External accounts mapped successfully",
-                        UserDto.fromEntity(updatedUser)
-                )
+                return success(
+                        HttpStatus.OK,
+                        ExternalAccountsResponse.of(
+                                "External accounts mapped successfully",
+                                UserDto.fromEntity(updatedUser)
+                        ),
+                        servletRequest
         );
     }
 
@@ -262,13 +276,14 @@ public class AdminController {
             }
     )
     @GetMapping("/audit/entity/{entityType}/{entityId}")
-    public ResponseEntity<Page<AuditLog>> getAuditByEntity(
+    public ResponseEntity<com.example.common.api.ApiResponse<Page<AuditLog>>> getAuditByEntity(
             @Parameter(description = "Entity type (e.g., User)") @PathVariable("entityType") String entityType,
             @Parameter(description = "Entity ID") @PathVariable("entityId") Long entityId,
-            @PageableDefault(size = 20, sort = "timestamp", direction = Sort.Direction.DESC) Pageable pageable) {
+            @PageableDefault(size = 20, sort = "timestamp", direction = Sort.Direction.DESC) Pageable pageable,
+            HttpServletRequest servletRequest) {
         
         Page<AuditLog> logs = auditLogRepository.findByEntityTypeAndEntityIdOrderByTimestampDesc(entityType, entityId, pageable);
-        return ResponseEntity.ok(logs);
+                return success(HttpStatus.OK, logs, servletRequest);
     }
 
     /**
@@ -283,12 +298,13 @@ public class AdminController {
             }
     )
     @GetMapping("/audit/actor/{actorId}")
-    public ResponseEntity<Page<AuditLog>> getAuditByActor(
+    public ResponseEntity<com.example.common.api.ApiResponse<Page<AuditLog>>> getAuditByActor(
             @Parameter(description = "Actor user ID") @PathVariable("actorId") Long actorId,
-            @PageableDefault(size = 20, sort = "timestamp", direction = Sort.Direction.DESC) Pageable pageable) {
+            @PageableDefault(size = 20, sort = "timestamp", direction = Sort.Direction.DESC) Pageable pageable,
+            HttpServletRequest servletRequest) {
         
         Page<AuditLog> logs = auditLogRepository.findByActorIdOrderByTimestampDesc(actorId, pageable);
-        return ResponseEntity.ok(logs);
+                return success(HttpStatus.OK, logs, servletRequest);
     }
 
     /**
@@ -303,15 +319,16 @@ public class AdminController {
             }
     )
     @GetMapping("/audit/range")
-    public ResponseEntity<Page<AuditLog>> getAuditByDateRange(
+    public ResponseEntity<com.example.common.api.ApiResponse<Page<AuditLog>>> getAuditByDateRange(
             @Parameter(description = "Start date (ISO format)") 
             @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @Parameter(description = "End date (ISO format)") 
             @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
-            @PageableDefault(size = 20, sort = "timestamp", direction = Sort.Direction.DESC) Pageable pageable) {
+            @PageableDefault(size = 20, sort = "timestamp", direction = Sort.Direction.DESC) Pageable pageable,
+            HttpServletRequest servletRequest) {
         
         Page<AuditLog> logs = auditLogRepository.findByTimestampBetween(startDate, endDate, pageable);
-        return ResponseEntity.ok(logs);
+                return success(HttpStatus.OK, logs, servletRequest);
     }
 
     /**
@@ -326,10 +343,30 @@ public class AdminController {
             }
     )
     @GetMapping("/audit/security-events")
-    public ResponseEntity<Page<AuditLog>> getSecurityEvents(
-            @PageableDefault(size = 20, sort = "timestamp", direction = Sort.Direction.DESC) Pageable pageable) {
+    public ResponseEntity<com.example.common.api.ApiResponse<Page<AuditLog>>> getSecurityEvents(
+            @PageableDefault(size = 20, sort = "timestamp", direction = Sort.Direction.DESC) Pageable pageable,
+            HttpServletRequest servletRequest) {
         
         Page<AuditLog> logs = auditLogRepository.findSecurityEvents(pageable);
-        return ResponseEntity.ok(logs);
+                return success(HttpStatus.OK, logs, servletRequest);
     }
+
+        private <T> ResponseEntity<com.example.common.api.ApiResponse<T>> success(HttpStatus status, T data, HttpServletRequest request) {
+                return ResponseEntity.status(status).body(
+                        ApiResponseFactory.success(
+                                status.value(),
+                                data,
+                                request.getRequestURI(),
+                                resolveCorrelationId(request)
+                        )
+                );
+        }
+
+        private String resolveCorrelationId(HttpServletRequest request) {
+                String correlationId = request.getHeader(CorrelationIdFilter.HEADER_NAME);
+                if (correlationId == null || correlationId.isBlank()) {
+                        correlationId = MDC.get(CorrelationIdFilter.MDC_KEY);
+                }
+                return correlationId;
+        }
 }
