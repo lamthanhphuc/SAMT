@@ -1,8 +1,11 @@
 package com.samt.projectconfig.exception;
 
-import com.samt.projectconfig.dto.response.ErrorResponse;
+import com.example.common.api.ApiResponse;
+import com.example.common.api.ApiResponseFactory;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,347 +13,210 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-import java.time.Instant;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 
-/**
- * Global exception handler for REST controllers.
- * Converts exceptions to consistent ErrorResponse format.
- */
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
-    
+
+    @ExceptionHandler({CompletionException.class, ExecutionException.class})
+    public ResponseEntity<ApiResponse<Void>> handleAsyncWrapper(Exception ex, HttpServletRequest request) {
+        Throwable cause = unwrap(ex);
+        if (cause instanceof RuntimeException runtimeException) {
+            throw runtimeException;
+        }
+        return handleGeneric(ex, request);
+    }
+
     @ExceptionHandler(ConfigNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleConfigNotFound(ConfigNotFoundException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleConfigNotFound(ConfigNotFoundException ex, HttpServletRequest request) {
         log.warn("Config not found: {}", ex.getMessage());
-        return buildErrorResponse(
-            HttpStatus.NOT_FOUND,
-            "CONFIG_NOT_FOUND",
-            ex.getMessage(),
-            null
-        );
+        return error(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
-    
+
     @ExceptionHandler(GroupNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleGroupNotFound(GroupNotFoundException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleGroupNotFound(GroupNotFoundException ex, HttpServletRequest request) {
         log.warn("Group not found: {}", ex.getMessage());
-        return buildErrorResponse(
-            HttpStatus.NOT_FOUND,
-            "GROUP_NOT_FOUND",
-            ex.getMessage(),
-            null
-        );
+        return error(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
-    
+
     @ExceptionHandler(ForbiddenException.class)
-    public ResponseEntity<ErrorResponse> handleForbidden(ForbiddenException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleForbidden(ForbiddenException ex, HttpServletRequest request) {
         log.warn("Forbidden: {}", ex.getMessage());
-        return buildErrorResponse(
-            HttpStatus.FORBIDDEN,
-            "FORBIDDEN",
-            ex.getMessage(),
-            null
-        );
+        return error(HttpStatus.FORBIDDEN, ex.getMessage(), request);
     }
-    
+
     @ExceptionHandler(ConfigAlreadyExistsException.class)
-    public ResponseEntity<ErrorResponse> handleConfigAlreadyExists(ConfigAlreadyExistsException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleConfigAlreadyExists(ConfigAlreadyExistsException ex, HttpServletRequest request) {
         log.warn("Config already exists: {}", ex.getMessage());
-        return buildErrorResponse(
-            HttpStatus.CONFLICT,
-            "CONFIG_ALREADY_EXISTS",
-            ex.getMessage(),
-            null
-        );
+        return error(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
-    
+
     @ExceptionHandler(ConflictException.class)
-    public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleConflict(ConflictException ex, HttpServletRequest request) {
         log.warn("Conflict: {}", ex.getMessage());
-        return buildErrorResponse(
-            HttpStatus.CONFLICT,
-            "CONFLICT",
-            ex.getMessage(),
-            null
-        );
+        return error(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
-    
+
     @ExceptionHandler({
         jakarta.persistence.OptimisticLockException.class,
         org.hibernate.StaleObjectStateException.class,
         org.springframework.orm.ObjectOptimisticLockingFailureException.class
     })
-    public ResponseEntity<ErrorResponse> handleOptimisticLock(Exception ex) {
+    public ResponseEntity<ApiResponse<Void>> handleOptimisticLock(Exception ex, HttpServletRequest request) {
         log.warn("Optimistic lock conflict: {}", ex.getMessage());
-        return buildErrorResponse(
-            HttpStatus.CONFLICT,
-            "CONFLICT",
-            "Configuration was modified by another user. Please refresh and retry.",
-            null
-        );
+        return error(HttpStatus.CONFLICT, "Configuration was modified by another user. Please refresh and retry.", request);
     }
-    
+
     @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
-    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(
-        org.springframework.dao.DataIntegrityViolationException ex
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(
+        org.springframework.dao.DataIntegrityViolationException ex,
+        HttpServletRequest request
     ) {
         log.warn("Data integrity violation: {}", ex.getMessage());
-        
-        // Check if it's a unique constraint violation
-        String message = ex.getMessage();
-        if (message != null && message.toLowerCase().contains("unique")) {
-            return buildErrorResponse(
-                HttpStatus.CONFLICT,
-                "CONFLICT",
-                "A configuration for this group already exists",
-                null
-            );
+        String text = ex.getMessage();
+        if (text != null && text.toLowerCase().contains("unique")) {
+            return error(HttpStatus.CONFLICT, "A configuration for this group already exists", request);
         }
-        
-        // Generic data integrity error
-        return buildErrorResponse(
-            HttpStatus.BAD_REQUEST,
-            "DATA_INTEGRITY_ERROR",
-            "Data integrity constraint violated",
-            null
-        );
+        return error(HttpStatus.BAD_REQUEST, "Data integrity constraint violated", request);
     }
-    
+
     @ExceptionHandler(ServiceUnavailableException.class)
-    public ResponseEntity<ErrorResponse> handleServiceUnavailable(ServiceUnavailableException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleServiceUnavailable(ServiceUnavailableException ex, HttpServletRequest request) {
         log.error("Service unavailable: {}", ex.getMessage());
-        return buildErrorResponse(
-            HttpStatus.SERVICE_UNAVAILABLE,
-            "SERVICE_UNAVAILABLE",
-            ex.getMessage(),
-            null
-        );
+        return error(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request);
     }
-    
+
     @ExceptionHandler(EncryptionException.class)
-    public ResponseEntity<ErrorResponse> handleEncryption(EncryptionException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleEncryption(EncryptionException ex, HttpServletRequest request) {
         log.error("Encryption error: {}", ex.getMessage(), ex);
-        return buildErrorResponse(
-            HttpStatus.INTERNAL_SERVER_ERROR,
-            "INTERNAL_SERVER_ERROR",
-            "Encryption error occurred",
-            null
-        );
+        return error(HttpStatus.INTERNAL_SERVER_ERROR, "Encryption error occurred", request);
     }
-    
+
     @ExceptionHandler(VerificationException.class)
-    public ResponseEntity<ErrorResponse> handleVerification(VerificationException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleVerification(VerificationException ex, HttpServletRequest request) {
         log.warn("Verification error: {}", ex.getMessage());
-        return buildErrorResponse(
-            HttpStatus.GATEWAY_TIMEOUT,
-            "GATEWAY_TIMEOUT",
-            ex.getMessage(),
-            null
-        );
+        return error(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request);
     }
-    
+
     @ExceptionHandler(java.util.concurrent.RejectedExecutionException.class)
-    public ResponseEntity<ErrorResponse> handleRejectedExecution(java.util.concurrent.RejectedExecutionException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleRejectedExecution(java.util.concurrent.RejectedExecutionException ex, HttpServletRequest request) {
         log.warn("Verification executor overloaded - rejected task");
-        return buildErrorResponse(
-            HttpStatus.SERVICE_UNAVAILABLE,
-            "SERVICE_OVERLOADED",
-            "Verification service is temporarily overloaded. Please retry later.",
-            null
-        );
+        return error(HttpStatus.SERVICE_UNAVAILABLE, "Verification service is temporarily overloaded. Please retry later.", request);
     }
-    
+
     @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<ErrorResponse> handleBadRequest(BadRequestException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleBadRequest(BadRequestException ex, HttpServletRequest request) {
         log.warn("Bad request: {}", ex.getMessage());
-        return buildErrorResponse(
-            HttpStatus.BAD_REQUEST,
-            "BAD_REQUEST",
-            ex.getMessage(),
-            null
-        );
+        return error(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
-    
+
     @ExceptionHandler(GatewayTimeoutException.class)
-    public ResponseEntity<ErrorResponse> handleGatewayTimeout(GatewayTimeoutException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleGatewayTimeout(GatewayTimeoutException ex, HttpServletRequest request) {
         log.error("Gateway timeout: {}", ex.getMessage());
-        return buildErrorResponse(
-            HttpStatus.GATEWAY_TIMEOUT,
-            "GATEWAY_TIMEOUT",
-            ex.getMessage(),
-            null
-        );
+        return error(HttpStatus.GATEWAY_TIMEOUT, ex.getMessage(), request);
     }
-    
+
     @ExceptionHandler(JwtException.class)
-    public ResponseEntity<ErrorResponse> handleJwt(JwtException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleJwt(JwtException ex, HttpServletRequest request) {
         log.warn("JWT error: {}", ex.getMessage());
-        return buildErrorResponse(
-            HttpStatus.UNAUTHORIZED,
-            "UNAUTHORIZED",
-            "Invalid or expired token",
-            null
-        );
+        return error(HttpStatus.UNAUTHORIZED, "Invalid or expired token", request);
     }
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleBadCredentials(BadCredentialsException ex, HttpServletRequest request) {
         log.warn("Bad credentials: {}", ex.getMessage());
-        return buildErrorResponse(
-            HttpStatus.UNAUTHORIZED,
-            "UNAUTHORIZED",
-            "Invalid or expired token",
-            null
-        );
+        return error(HttpStatus.UNAUTHORIZED, "Invalid or expired token", request);
     }
-    
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
         log.warn("Validation error: {}", ex.getMessage());
-        
-        Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getFieldErrors().forEach(error -> 
-            errors.put(error.getField(), error.getDefaultMessage())
-        );
-        
-        String firstField = ex.getBindingResult().getFieldErrors().isEmpty() 
-            ? null 
-            : ex.getBindingResult().getFieldErrors().get(0).getField();
-        String firstMessage = ex.getBindingResult().getFieldErrors().isEmpty()
+        String message = ex.getBindingResult().getFieldErrors().isEmpty()
             ? "Validation failed"
             : ex.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
-        
-        return buildErrorResponse(
-            HttpStatus.BAD_REQUEST,
-            "VALIDATION_ERROR",
-            firstMessage,
-            firstField,
-            errors
-        );
+        return error(HttpStatus.BAD_REQUEST, message, request);
     }
-    
+
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleConstraintViolation(ConstraintViolationException ex, HttpServletRequest request) {
         log.warn("Constraint violation: {}", ex.getMessage());
-        return buildErrorResponse(
-            HttpStatus.BAD_REQUEST,
-            HttpStatus.BAD_REQUEST.getReasonPhrase(),
-            "Validation failed",
-            null
-        );
+        return error(HttpStatus.BAD_REQUEST, "Validation failed", request);
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
-        String message = "Invalid value for parameter '" + ex.getName() + "'";
-        if (java.util.UUID.class.equals(ex.getRequiredType())) {
-            message = "Invalid UUID";
-        }
-        return buildErrorResponse(
-            HttpStatus.BAD_REQUEST,
-            HttpStatus.BAD_REQUEST.getReasonPhrase(),
-            message,
-            ex.getName()
-        );
+    public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        String message = java.util.UUID.class.equals(ex.getRequiredType())
+            ? "Invalid UUID"
+            : "Invalid value for parameter '" + ex.getName() + "'";
+        return error(HttpStatus.BAD_REQUEST, message, request);
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
-    public ResponseEntity<ErrorResponse> handleMissingRequestParameter(MissingServletRequestParameterException ex) {
-        return buildErrorResponse(
-            HttpStatus.BAD_REQUEST,
-            HttpStatus.BAD_REQUEST.getReasonPhrase(),
-            "Missing required parameter '" + ex.getParameterName() + "'",
-            ex.getParameterName()
-        );
+    public ResponseEntity<ApiResponse<Void>> handleMissingRequestParameter(MissingServletRequestParameterException ex, HttpServletRequest request) {
+        return error(HttpStatus.BAD_REQUEST, "Missing required parameter '" + ex.getParameterName() + "'", request);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ErrorResponse> handleUnreadableBody(HttpMessageNotReadableException ex) {
-        return buildErrorResponse(
-            HttpStatus.BAD_REQUEST,
-            HttpStatus.BAD_REQUEST.getReasonPhrase(),
-            "Malformed request body",
-            null
-        );
+    public ResponseEntity<ApiResponse<Void>> handleUnreadableBody(HttpMessageNotReadableException ex, HttpServletRequest request) {
+        return error(HttpStatus.BAD_REQUEST, "Malformed request body", request);
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
             .header(HttpHeaders.ALLOW, resolveAllowHeader(ex))
-            .body(buildErrorBody(
-            HttpStatus.METHOD_NOT_ALLOWED,
-            HttpStatus.METHOD_NOT_ALLOWED.getReasonPhrase(),
-            "Method not allowed",
-            null
-        ));
+            .body(errorBody(HttpStatus.METHOD_NOT_ALLOWED, "Method not allowed", request));
     }
-    
+
     @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleIllegalState(IllegalStateException ex, HttpServletRequest request) {
         log.warn("Illegal state: {}", ex.getMessage());
-        return buildErrorResponse(
-            HttpStatus.CONFLICT,
-            "CONFLICT",
-            ex.getMessage(),
-            null
-        );
+        return error(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
-    
+
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
+    public ResponseEntity<ApiResponse<Void>> handleGeneric(Exception ex, HttpServletRequest request) {
         log.error("Unexpected error: {}", ex.getMessage(), ex);
-        return buildErrorResponse(
-            HttpStatus.INTERNAL_SERVER_ERROR,
-            "INTERNAL_SERVER_ERROR",
-            "An unexpected error occurred",
-            null
+        return error(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred", request);
+    }
+
+    private ResponseEntity<ApiResponse<Void>> error(HttpStatus status, String message, HttpServletRequest request) {
+        return ResponseEntity.status(status).body(errorBody(status, message, request));
+    }
+
+    private ApiResponse<Void> errorBody(HttpStatus status, String message, HttpServletRequest request) {
+        return ApiResponseFactory.error(
+            status.value(),
+            status.getReasonPhrase(),
+            message,
+            request.getRequestURI(),
+            resolveCorrelationId(request)
         );
     }
-    
-    private ResponseEntity<ErrorResponse> buildErrorResponse(
-        HttpStatus status,
-        String code,
-        String message,
-        String field
-    ) {
-        return buildErrorResponse(status, code, message, field, null);
-    }
-    
-    private ResponseEntity<ErrorResponse> buildErrorResponse(
-        HttpStatus status,
-        String code,
-        String message,
-        String field,
-        Object details
-    ) {
-        return ResponseEntity.status(status).body(buildErrorBody(status, code, message, details != null ? details : field));
+
+    private String resolveCorrelationId(HttpServletRequest request) {
+        String correlationId = request.getHeader("X-Request-ID");
+        if (correlationId == null || correlationId.isBlank()) {
+            correlationId = MDC.get("correlationId");
+        }
+        return correlationId;
     }
 
-    private ErrorResponse buildErrorBody(
-        HttpStatus status,
-        String code,
-        String message,
-        Object details
-    ) {
-        ErrorResponse response = ErrorResponse.builder()
-            .statusCode(status.value())
-            .error(status.getReasonPhrase())
-            .message(message)
-            .details(details)
-            .timestamp(Instant.now().toString())
-            .build();
-
-        return response;
+    private Throwable unwrap(Throwable throwable) {
+        Throwable current = throwable;
+        while ((current instanceof CompletionException || current instanceof ExecutionException) && current.getCause() != null) {
+            current = current.getCause();
+        }
+        return current;
     }
 
     private String resolveAllowHeader(HttpRequestMethodNotSupportedException ex) {

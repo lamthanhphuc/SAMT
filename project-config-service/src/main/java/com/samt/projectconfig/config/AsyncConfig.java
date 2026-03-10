@@ -1,6 +1,7 @@
 package com.samt.projectconfig.config;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -44,18 +45,19 @@ public class AsyncConfig implements AsyncConfigurer {
      * @return Configured thread pool executor
      */
     @Bean(name = "verificationExecutor")
-    public Executor verificationExecutor() {
+    public Executor verificationExecutor(
+        @Value("${verification.async.core-pool-size:24}") int corePoolSize,
+        @Value("${verification.async.max-pool-size:48}") int maxPoolSize,
+        @Value("${verification.async.queue-capacity:300}") int queueCapacity,
+        @Value("${verification.async.keep-alive-seconds:60}") int keepAliveSeconds
+    ) {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         
-        // Core pool size: all threads kept alive (aligned with max)
-        executor.setCorePoolSize(100);
+        executor.setCorePoolSize(corePoolSize);
         
-        // Max pool size: maximum concurrent async executions (aligned with bulkhead semaphore)
-        executor.setMaxPoolSize(100);
+        executor.setMaxPoolSize(maxPoolSize);
         
-        // Queue capacity: ZERO for perfect alignment with bulkhead semaphore
-        // No buffering = immediate fail-fast when overloaded
-        executor.setQueueCapacity(0);
+        executor.setQueueCapacity(queueCapacity);
         
         // Thread naming for debugging
         executor.setThreadNamePrefix("verify-async-");
@@ -68,8 +70,7 @@ public class AsyncConfig implements AsyncConfigurer {
         // Without this, correlation ID will be lost in worker threads
         executor.setTaskDecorator(new MdcTaskDecorator());
         
-        // Thread keep-alive: cleanup idle threads after 60s
-        executor.setKeepAliveSeconds(60);
+        executor.setKeepAliveSeconds(keepAliveSeconds);
         executor.setAllowCoreThreadTimeOut(false);
         
         // Wait for tasks to complete on shutdown
@@ -78,8 +79,13 @@ public class AsyncConfig implements AsyncConfigurer {
         
         executor.initialize();
         
-        log.info("Initialized verification executor: core={}, max={}, queue={} (ZERO-QUEUE), rejection=AbortPolicy", 
-            executor.getCorePoolSize(), executor.getMaxPoolSize(), executor.getQueueCapacity());
+        log.info(
+            "Initialized verification executor: core={}, max={}, queue={}, keepAlive={}s, rejection=AbortPolicy",
+            executor.getCorePoolSize(),
+            executor.getMaxPoolSize(),
+            executor.getQueueCapacity(),
+            keepAliveSeconds
+        );
         
         return executor;
     }

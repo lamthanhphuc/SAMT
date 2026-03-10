@@ -23,6 +23,7 @@ import io.grpc.StatusRuntimeException;
 import io.grpc.stub.MetadataUtils;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 
@@ -65,12 +66,15 @@ public class UserGroupServiceGrpcClient {
     private UserGroupGrpcServiceGrpc.UserGroupGrpcServiceFutureStub futureStub;
     
     private final GrpcExceptionMapper exceptionMapper;
+    private final long grpcDeadlineMs;
     
-    public UserGroupServiceGrpcClient(GrpcExceptionMapper exceptionMapper) {
+    public UserGroupServiceGrpcClient(
+        GrpcExceptionMapper exceptionMapper,
+        @Value("${grpc.client.user-group-service.deadline:5000}") long grpcDeadlineMs
+    ) {
         this.exceptionMapper = exceptionMapper;
+        this.grpcDeadlineMs = grpcDeadlineMs;
     }
-    
-    private static final long GRPC_DEADLINE_MS = 800;
     
     /**
      * Static Metadata.Key for correlation ID propagation.
@@ -116,7 +120,7 @@ public class UserGroupServiceGrpcClient {
             String correlationId = MDC.get("correlationId");
             
             UserGroupGrpcServiceGrpc.UserGroupGrpcServiceFutureStub stub = futureStub
-                .withDeadline(Deadline.after(GRPC_DEADLINE_MS, TimeUnit.MILLISECONDS));
+                .withDeadline(Deadline.after(grpcDeadlineMs, TimeUnit.MILLISECONDS));
             
             // Only create Metadata if correlation ID present (avoid unnecessary allocation)
             if (correlationId != null && !correlationId.isEmpty()) {
@@ -145,14 +149,15 @@ public class UserGroupServiceGrpcClient {
                     return response;
                 })
                 .exceptionally(throwable -> {
-                    if (throwable instanceof StatusRuntimeException ex) {
+                    Throwable cause = unwrap(throwable);
+                    if (cause instanceof StatusRuntimeException ex) {
                         exceptionMapper.mapAndThrow(ex, "verifyGroupExists");
                     }
                     // Re-throw business exceptions
-                    if (throwable instanceof RuntimeException) {
-                        throw (RuntimeException) throwable;
+                    if (cause instanceof RuntimeException runtimeException) {
+                        throw runtimeException;
                     }
-                    throw new RuntimeException("Unexpected error during group verification", throwable);
+                    throw new RuntimeException("Unexpected error during group verification", cause);
                 });
             
         } catch (Exception ex) {
@@ -192,7 +197,7 @@ public class UserGroupServiceGrpcClient {
             String correlationId = MDC.get("correlationId");
             
             UserGroupGrpcServiceGrpc.UserGroupGrpcServiceFutureStub stub = futureStub
-                .withDeadline(Deadline.after(GRPC_DEADLINE_MS, TimeUnit.MILLISECONDS));
+                .withDeadline(Deadline.after(grpcDeadlineMs, TimeUnit.MILLISECONDS));
             
             // Only create Metadata if correlation ID present (avoid unnecessary allocation)
             if (correlationId != null && !correlationId.isEmpty()) {
@@ -216,13 +221,14 @@ public class UserGroupServiceGrpcClient {
                     return response;
                 })
                 .exceptionally(throwable -> {
-                    if (throwable instanceof StatusRuntimeException ex) {
+                    Throwable cause = unwrap(throwable);
+                    if (cause instanceof StatusRuntimeException ex) {
                         exceptionMapper.mapAndThrow(ex, "checkGroupLeader");
                     }
-                    if (throwable instanceof RuntimeException) {
-                        throw (RuntimeException) throwable;
+                    if (cause instanceof RuntimeException runtimeException) {
+                        throw runtimeException;
                     }
-                    throw new RuntimeException("Unexpected error during leader check", throwable);
+                    throw new RuntimeException("Unexpected error during leader check", cause);
                 });
             
         } catch (Exception ex) {
@@ -259,7 +265,7 @@ public class UserGroupServiceGrpcClient {
             String correlationId = MDC.get("correlationId");
             
             UserGroupGrpcServiceGrpc.UserGroupGrpcServiceFutureStub stub = futureStub
-                .withDeadline(Deadline.after(GRPC_DEADLINE_MS, TimeUnit.MILLISECONDS));
+                .withDeadline(Deadline.after(grpcDeadlineMs, TimeUnit.MILLISECONDS));
             
             // Only create Metadata if correlation ID present (avoid unnecessary allocation)
             if (correlationId != null && !correlationId.isEmpty()) {
@@ -283,13 +289,14 @@ public class UserGroupServiceGrpcClient {
                     );
                 })
                 .exceptionally(throwable -> {
-                    if (throwable instanceof StatusRuntimeException ex) {
+                    Throwable cause = unwrap(throwable);
+                    if (cause instanceof StatusRuntimeException ex) {
                         exceptionMapper.mapAndThrow(ex, "checkGroupMembership");
                     }
-                    if (throwable instanceof RuntimeException) {
-                        throw (RuntimeException) throwable;
+                    if (cause instanceof RuntimeException runtimeException) {
+                        throw runtimeException;
                     }
-                    throw new RuntimeException("Unexpected error during membership check", throwable);
+                    throw new RuntimeException("Unexpected error during membership check", cause);
                 });
             
         } catch (Exception ex) {

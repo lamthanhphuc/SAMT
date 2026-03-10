@@ -1,6 +1,7 @@
 package com.samt.projectconfig.security;
 
 import jakarta.servlet.DispatcherType;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,12 +26,13 @@ import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.firewall.HttpFirewall;
 import org.springframework.security.web.firewall.StrictHttpFirewall;
-import org.springframework.data.redis.core.StringRedisTemplate;
-
-import com.example.common.security.JtiReplayValidator;
 
 import java.time.Duration;
 import java.util.List;
@@ -70,6 +72,9 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http, JwtDecoder jwtDecoder) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
+            .securityContext(securityContext -> securityContext
+                .securityContextRepository(securityContextRepository())
+            )
             .sessionManagement(session -> 
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
@@ -88,6 +93,7 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2
+                .bearerTokenResolver(asyncDispatchSafeBearerTokenResolver())
                 .jwt(jwt -> jwt
                     .decoder(jwtDecoder)
                     .jwtAuthenticationConverter(jwtAuthenticationConverter())
@@ -106,6 +112,9 @@ public class SecurityConfig {
     public SecurityFilterChain filterChainProd(HttpSecurity http, JwtDecoder jwtDecoder) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
+            .securityContext(securityContext -> securityContext
+                .securityContextRepository(securityContextRepository())
+            )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.FORWARD).permitAll()
@@ -122,6 +131,7 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2
+                .bearerTokenResolver(asyncDispatchSafeBearerTokenResolver())
                 .jwt(jwt -> jwt
                     .decoder(jwtDecoder)
                     .jwtAuthenticationConverter(jwtAuthenticationConverter())
@@ -138,8 +148,7 @@ public class SecurityConfig {
     @Bean
     public JwtDecoder jwtDecoder(
         @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}") String jwkSetUri,
-        InternalJwtValidationProperties internalJwtValidationProperties,
-        StringRedisTemplate redisTemplate
+        InternalJwtValidationProperties internalJwtValidationProperties
     ) {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
 
@@ -175,12 +184,27 @@ public class SecurityConfig {
             timestampValidator,
             serviceClaimValidator,
             jtiRequiredValidator,
-            kidRequiredValidator,
-            new JtiReplayValidator(redisTemplate, Duration.ofSeconds(60))
+            kidRequiredValidator
         );
 
         decoder.setJwtValidator(validator);
         return decoder;
+    }
+
+    @Bean
+    public BearerTokenResolver asyncDispatchSafeBearerTokenResolver() {
+        DefaultBearerTokenResolver delegate = new DefaultBearerTokenResolver();
+        return request -> isAsyncRedispatch(request) ? null : delegate.resolve(request);
+    }
+
+    @Bean
+    public SecurityContextRepository securityContextRepository() {
+        return new RequestAttributeSecurityContextRepository();
+    }
+
+    private boolean isAsyncRedispatch(HttpServletRequest request) {
+        DispatcherType dispatcherType = request.getDispatcherType();
+        return dispatcherType == DispatcherType.ASYNC || dispatcherType == DispatcherType.FORWARD;
     }
 
     @Bean

@@ -1,16 +1,16 @@
 package com.samt.projectconfig.security;
 
+import com.example.common.api.ApiResponseFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.samt.projectconfig.dto.response.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.MDC;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.time.Instant;
 
 @Component
 public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
@@ -23,20 +23,31 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
     @Override
     public void commence(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            AuthenticationException authException
+        HttpServletRequest request,
+        HttpServletResponse response,
+        AuthenticationException authException
     ) throws IOException {
+        String correlationId = resolveCorrelationId(request);
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setHeader(CorrelationIdFilter.HEADER_NAME, correlationId);
         objectMapper.writeValue(
-                response.getOutputStream(),
-                ErrorResponse.builder()
-                        .statusCode(HttpServletResponse.SC_UNAUTHORIZED)
-                        .error("Unauthorized")
-                        .message("Unauthorized")
-                        .timestamp(Instant.now().toString())
-                        .build()
+            response.getOutputStream(),
+            ApiResponseFactory.error(
+                HttpServletResponse.SC_UNAUTHORIZED,
+                "Unauthorized",
+                "Unauthorized",
+                request.getRequestURI(),
+                correlationId
+            )
         );
+    }
+
+    private String resolveCorrelationId(HttpServletRequest request) {
+        String correlationId = request.getHeader(CorrelationIdFilter.HEADER_NAME);
+        if (correlationId == null || correlationId.isBlank()) {
+            correlationId = MDC.get(CorrelationIdFilter.MDC_KEY);
+        }
+        return correlationId;
     }
 }

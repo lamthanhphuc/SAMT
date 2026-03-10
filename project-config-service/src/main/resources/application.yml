@@ -23,8 +23,8 @@ spring:
     driver-class-name: org.postgresql.Driver
     hikari:
       connection-timeout: 30000
-      maximum-pool-size: ${DB_POOL_SIZE:10}
-      minimum-idle: ${DB_POOL_MIN_IDLE:2}
+      maximum-pool-size: ${DB_POOL_SIZE:30}
+      minimum-idle: ${DB_POOL_MIN_IDLE:10}
       idle-timeout: 600000
       max-lifetime: 1800000
       leak-detection-threshold: 60000
@@ -80,6 +80,11 @@ encryption:
 #   VERIFICATION TIMEOUTS
 # ============================================
 verification:
+  async:
+    core-pool-size: ${VERIFICATION_ASYNC_CORE_POOL:24}
+    max-pool-size: ${VERIFICATION_ASYNC_MAX_POOL:48}
+    queue-capacity: ${VERIFICATION_ASYNC_QUEUE_CAPACITY:300}
+    keep-alive-seconds: ${VERIFICATION_ASYNC_KEEP_ALIVE_SECONDS:60}
   jira:
     timeout-seconds: ${JIRA_TIMEOUT:6}
   github:
@@ -113,7 +118,7 @@ grpc:
         trustCertCollection: file:/certs/ca.crt
     user-group-service:
       address: dns:///user-group-service:9095
-      deadline: 2000
+      deadline: ${GRPC_USER_GROUP_DEADLINE_MS:5000}
 
 # ============================================
 #   RESILIENCE4J CONFIGURATION
@@ -160,11 +165,17 @@ resilience4j:
     instances:
       userGroupService:
         baseConfig: default
-        slidingWindowSize: 50
-        minimumNumberOfCalls: 5
-        waitDurationInOpenState: 5s
-        failureRateThreshold: 40
-        slowCallDurationThreshold: 1500ms
+        slidingWindowSize: 200
+        minimumNumberOfCalls: 80
+        permittedNumberOfCallsInHalfOpenState: 20
+        waitDurationInOpenState: 4s
+        failureRateThreshold: 80
+        slowCallRateThreshold: 90
+        slowCallDurationThreshold: 4s
+        ignoreExceptions:
+          - com.samt.projectconfig.exception.ForbiddenException
+          - com.samt.projectconfig.exception.GroupNotFoundException
+          - com.samt.projectconfig.exception.BadRequestException
       jiraVerification:
         baseConfig: default
         slidingWindowSize: 50
@@ -200,7 +211,7 @@ resilience4j:
   bulkhead:
     configs:
       default:
-        maxConcurrentCalls: 100
+        maxConcurrentCalls: 40
         maxWaitDuration: 0ms
     instances:
       jiraVerification:

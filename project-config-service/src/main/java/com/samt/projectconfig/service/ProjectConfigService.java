@@ -18,6 +18,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -44,6 +46,8 @@ import java.util.concurrent.TimeoutException;
 @RequiredArgsConstructor
 @Slf4j
 public class ProjectConfigService {
+
+    private final ConcurrentMap<UUID, CompletableFuture<VerificationResponse>> inFlightVerifications = new ConcurrentHashMap<>();
     
     private final ProjectConfigRepository repository;
     private final TokenEncryptionService encryptionService;
@@ -492,34 +496,77 @@ public class ProjectConfigService {
         }
         
         // ========== PHASE 3: EXTERNAL API CALLS (ASYNC PARALLEL ~10-12s) ==========
-        return authFuture.thenCompose(unused -> {
-            log.info("Starting PARALLEL async external API verification for config {} (NO blocking)", id);
-            
-            CompletableFuture<VerificationResponse.JiraResult> jiraFuture = 
-                jiraVerificationService.verifyAsync(
-                    decrypted.jiraHostUrl(),
-                    decrypted.jiraEmail(),
-                    decrypted.jiraToken()
-                );
-            
-            CompletableFuture<VerificationResponse.GitHubResult> githubFuture = 
-                githubVerificationService.verifyAsync(decrypted.githubRepoUrl(), decrypted.githubToken());
-            
-            return CompletableFuture.allOf(jiraFuture, githubFuture)
-                .thenCompose(voidResult -> {
-                    return jiraFuture.thenCombine(githubFuture, (jiraResult, githubResult) -> {
-                        log.info("PARALLEL async verification completed for config {} (jira={}, github={})", 
-                            id, jiraResult.status(), githubResult.status());
-                        
-                        // ========== PHASE 4: STATUS UPDATE (SHORT TRANSACTION ~50ms) ==========
-                        return persistVerificationResult(id, jiraResult, githubResult, userId);
-                    });
-                })
-                .exceptionally(throwable -> {
-                    log.error("Async verification FAILED for config {}: {}", id, throwable.getMessage());
-                    throw new VerificationException("Verification execution failed: " + throwable.getMessage());
-                });
+        return authFuture.thenCompose(unused -> joinOrStartVerification(id, userId, decrypted));
+    }
+
+    private CompletableFuture<VerificationResponse> joinOrStartVerification(
+        UUID id,
+        Long userId,
+        ConfigDecryptionResult decrypted
+    ) {
+        CompletableFuture<VerificationResponse> existing = inFlightVerifications.get(id);
+        if (existing != null) {
+            log.info("Joining in-flight verification for config {}", id);
+            return existing;
+        }
+
+        CompletableFuture<VerificationResponse> placeholder = new CompletableFuture<>();
+        CompletableFuture<VerificationResponse> previous = inFlightVerifications.putIfAbsent(id, placeholder);
+        if (previous != null) {
+            log.info("Joining in-flight verification for config {}", id);
+            return previous;
+        }
+
+        CompletableFuture<VerificationResponse> created;
+        try {
+            created = startVerification(id, userId, decrypted);
+        } catch (Throwable throwable) {
+            inFlightVerifications.remove(id, placeholder);
+            placeholder.completeExceptionally(throwable);
+            return placeholder;
+        }
+
+        created.whenComplete((result, throwable) -> {
+            if (throwable != null) {
+                placeholder.completeExceptionally(throwable);
+            } else {
+                placeholder.complete(result);
+            }
+            inFlightVerifications.remove(id, placeholder);
         });
+        return placeholder;
+    }
+
+    private CompletableFuture<VerificationResponse> startVerification(
+        UUID id,
+        Long userId,
+        ConfigDecryptionResult decrypted
+    ) {
+        log.info("Starting PARALLEL async external API verification for config {} (NO blocking)", id);
+
+        CompletableFuture<VerificationResponse.JiraResult> jiraFuture = jiraVerificationService.verifyAsync(
+            decrypted.jiraHostUrl(),
+            decrypted.jiraEmail(),
+            decrypted.jiraToken()
+        );
+
+        CompletableFuture<VerificationResponse.GitHubResult> githubFuture =
+            githubVerificationService.verifyAsync(decrypted.githubRepoUrl(), decrypted.githubToken());
+
+        return CompletableFuture.allOf(jiraFuture, githubFuture)
+            .thenCompose(voidResult -> jiraFuture.thenCombine(githubFuture, (jiraResult, githubResult) -> {
+                log.info("PARALLEL async verification completed for config {} (jira={}, github={})",
+                    id, jiraResult.status(), githubResult.status());
+                return persistVerificationResult(id, jiraResult, githubResult, userId);
+            }))
+            .exceptionally(throwable -> {
+                Throwable cause = unwrapAsyncException(throwable);
+                log.error("Async verification FAILED for config {}: {}", id, cause.getMessage(), cause);
+                if (cause instanceof RuntimeException runtimeException) {
+                    throw runtimeException;
+                }
+                throw new VerificationException("Verification execution failed", cause);
+            });
     }
     
     /**
@@ -774,5 +821,15 @@ public class ProjectConfigService {
         } else {
             return "GitHub: " + github.message();
         }
+    }
+
+    private Throwable unwrapAsyncException(Throwable throwable) {
+        Throwable current = throwable;
+        while ((current instanceof java.util.concurrent.CompletionException
+            || current instanceof ExecutionException)
+            && current.getCause() != null) {
+            current = current.getCause();
+        }
+        return current;
     }
 }

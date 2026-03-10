@@ -52,8 +52,8 @@ import java.util.UUID;
 @Slf4j
 public class CorrelationIdFilter extends OncePerRequestFilter {
     
-    private static final String CORRELATION_ID_HEADER = "X-Request-ID";
-    private static final String MDC_KEY = "correlationId";
+    public static final String HEADER_NAME = "X-Request-ID";
+    public static final String MDC_KEY = "correlationId";
     
     /**
      * Extract or generate correlation ID and store in MDC.
@@ -78,7 +78,7 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
                                    FilterChain filterChain) throws ServletException, IOException {
         
         // Extract correlation ID from request header or generate new one
-        String correlationId = request.getHeader(CORRELATION_ID_HEADER);
+        String correlationId = request.getHeader(HEADER_NAME);
         if (correlationId == null || correlationId.isBlank()) {
             correlationId = UUID.randomUUID().toString();
             log.debug("Generated new correlation ID: {}", correlationId);
@@ -90,7 +90,7 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
         MDC.put(MDC_KEY, correlationId);
         
         // Add to response header for client-side tracing
-        response.setHeader(CORRELATION_ID_HEADER, correlationId);
+        response.setHeader(HEADER_NAME, correlationId);
         
         try {
             // Continue filter chain with correlation ID in MDC

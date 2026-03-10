@@ -1,16 +1,16 @@
 package com.samt.projectconfig.security;
 
+import com.example.common.api.ApiResponseFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.samt.projectconfig.dto.response.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.MDC;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.time.Instant;
 
 @Component
 public class RestAccessDeniedHandler implements AccessDeniedHandler {
@@ -23,20 +23,31 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
 
     @Override
     public void handle(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            AccessDeniedException accessDeniedException
+        HttpServletRequest request,
+        HttpServletResponse response,
+        AccessDeniedException accessDeniedException
     ) throws IOException {
+        String correlationId = resolveCorrelationId(request);
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setHeader(CorrelationIdFilter.HEADER_NAME, correlationId);
         objectMapper.writeValue(
-                response.getOutputStream(),
-                ErrorResponse.builder()
-                        .statusCode(HttpServletResponse.SC_FORBIDDEN)
-                        .error("Forbidden")
-                        .message("Forbidden")
-                        .timestamp(Instant.now().toString())
-                        .build()
+            response.getOutputStream(),
+            ApiResponseFactory.error(
+                HttpServletResponse.SC_FORBIDDEN,
+                "Forbidden",
+                "Forbidden",
+                request.getRequestURI(),
+                correlationId
+            )
         );
+    }
+
+    private String resolveCorrelationId(HttpServletRequest request) {
+        String correlationId = request.getHeader(CorrelationIdFilter.HEADER_NAME);
+        if (correlationId == null || correlationId.isBlank()) {
+            correlationId = MDC.get(CorrelationIdFilter.MDC_KEY);
+        }
+        return correlationId;
     }
 }
