@@ -5,7 +5,6 @@
 server:
   port: ${SERVER_PORT:8083}
   shutdown: graceful
-  forward-headers-strategy: framework
 
 spring:
   application:
@@ -15,9 +14,7 @@ spring:
     timeout-per-shutdown-phase: 30s
 
   datasource:
-    # Password MUST be provided via SPRING_DATASOURCE_PASSWORD (no insecure fallback)
-    # Docker: will typically be provided via SPRING_DATASOURCE_PASSWORD from environment
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/samt_core?serverTimezone=UTC&ApplicationName=analysis-service}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/samt_analysis?serverTimezone=UTC&ApplicationName=analysis-service}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
@@ -33,9 +30,6 @@ spring:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:localhost}
       port: ${SPRING_DATA_REDIS_PORT:6379}
-      # In secure deployments, prefer Docker secret `redis_password` via Spring configtree.
-      # Local/dev can still provide REDIS_PASSWORD via .env.
-      password: ${redis_password:${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required for security - set in .env file}}
       timeout: 3000ms
       lettuce:
         pool:
@@ -57,6 +51,11 @@ spring:
           batch_size: 20
         order_inserts: true
         order_updates: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
 
   security:
     oauth2:
@@ -85,13 +84,25 @@ logging:
     com.example: ${LOG_LEVEL:INFO}
     org.hibernate.SQL: ${SQL_LOG_LEVEL:WARN}
 
-springdoc:
-  api-docs:
-    enabled: true
-    path: /v3/api-docs
-  swagger-ui:
-    path: /swagger-ui/index.html
-    enabled: true
+openai:
+  api:
+    key: ${OPENAI_API_KEY}
+    url: https://api.openai.com/v1/chat/completions
+    model: gpt-4o-mini
+    timeout: ${OPENAI_API_TIMEOUT_MS:5000}
+
+resilience4j:
+  retry:
+    instances:
+      openAi:
+        max-attempts: 3
+        wait-duration: 300ms
+  circuitbreaker:
+    instances:
+      openAi:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
 
 ---
 # ==============================================
@@ -103,7 +114,7 @@ spring:
       on-profile: docker
 
   datasource:
-    url: jdbc:postgresql://postgres-core:5432/samt_core?serverTimezone=UTC&ApplicationName=analysis-service
+    url: jdbc:postgresql://postgres-analysis:5432/samt_analysis?serverTimezone=UTC&ApplicationName=analysis-service
 
   data:
     redis:
