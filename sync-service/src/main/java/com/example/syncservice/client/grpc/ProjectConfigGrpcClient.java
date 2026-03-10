@@ -8,6 +8,7 @@ import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import com.example.syncservice.client.grpc.InternalGetDecryptedConfigRequest;
 import com.example.syncservice.client.grpc.InternalGetDecryptedConfigResponse;
@@ -16,9 +17,11 @@ import com.example.syncservice.client.grpc.InternalListVerifiedConfigsResponse;
 import com.example.syncservice.client.grpc.ProjectConfigInternalServiceGrpc;
 
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.UUID;
 import java.util.Objects;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -37,6 +40,14 @@ public class ProjectConfigGrpcClient {
     @GrpcClient("project-config-service")
     private ProjectConfigInternalServiceGrpc.ProjectConfigInternalServiceBlockingStub projectConfigStub;
 
+    private final Map<UUID, CachedConfig> configCache = new ConcurrentHashMap<>();
+    private final long configCacheTtlMillis;
+
+    public ProjectConfigGrpcClient(
+            @Value("${sync.grpc.config-cache-ttl-seconds:30}") long configCacheTtlSeconds) {
+        this.configCacheTtlMillis = Math.max(1, configCacheTtlSeconds) * 1000L;
+    }
+
     /**
      * Get decrypted project config by ID.
      * Retrieves API tokens in plaintext for external API calls.
@@ -50,6 +61,13 @@ public class ProjectConfigGrpcClient {
     public ProjectConfigDto getDecryptedConfig(UUID configId) {
         log.debug("Fetching decrypted config for configId={}", configId);
 
+        CachedConfig cached = configCache.get(configId);
+        long now = System.currentTimeMillis();
+        if (cached != null && cached.expiresAtEpochMs() > now) {
+            log.debug("Cache hit for configId={}", configId);
+            return cached.value();
+        }
+
         try {
             InternalGetDecryptedConfigRequest request = InternalGetDecryptedConfigRequest.newBuilder()
                     .setConfigId(configId.toString())
@@ -60,6 +78,7 @@ public class ProjectConfigGrpcClient {
                     .internalGetDecryptedConfig(request);
 
             ProjectConfigDto dto = mapToDto(response);
+                configCache.put(configId, new CachedConfig(dto, now + configCacheTtlMillis));
             log.debug("Successfully fetched config for configId={}", configId);
             return dto;
 
@@ -69,6 +88,7 @@ public class ProjectConfigGrpcClient {
 
             Status.Code code = e.getStatus().getCode();
             if (code == Status.Code.NOT_FOUND) {
+                configCache.remove(configId);
                 throw new ConfigNotFoundException(configId);
             }
             if (code == Status.Code.PERMISSION_DENIED || code == Status.Code.UNAUTHENTICATED) {
@@ -169,5 +189,8 @@ public class ProjectConfigGrpcClient {
         public NonRetryableGrpcClientException(String message, Throwable cause) {
             super(message, cause);
         }
+    }
+
+    private record CachedConfig(ProjectConfigDto value, long expiresAtEpochMs) {
     }
 }

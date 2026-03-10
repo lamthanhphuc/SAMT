@@ -294,10 +294,10 @@ server:
 grpc:
   server:
     security:
-      enabled: false
+      enabled: true
   client:
     user-group-service:
-      negotiation-type: PLAINTEXT
+      negotiation-type: TLS
 
 logging:
   level:

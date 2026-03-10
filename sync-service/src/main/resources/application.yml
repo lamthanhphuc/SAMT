@@ -83,6 +83,9 @@ security:
 #   ASYNC THREAD POOL CONFIGURATION
 # ==============================================
 sync:
+  grpc:
+    config-cache-ttl-seconds: ${SYNC_GRPC_CONFIG_CACHE_TTL_SECONDS:30}
+
   async:
     core-pool-size: ${SYNC_ASYNC_CORE_POOL:24}
     max-pool-size: ${SYNC_ASYNC_MAX_POOL:48}
@@ -250,10 +253,10 @@ server:
 grpc:
   server:
     security:
-      enabled: false
+      enabled: true
   client:
     project-config-service:
-      negotiation-type: PLAINTEXT
+      negotiation-type: TLS
 
 logging:
   level:
