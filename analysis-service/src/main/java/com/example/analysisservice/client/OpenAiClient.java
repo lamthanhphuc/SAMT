@@ -1,4 +1,5 @@
 package com.example.analysisservice.client;
+
 import com.example.analysisservice.config.OpenAiProperties;
 import com.example.analysisservice.dto.request.OpenAiRequest;
 import com.example.analysisservice.dto.response.OpenAiResponse;
@@ -6,7 +7,11 @@ import com.example.analysisservice.web.UpstreamServiceException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -17,8 +22,8 @@ public class OpenAiClient {
     private final RestTemplate restTemplate;
     private final OpenAiProperties properties;
 
-        @Retry(name = "openAi")
-        @CircuitBreaker(name = "openAi")
+    @Retry(name = "openAi", fallbackMethod = "callFallback")
+    @CircuitBreaker(name = "openAi", fallbackMethod = "callFallback")
     public String call(OpenAiRequest request) {
 
         HttpHeaders headers = new HttpHeaders();
@@ -35,20 +40,25 @@ public class OpenAiClient {
                         entity,
                         OpenAiResponse.class);
 
-                if (!response.getStatusCode().is2xxSuccessful()) {
-                        throw new UpstreamServiceException("OpenAI returned non-success status: " + response.getStatusCode());
-                }
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            throw new UpstreamServiceException("OpenAI returned non-success status: " + response.getStatusCode());
+        }
 
-                OpenAiResponse body = response.getBody();
-                if (body == null || body.getChoices() == null || body.getChoices().isEmpty()) {
-                        throw new UpstreamServiceException("OpenAI response is empty");
-                }
+        OpenAiResponse body = response.getBody();
+        if (body == null || body.getChoices() == null || body.getChoices().isEmpty()) {
+            throw new UpstreamServiceException("OpenAI response is empty");
+        }
 
-                OpenAiResponse.Message message = body.getChoices().getFirst().getMessage();
-                if (message == null || message.getContent() == null || message.getContent().isBlank()) {
-                        throw new UpstreamServiceException("OpenAI response content missing");
-                }
+        OpenAiResponse.Message message = body.getChoices().getFirst().getMessage();
+        if (message == null || message.getContent() == null || message.getContent().isBlank()) {
+            throw new UpstreamServiceException("OpenAI response content missing");
+        }
 
-                return message.getContent();
+        return message.getContent();
+    }
+
+    @SuppressWarnings("unused")
+    private String callFallback(OpenAiRequest request, Throwable throwable) {
+        throw new UpstreamServiceException("OpenAI dependency unavailable", throwable);
     }
 }

@@ -5,23 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import com.example.user_groupservice.grpc.UserGroupGrpcServiceImpl;
-import com.example.user_groupservice.grpc.UserGrpcServiceGrpc;
-import com.example.user_groupservice.grpc.GetUserRequest;
-import com.example.user_groupservice.grpc.GetUserResponse;
-import com.example.user_groupservice.grpc.GetUserRoleRequest;
-import com.example.user_groupservice.grpc.GetUserRoleResponse;
-import com.example.user_groupservice.grpc.VerifyUserRequest;
-import com.example.user_groupservice.grpc.VerifyUserResponse;
-import com.example.user_groupservice.grpc.GetUsersRequest;
-import com.example.user_groupservice.grpc.GetUsersResponse;
-import com.example.user_groupservice.grpc.UpdateUserRequest;
-import com.example.user_groupservice.grpc.UpdateUserResponse;
-import com.example.user_groupservice.grpc.ListUsersRequest;
-import com.example.user_groupservice.grpc.ListUsersResponse;
 
 /**
  * gRPC client for Identity Service integration.
@@ -41,6 +28,11 @@ public class IdentityServiceClient {
     @Value("${grpc.client.identity-service.deadline-seconds:3}")
     private long deadlineSeconds;
 
+    private UserGrpcServiceGrpc.UserGrpcServiceBlockingStub stubWithDeadline() {
+        long effectiveDeadlineSeconds = deadlineSeconds > 0 ? deadlineSeconds : 3;
+        return userStub.withDeadlineAfter(effectiveDeadlineSeconds, TimeUnit.SECONDS);
+    }
+
     /**
      * Get user by ID from Identity Service.
      */
@@ -52,8 +44,7 @@ public class IdentityServiceClient {
                     .setUserId(userId.toString())
                     .build();
 
-            return userStub
-                    .withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS)
+            return stubWithDeadline()
                     .getUser(request);
 
         } catch (StatusRuntimeException e) {
@@ -73,8 +64,7 @@ public class IdentityServiceClient {
                     .setUserId(userId.toString())
                     .build();
 
-            return userStub
-                    .withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS)
+            return stubWithDeadline()
                     .getUserRole(request);
 
         } catch (StatusRuntimeException e) {
@@ -94,8 +84,7 @@ public class IdentityServiceClient {
                     .setUserId(userId.toString())
                     .build();
 
-            return userStub
-                    .withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS)
+            return stubWithDeadline()
                     .verifyUserExists(request);
 
         } catch (StatusRuntimeException e) {
@@ -124,8 +113,7 @@ public class IdentityServiceClient {
                     .addAllUserIds(userIdStrings)
                     .build();
 
-            return userStub
-                    .withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS)
+            return stubWithDeadline()
                     .getUsers(request);
 
         } catch (StatusRuntimeException e) {
@@ -146,8 +134,7 @@ public class IdentityServiceClient {
                     .setFullName(fullName)
                     .build();
 
-            return userStub
-                    .withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS)
+            return stubWithDeadline()
                     .updateUser(request);
 
         } catch (StatusRuntimeException e) {
@@ -171,8 +158,7 @@ public class IdentityServiceClient {
                 builder.setRole(role);
             }
 
-            return userStub
-                    .withDeadlineAfter(deadlineSeconds, TimeUnit.SECONDS)
+            return stubWithDeadline()
                     .listUsers(builder.build());
 
         } catch (StatusRuntimeException e) {

@@ -4,6 +4,8 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.retry.RetryConfig;
 import io.github.resilience4j.retry.RetryRegistry;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,6 +32,22 @@ import java.time.Duration;
 @Configuration
 public class ResilienceConfig {
 
+        private static final Duration RETRY_INITIAL_BACKOFF = Duration.ofMillis(200);
+        private static final double RETRY_BACKOFF_MULTIPLIER = 2.0;
+        private static final double RETRY_JITTER = 0.3;
+
+        private static boolean isTransientGrpcFailure(Throwable throwable) {
+                if (!(throwable instanceof StatusRuntimeException statusRuntimeException)) {
+                        return throwable instanceof java.util.concurrent.TimeoutException;
+                }
+
+                Status.Code code = statusRuntimeException.getStatus().getCode();
+                return code == Status.Code.UNAVAILABLE
+                                || code == Status.Code.DEADLINE_EXCEEDED
+                                || code == Status.Code.RESOURCE_EXHAUSTED
+                                || code == Status.Code.ABORTED;
+        }
+
     /**
      * Circuit Breaker Configuration for Identity Service gRPC calls
      */
@@ -38,53 +56,50 @@ public class ResilienceConfig {
         CircuitBreakerConfig config = CircuitBreakerConfig.custom()
                 // Failure rate threshold (50%)
                 .failureRateThreshold(50)
-                
+
                 // Wait duration in open state (10 seconds)
                 .waitDurationInOpenState(Duration.ofSeconds(10))
-                
+
                 // Permitted number of calls in half-open state
                 .permittedNumberOfCallsInHalfOpenState(3)
-                
+
                 // Sliding window size (10 calls)
                 .slidingWindowSize(10)
-                
+
                 // Sliding window type
                 .slidingWindowType(CircuitBreakerConfig.SlidingWindowType.COUNT_BASED)
-                
+
                 // Minimum number of calls before calculating failure rate
                 .minimumNumberOfCalls(5)
-                
+
                 // Slow call duration threshold (5 seconds)
                 .slowCallDurationThreshold(Duration.ofSeconds(5))
-                
+
                 // Slow call rate threshold (100%)
                 .slowCallRateThreshold(100)
-                
-                // Record exceptions
-                .recordExceptions(
-                        io.grpc.StatusRuntimeException.class,
-                        java.util.concurrent.TimeoutException.class
-                )
-                
+
+                // Only count transient failures toward opening the circuit.
+                .recordException(ResilienceConfig::isTransientGrpcFailure)
+
                 .build();
 
         CircuitBreakerRegistry registry = CircuitBreakerRegistry.of(config);
-        
+
         // Register circuit breaker for Identity Service
         var circuitBreaker = registry.circuitBreaker("identityService");
-        
+
         // Event listeners for debugging
         circuitBreaker.getEventPublisher()
-                .onStateTransition(event -> 
-                        log.warn("Identity Service Circuit Breaker state changed: FROM {} TO {}", 
+                .onStateTransition(event ->
+                        log.warn("Identity Service Circuit Breaker state changed: FROM {} TO {}",
                                 event.getStateTransition().getFromState(),
                                 event.getStateTransition().getToState()))
-                .onFailureRateExceeded(event -> 
-                        log.error("Identity Service Circuit Breaker failure rate exceeded: {}%", 
+                .onFailureRateExceeded(event ->
+                        log.error("Identity Service Circuit Breaker failure rate exceeded: {}%",
                                 event.getFailureRate()))
-                .onCallNotPermitted(event -> 
+                .onCallNotPermitted(event ->
                         log.error("Identity Service Circuit Breaker call not permitted (circuit is OPEN)"));
-        
+
         return registry;
     }
 
@@ -92,46 +107,47 @@ public class ResilienceConfig {
      * Retry Configuration for Identity Service gRPC calls
      */
     @Bean
-public RetryRegistry retryRegistry() {
+    public RetryRegistry retryRegistry() {
 
-    RetryConfig config = RetryConfig.custom()
-            .maxAttempts(3)
+        RetryConfig config = RetryConfig.custom()
+                .maxAttempts(3)
 
-            // Exponential backoff: 500ms → 1000ms → 2000ms
-            .intervalFunction(
-                    io.github.resilience4j.core.IntervalFunction
-                            .ofExponentialBackoff(500, 2.0)
-            )
+                // Jittered exponential backoff to avoid synchronized retry storms.
+                .intervalFunction(
+                        io.github.resilience4j.core.IntervalFunction
+                                .ofExponentialRandomBackoff(
+                                        RETRY_INITIAL_BACKOFF.toMillis(),
+                                        RETRY_BACKOFF_MULTIPLIER,
+                                        RETRY_JITTER
+                                )
+                )
 
-            .retryExceptions(
-                    io.grpc.StatusRuntimeException.class,
-                    java.util.concurrent.TimeoutException.class
-            )
+                .retryOnException(ResilienceConfig::isTransientGrpcFailure)
 
-            .ignoreExceptions(
-                    IllegalArgumentException.class,
-                    IllegalStateException.class
-            )
+                .ignoreExceptions(
+                        IllegalArgumentException.class,
+                        IllegalStateException.class
+                )
 
-            .build();
+                .build();
 
-    RetryRegistry registry = RetryRegistry.of(config);
+        RetryRegistry registry = RetryRegistry.of(config);
 
-    var retry = registry.retry("identityService");
+        var retry = registry.retry("identityService");
 
-    retry.getEventPublisher()
-            .onRetry(event ->
-                    log.warn("Identity Service call retry attempt #{}: {}",
-                            event.getNumberOfRetryAttempts(),
-                            event.getLastThrowable().getMessage()))
-            .onSuccess(event ->
-                    log.debug("Identity Service call succeeded after {} retry attempts",
-                            event.getNumberOfRetryAttempts()))
-            .onError(event ->
-                    log.error("Identity Service call failed after {} retry attempts",
-                            event.getNumberOfRetryAttempts(),
-                            event.getLastThrowable()));
+        retry.getEventPublisher()
+                .onRetry(event ->
+                        log.warn("Identity Service call retry attempt #{}: {}",
+                                event.getNumberOfRetryAttempts(),
+                                event.getLastThrowable().getMessage()))
+                .onSuccess(event ->
+                        log.debug("Identity Service call succeeded after {} retry attempts",
+                                event.getNumberOfRetryAttempts()))
+                .onError(event ->
+                        log.error("Identity Service call failed after {} retry attempts",
+                                event.getNumberOfRetryAttempts(),
+                                event.getLastThrowable()));
 
-    return registry;
-}
+        return registry;
+    }
 }
