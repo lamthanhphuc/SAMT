@@ -118,6 +118,29 @@ public class SyncDataService {
             return 0;
         }
 
+        return upsertUnifiedActivities(activities);
+    }
+
+    @Transactional
+    public int persistJiraSyncBatch(List<UnifiedActivity> activities, List<JiraIssue> issues) {
+        int affectedActivities = activities == null || activities.isEmpty() ? 0 : upsertUnifiedActivities(activities);
+        if (issues != null && !issues.isEmpty()) {
+            upsertJiraIssues(issues);
+        }
+        return affectedActivities;
+    }
+
+    @Transactional
+    public int persistGithubSyncBatch(List<UnifiedActivity> activities, List<GithubCommit> commits) {
+        int affectedActivities = activities == null || activities.isEmpty() ? 0 : upsertUnifiedActivities(activities);
+        if (commits != null && !commits.isEmpty()) {
+            upsertGithubCommits(commits);
+        }
+        return affectedActivities;
+    }
+
+    private int upsertUnifiedActivities(List<UnifiedActivity> activities) {
+
         try {
             int affected = unifiedActivityRepository.upsertBatch(activities);
             log.debug("Persisted {} unified activities (upsert)", affected);
@@ -149,6 +172,11 @@ public class SyncDataService {
             return;
         }
 
+        upsertJiraIssues(issues);
+    }
+
+    private void upsertJiraIssues(List<JiraIssue> issues) {
+
         try {
             // Use UPSERT to handle UNIQUE constraint on (project_config_id, issue_key)
             int affected = jiraIssueRepository.upsertBatch(issues);
@@ -179,6 +207,11 @@ public class SyncDataService {
         if (commits == null || commits.isEmpty()) {
             return;
         }
+
+        upsertGithubCommits(commits);
+    }
+
+    private void upsertGithubCommits(List<GithubCommit> commits) {
 
         try {
             // Use UPSERT to handle UNIQUE constraint on (project_config_id, commit_sha)

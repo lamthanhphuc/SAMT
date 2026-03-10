@@ -23,8 +23,8 @@ spring:
     driver-class-name: org.postgresql.Driver
     hikari:
       connection-timeout: 30000
-      maximum-pool-size: ${DB_POOL_SIZE:10}
-      minimum-idle: ${DB_POOL_MIN_IDLE:2}
+      maximum-pool-size: ${DB_POOL_SIZE:30}
+      minimum-idle: ${DB_POOL_MIN_IDLE:10}
       idle-timeout: 600000
       max-lifetime: 1800000
       leak-detection-threshold: 120000  # 2min - allows CREATE INDEX CONCURRENTLY in migrations
@@ -39,9 +39,9 @@ spring:
       timeout: 3000ms
       lettuce:
         pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 2
+          max-active: 24
+          max-idle: 16
+          min-idle: 6
 
   jpa:
     hibernate:
@@ -84,9 +84,9 @@ security:
 # ==============================================
 sync:
   async:
-    core-pool-size: ${SYNC_ASYNC_CORE_POOL:2}
-    max-pool-size: ${SYNC_ASYNC_MAX_POOL:5}
-    queue-capacity: ${SYNC_ASYNC_QUEUE_CAPACITY:100}
+    core-pool-size: ${SYNC_ASYNC_CORE_POOL:24}
+    max-pool-size: ${SYNC_ASYNC_MAX_POOL:48}
+    queue-capacity: ${SYNC_ASYNC_QUEUE_CAPACITY:300}
     thread-name-prefix: sync-
 
   scheduler:
@@ -123,30 +123,30 @@ resilience4j:
   retry:
     instances:
       jiraRetry:
-        max-attempts: 3
-        wait-duration: 1s
+        max-attempts: 2
+        wait-duration: 200ms
         enable-exponential-backoff: true
         exponential-backoff-multiplier: 2
         randomization-factor: 0.5
-        exponential-max-wait-duration: 10s
+        exponential-max-wait-duration: 2s
         retry-exceptions:
           - java.net.ConnectException
           - java.net.SocketTimeoutException
           - org.springframework.web.reactive.function.client.WebClientRequestException
       githubRetry:
-        max-attempts: 3
-        wait-duration: 2s
+        max-attempts: 2
+        wait-duration: 200ms
         enable-exponential-backoff: true
         exponential-backoff-multiplier: 2
         randomization-factor: 0.5
-        exponential-max-wait-duration: 10s
+        exponential-max-wait-duration: 2s
         retry-exceptions:
           - java.net.ConnectException
           - java.net.SocketTimeoutException
           - org.springframework.web.reactive.function.client.WebClientRequestException
       grpcRetry:
         max-attempts: 2
-        wait-duration: 500ms
+        wait-duration: 200ms
         enable-exponential-backoff: true
         exponential-backoff-multiplier: 2
         randomization-factor: 0.5
@@ -156,36 +156,41 @@ resilience4j:
   circuitbreaker:
     instances:
       jiraCircuitBreaker:
-        sliding-window-size: 10
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 60s
-        permitted-number-of-calls-in-half-open-state: 3
+        sliding-window-size: 100
+        minimum-number-of-calls: 20
+        failure-rate-threshold: 75
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 10
         automatic-transition-from-open-to-half-open-enabled: true
-        slow-call-duration-threshold: 20s
-        slow-call-rate-threshold: 80
+        slow-call-duration-threshold: 10s
+        slow-call-rate-threshold: 90
       githubCircuitBreaker:
-        sliding-window-size: 10
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 60s
-        permitted-number-of-calls-in-half-open-state: 3
+        sliding-window-size: 100
+        minimum-number-of-calls: 20
+        failure-rate-threshold: 75
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 10
         automatic-transition-from-open-to-half-open-enabled: true
       grpcCircuitBreaker:
-        sliding-window-size: 5
+        sliding-window-size: 50
+        minimum-number-of-calls: 20
         failure-rate-threshold: 60
-        wait-duration-in-open-state: 30s
-        permitted-number-of-calls-in-half-open-state: 2
+        wait-duration-in-open-state: 8s
+        permitted-number-of-calls-in-half-open-state: 10
         automatic-transition-from-open-to-half-open-enabled: true
+        ignore-exceptions:
+          - com.example.syncservice.exception.ConfigNotFoundException
 
   ratelimiter:
     instances:
       jiraRateLimiter:
-        limit-for-period: 10
+        limit-for-period: 300
         limit-refresh-period: 1s
-        timeout-duration: 5s
+        timeout-duration: 200ms
       githubRateLimiter:
-        limit-for-period: 100
+        limit-for-period: 5000
         limit-refresh-period: 60s
-        timeout-duration: 5s
+        timeout-duration: 200ms
 
 management:
   endpoints:

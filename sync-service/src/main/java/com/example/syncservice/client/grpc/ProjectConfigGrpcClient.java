@@ -1,5 +1,6 @@
 package com.example.syncservice.client.grpc;
 
+import com.example.syncservice.exception.ConfigNotFoundException;
 import com.example.syncservice.dto.ProjectConfigDto;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
@@ -66,7 +67,7 @@ public class ProjectConfigGrpcClient {
                     configId, e.getStatus().getCode(), e.getStatus().getDescription());
             
             if (e.getStatus().getCode() == Status.Code.NOT_FOUND) {
-                throw new ConfigNotFoundException("Config not found: " + configId);
+                throw new ConfigNotFoundException(configId);
             } else if (e.getStatus().getCode() == Status.Code.PERMISSION_DENIED) {
                 throw new GrpcClientException("Service authentication failed", e);
             } else if (e.getStatus().getCode() == Status.Code.DEADLINE_EXCEEDED) {
@@ -142,15 +143,6 @@ public class ProjectConfigGrpcClient {
 
         public GrpcClientException(String message, Throwable cause) {
             super(message, cause);
-        }
-    }
-
-    /**
-     * Exception when config not found.
-     */
-    public static class ConfigNotFoundException extends GrpcClientException {
-        public ConfigNotFoundException(String message) {
-            super(message);
         }
     }
 }

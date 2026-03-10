@@ -19,6 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 /**
@@ -35,6 +37,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class SyncOrchestrator {
+
+    private final ConcurrentMap<UUID, CompletableFuture<SyncResultDto>> inFlightJiraSyncs = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, CompletableFuture<SyncResultDto>> inFlightGithubSyncs = new ConcurrentHashMap<>();
 
     private final ProjectConfigGrpcClient projectConfigGrpcClient;
     private final JiraClient jiraClient;
@@ -113,6 +118,54 @@ public class SyncOrchestrator {
      */
     @Async("syncTaskExecutor")
     public CompletableFuture<SyncResultDto> syncJiraIssuesAsync(UUID projectConfigId) {
+        return joinOrStartSync(projectConfigId, inFlightJiraSyncs, "Jira", () -> executeJiraSync(projectConfigId));
+    }
+
+    @Async("syncTaskExecutor")
+    public CompletableFuture<SyncResultDto> syncGithubCommitsAsync(UUID projectConfigId) {
+        return joinOrStartSync(projectConfigId, inFlightGithubSyncs, "GitHub", () -> executeGithubSync(projectConfigId));
+    }
+
+    private CompletableFuture<SyncResultDto> joinOrStartSync(
+        UUID projectConfigId,
+        ConcurrentMap<UUID, CompletableFuture<SyncResultDto>> inFlightMap,
+        String syncType,
+        java.util.function.Supplier<CompletableFuture<SyncResultDto>> operation
+    ) {
+        CompletableFuture<SyncResultDto> existing = inFlightMap.get(projectConfigId);
+        if (existing != null) {
+            log.info("Joining in-flight {} sync for configId={}", syncType, projectConfigId);
+            return existing;
+        }
+
+        CompletableFuture<SyncResultDto> placeholder = new CompletableFuture<>();
+        CompletableFuture<SyncResultDto> previous = inFlightMap.putIfAbsent(projectConfigId, placeholder);
+        if (previous != null) {
+            log.info("Joining in-flight {} sync for configId={}", syncType, projectConfigId);
+            return previous;
+        }
+
+        CompletableFuture<SyncResultDto> created;
+        try {
+            created = operation.get();
+        } catch (Throwable throwable) {
+            inFlightMap.remove(projectConfigId, placeholder);
+            placeholder.completeExceptionally(throwable);
+            return placeholder;
+        }
+
+        created.whenComplete((result, throwable) -> {
+            if (throwable != null) {
+                placeholder.completeExceptionally(throwable);
+            } else {
+                placeholder.complete(result);
+            }
+            inFlightMap.remove(projectConfigId, placeholder);
+        });
+        return placeholder;
+    }
+
+    private CompletableFuture<SyncResultDto> executeJiraSync(UUID projectConfigId) {
         long startTime = System.currentTimeMillis();
         String correlationId = MDC.get("correlationId");
         if (correlationId == null) {
@@ -160,8 +213,7 @@ public class SyncOrchestrator {
                     .collect(Collectors.toList());
 
             // Step 5: Persist to DB (SHORT transactions)
-            int savedActivities = syncDataService.persistUnifiedActivities(unifiedActivities);
-            syncDataService.persistJiraIssues(jiraIssues);
+            int savedActivities = syncDataService.persistJiraSyncBatch(unifiedActivities, jiraIssues);
 
             // Step 6: Update sync job status based on execution result
             long duration = System.currentTimeMillis() - startTime;
@@ -190,7 +242,7 @@ public class SyncOrchestrator {
                         .syncJobId(syncJob.getId())
                         .projectConfigId(projectConfigId)
                         .jobType(SyncJob.JobType.JIRA_ISSUES.name())
-                        .success(!degraded)
+                    .success(true)
                         .degraded(degraded)
                         .recordsFetched(issueDtos.size())
                         .recordsSaved(savedActivities)
@@ -209,16 +261,7 @@ public class SyncOrchestrator {
 
                 syncMetrics.recordSyncFailure(SyncJob.JobType.JIRA_ISSUES);
 
-                return CompletableFuture.completedFuture(SyncResultDto.builder()
-                        .syncJobId(syncJob != null ? syncJob.getId() : null)
-                        .projectConfigId(projectConfigId)
-                        .jobType(SyncJob.JobType.JIRA_ISSUES.name())
-                        .success(false)
-                        .degraded(false)
-                        .errorMessage(e.getMessage())
-                        .durationMs(System.currentTimeMillis() - startTime)
-                        .correlationId(correlationId)
-                        .build());
+                return CompletableFuture.failedFuture(e);
             } finally {
                 MDC.remove("correlationId");
             }
@@ -230,8 +273,7 @@ public class SyncOrchestrator {
      * 
      * Similar flow to syncJiraIssuesAsync.
      */
-    @Async("syncTaskExecutor")
-    public CompletableFuture<SyncResultDto> syncGithubCommitsAsync(UUID projectConfigId) {
+    private CompletableFuture<SyncResultDto> executeGithubSync(UUID projectConfigId) {
         long startTime = System.currentTimeMillis();
         String correlationId = MDC.get("correlationId");
         if (correlationId == null) {
@@ -278,8 +320,7 @@ public class SyncOrchestrator {
                     .collect(Collectors.toList());
 
             // Step 5: Persist to DB
-            int savedActivities = syncDataService.persistUnifiedActivities(unifiedActivities);
-            syncDataService.persistGithubCommits(githubCommits);
+            int savedActivities = syncDataService.persistGithubSyncBatch(unifiedActivities, githubCommits);
 
             // Step 6: Update sync job status based on execution result
             long duration = System.currentTimeMillis() - startTime;
@@ -308,7 +349,7 @@ public class SyncOrchestrator {
                         .syncJobId(syncJob.getId())
                         .projectConfigId(projectConfigId)
                         .jobType(SyncJob.JobType.GITHUB_COMMITS.name())
-                        .success(!degraded)
+                    .success(true)
                         .degraded(degraded)
                         .recordsFetched(commitDtos.size())
                         .recordsSaved(savedActivities)
@@ -326,16 +367,7 @@ public class SyncOrchestrator {
 
                 syncMetrics.recordSyncFailure(SyncJob.JobType.GITHUB_COMMITS);
 
-                return CompletableFuture.completedFuture(SyncResultDto.builder()
-                        .syncJobId(syncJob != null ? syncJob.getId() : null)
-                        .projectConfigId(projectConfigId)
-                        .jobType(SyncJob.JobType.GITHUB_COMMITS.name())
-                        .success(false)
-                        .degraded(false)
-                        .errorMessage(e.getMessage())
-                        .durationMs(System.currentTimeMillis() - startTime)
-                        .correlationId(correlationId)
-                        .build());
+                return CompletableFuture.failedFuture(e);
             } finally {
                 MDC.remove("correlationId");
             }
