@@ -1,10 +1,12 @@
 package com.example.user_groupservice.security;
 
-import com.example.user_groupservice.dto.response.ErrorResponse;
+import com.example.common.api.ApiResponseFactory;
+import com.example.user_groupservice.web.CorrelationIdFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.MDC;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -12,29 +14,35 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
-/**
- * Custom authentication entry point for handling 401 Unauthorized errors.
- */
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
-    
+
     private final ObjectMapper objectMapper;
-    
+
     @Override
-    public void commence(HttpServletRequest request,
-                         HttpServletResponse response,
-                         AuthenticationException authException) throws IOException {
-        
+    public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
+        String correlationId = resolveCorrelationId(request);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        
-        ErrorResponse errorResponse = ErrorResponse.of(
+        response.setHeader(CorrelationIdFilter.HEADER_NAME, correlationId);
+        objectMapper.writeValue(
+            response.getOutputStream(),
+            ApiResponseFactory.error(
                 HttpServletResponse.SC_UNAUTHORIZED,
-            "Unauthorized",
-            "Authentication required. Request must come via API Gateway."
+                "Unauthorized",
+                "Authentication required. Request must come via API Gateway.",
+                request.getRequestURI(),
+                correlationId
+            )
         );
-        
-        objectMapper.writeValue(response.getOutputStream(), errorResponse);
+    }
+
+    private String resolveCorrelationId(HttpServletRequest request) {
+        String correlationId = request.getHeader(CorrelationIdFilter.HEADER_NAME);
+        if (correlationId == null || correlationId.isBlank()) {
+            correlationId = MDC.get(CorrelationIdFilter.MDC_KEY);
+        }
+        return correlationId;
     }
 }
