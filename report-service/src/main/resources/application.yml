@@ -17,7 +17,7 @@ spring:
   datasource:
     # Password MUST be provided via SPRING_DATASOURCE_PASSWORD (no insecure fallback)
     # Docker: will typically be provided via SPRING_DATASOURCE_PASSWORD from environment
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/samt_core?serverTimezone=UTC&ApplicationName=report-service}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/samt_report?serverTimezone=UTC&ApplicationName=report-service}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
@@ -58,6 +58,11 @@ spring:
         order_inserts: true
         order_updates: true
 
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
   security:
     oauth2:
       resourceserver:
@@ -94,6 +99,45 @@ springdoc:
     enabled: true
 
 ---
+#grpc
+grpc:
+ client:
+  sync-service:
+    address: static://${SYNC_SERVICE_GRPC_HOST:localhost}:${SYNC_SERVICE_GRPC_PORT:9094}
+    negotiationType: TLS
+    enable-keep-alive: true
+    keep-alive-time: 30s
+    keep-alive-timeout: 10s
+    enable-retry: true
+    max-retry-attempts: 3
+    default-load-balancing-policy: round_robin
+    immediate-connect-timeout: 5s
+
+ai:
+  service:
+    url: ${AI_SERVICE_URL:http://localhost:8083}
+    timeout: ${AI_SERVICE_TIMEOUT_MS:5000}
+
+resilience4j:
+  retry:
+    instances:
+      syncGrpc:
+        max-attempts: 3
+        wait-duration: 300ms
+      analysisApi:
+        max-attempts: 3
+        wait-duration: 300ms
+  circuitbreaker:
+    instances:
+      syncGrpc:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+      analysisApi:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+    
 # ==============================================
 # DOCKER PROFILE
 # ==============================================
@@ -103,7 +147,7 @@ spring:
       on-profile: docker
 
   datasource:
-    url: jdbc:postgresql://postgres-core:5432/samt_core?serverTimezone=UTC&ApplicationName=report-service
+    url: jdbc:postgresql://postgres-report:5432/samt_report?serverTimezone=UTC&ApplicationName=report-service
 
   data:
     redis:

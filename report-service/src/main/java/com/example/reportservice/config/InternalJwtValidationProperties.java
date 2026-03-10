@@ -1,11 +1,15 @@
-package com.example.reportservice.security;
+package com.example.reportservice.config;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
+@Getter
+@Setter
 @Validated
 @ConfigurationProperties(prefix = "security.internal-jwt")
 public class InternalJwtValidationProperties {
@@ -19,28 +23,4 @@ public class InternalJwtValidationProperties {
     @Min(0)
     @Max(30)
     private int clockSkewSeconds = 30;
-
-    public String getIssuer() {
-        return issuer;
-    }
-
-    public void setIssuer(String issuer) {
-        this.issuer = issuer;
-    }
-
-    public String getExpectedService() {
-        return expectedService;
-    }
-
-    public void setExpectedService(String expectedService) {
-        this.expectedService = expectedService;
-    }
-
-    public int getClockSkewSeconds() {
-        return clockSkewSeconds;
-    }
-
-    public void setClockSkewSeconds(int clockSkewSeconds) {
-        this.clockSkewSeconds = clockSkewSeconds;
-    }
 }

@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.example.reportservice.grpc";
+option java_outer_classname = "SyncProto";
+
+//package sync;
+
+service SyncService {
+
+  rpc GetIssuesByProjectConfig(ProjectConfigRequest)
+      returns (IssueListResponse);
+
+}
+
+message ProjectConfigRequest {
+  string projectConfigId = 1;
+}
+
+message IssueResponse {
+  string issueId = 1;
+  string issueKey = 2;
+  string summary = 3;
+  string description = 4;
+  string issueType = 5;
+  string status = 6;
+  string priority = 7;
+  string assigneeEmail = 8;
+  string assigneeName = 9;
+  string reporterEmail = 10;
+  string reporterName = 11;
+}
+
+message IssueListResponse {
+  repeated IssueResponse issues = 1;
+}
