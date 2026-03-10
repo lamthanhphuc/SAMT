@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import net.devh.boot.grpc.server.service.GrpcService;
 
 import java.util.List;
+import java.util.UUID;
 
 @GrpcService
 @RequiredArgsConstructor
@@ -23,8 +24,8 @@ public class SyncGrpcService extends SyncServiceGrpc.SyncServiceImplBase {
 
         try {
 
-            Long projectConfigId =
-                    Long.parseLong(request.getProjectConfigId());
+            UUID projectConfigId =
+                    UUID.fromString(request.getProjectConfigId());
 
             List<JiraIssue> issues =
                     jiraIssueRepository.findByProjectConfigIdAndDeletedAtIsNull(projectConfigId);

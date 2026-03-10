@@ -4,6 +4,7 @@ import com.example.analysisservice.config.CorrelationIdFilter;
 import com.example.analysisservice.web.ApiError;
 import com.example.analysisservice.web.BadRequestException;
 import com.example.analysisservice.web.UpstreamServiceException;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadRequestException.class)
@@ -28,7 +30,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UpstreamServiceException.class)
     public ResponseEntity<ApiError> handleUpstream(UpstreamServiceException ex) {
-        return build(HttpStatus.BAD_GATEWAY, "UPSTREAM_ERROR", ex.getMessage());
+        log.warn("Upstream dependency failure. correlationId={}", MDC.get(CorrelationIdFilter.MDC_KEY), ex);
+        return build(HttpStatus.BAD_GATEWAY, "UPSTREAM_ERROR", "Dependent service temporarily unavailable");
     }
 
     @ExceptionHandler(AccessDeniedException.class)
@@ -38,6 +41,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handle(Exception ex) {
+        log.error("Unhandled server exception. correlationId={}", MDC.get(CorrelationIdFilter.MDC_KEY), ex);
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "Unexpected server error");
     }
 

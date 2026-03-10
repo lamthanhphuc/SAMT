@@ -26,7 +26,9 @@ message IssueResponse {
   string status = 6;
   string priority = 7;
   string assigneeEmail = 8;
-  string reporterEmail = 9;
+  string assigneeName = 9;
+  string reporterEmail = 10;
+  string reporterName = 11;
 }
 
 message IssueListResponse {
