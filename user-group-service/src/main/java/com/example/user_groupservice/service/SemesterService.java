@@ -1,5 +1,6 @@
 package com.example.user_groupservice.service;
 
+import com.example.user_groupservice.config.CacheConfig;
 import com.example.user_groupservice.dto.request.CreateSemesterRequest;
 import com.example.user_groupservice.dto.request.UpdateSemesterRequest;
 import com.example.user_groupservice.dto.response.SemesterResponse;
@@ -9,6 +10,10 @@ import com.example.user_groupservice.exception.ResourceNotFoundException;
 import com.example.user_groupservice.repository.SemesterRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +28,16 @@ public class SemesterService {
     private final SemesterRepository semesterRepository;
     
     @Transactional
+    @Caching(
+        put = {
+            @CachePut(cacheNames = CacheConfig.SEMESTER_BY_ID_CACHE, key = "#result.id"),
+            @CachePut(cacheNames = CacheConfig.SEMESTER_BY_CODE_CACHE, key = "#result.semesterCode")
+        },
+        evict = {
+            @CacheEvict(cacheNames = CacheConfig.SEMESTER_LIST_CACHE, key = "'all'"),
+            @CacheEvict(cacheNames = CacheConfig.ACTIVE_SEMESTER_CACHE, key = "'active'")
+        }
+    )
     public SemesterResponse createSemester(CreateSemesterRequest request) {
         log.info("Creating semester: {}", request.getSemesterCode());
         
@@ -51,6 +66,7 @@ public class SemesterService {
     }
     
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheConfig.SEMESTER_BY_ID_CACHE, key = "#id")
     public SemesterResponse getSemesterById(Long id) {
         Semester semester = semesterRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException(
@@ -61,6 +77,7 @@ public class SemesterService {
     }
     
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheConfig.SEMESTER_BY_CODE_CACHE, key = "#code")
     public SemesterResponse getSemesterByCode(String code) {
         Semester semester = semesterRepository.findBySemesterCode(code)
             .orElseThrow(() -> new ResourceNotFoundException(
@@ -71,6 +88,7 @@ public class SemesterService {
     }
     
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheConfig.ACTIVE_SEMESTER_CACHE, key = "'active'")
     public SemesterResponse getActiveSemester() {
         Semester semester = semesterRepository.findByIsActiveTrue()
             .orElseThrow(() -> new ResourceNotFoundException(
@@ -81,6 +99,7 @@ public class SemesterService {
     }
     
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheConfig.SEMESTER_LIST_CACHE, key = "'all'")
     public List<SemesterResponse> listAllSemesters() {
         return semesterRepository.findAllOrderByStartDateDesc().stream()
             .map(this::toResponse)
@@ -88,6 +107,16 @@ public class SemesterService {
     }
     
     @Transactional
+    @Caching(
+        put = {
+            @CachePut(cacheNames = CacheConfig.SEMESTER_BY_ID_CACHE, key = "#result.id"),
+            @CachePut(cacheNames = CacheConfig.SEMESTER_BY_CODE_CACHE, key = "#result.semesterCode")
+        },
+        evict = {
+            @CacheEvict(cacheNames = CacheConfig.SEMESTER_LIST_CACHE, key = "'all'"),
+            @CacheEvict(cacheNames = CacheConfig.ACTIVE_SEMESTER_CACHE, key = "'active'")
+        }
+    )
     public SemesterResponse updateSemester(Long id, UpdateSemesterRequest request) {
         Semester semester = semesterRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException(
@@ -114,6 +143,12 @@ public class SemesterService {
     }
     
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(cacheNames = CacheConfig.SEMESTER_BY_ID_CACHE, allEntries = true),
+        @CacheEvict(cacheNames = CacheConfig.SEMESTER_BY_CODE_CACHE, allEntries = true),
+        @CacheEvict(cacheNames = CacheConfig.ACTIVE_SEMESTER_CACHE, allEntries = true),
+        @CacheEvict(cacheNames = CacheConfig.SEMESTER_LIST_CACHE, allEntries = true)
+    })
     public void activateSemester(Long id) {
         Semester semester = semesterRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException(

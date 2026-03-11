@@ -65,6 +65,12 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- Cache abstraction -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+
         <!-- Redis (JTI replay prevention) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

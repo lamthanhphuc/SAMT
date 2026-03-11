@@ -114,7 +114,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics
+  metrics:
+    enable:
+      cache: true
 
 # Swagger
 springdoc:
