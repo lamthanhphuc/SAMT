@@ -101,17 +101,20 @@ springdoc:
 ---
 #grpc
 grpc:
- client:
-  sync-service:
-    address: static://${SYNC_SERVICE_GRPC_HOST:localhost}:${SYNC_SERVICE_GRPC_PORT:9094}
-    negotiationType: TLS
-    enable-keep-alive: true
-    keep-alive-time: 30s
-    keep-alive-timeout: 10s
-    enable-retry: true
-    max-retry-attempts: 3
-    default-load-balancing-policy: round_robin
-    immediate-connect-timeout: 5s
+  client:
+    default:
+      negotiation-type: TLS
+      security:
+        trustCertCollection: file:/certs/ca.crt
+    sync-service:
+      address: static://${SYNC_SERVICE_GRPC_HOST:sync-service}:${SYNC_SERVICE_GRPC_PORT:9094}
+      enable-keep-alive: true
+      keep-alive-time: 30s
+      keep-alive-timeout: 10s
+      enable-retry: true
+      max-retry-attempts: 3
+      default-load-balancing-policy: round_robin
+      immediate-connect-timeout: 5s
 
 ai:
   service:

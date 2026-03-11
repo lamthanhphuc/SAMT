@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres-sync:5432/sync_db?serverTimezone=UTC&ApplicationName=sync-service
+  data:
+    redis:
+      host: redis
+
+server:
+  port: 8080
+
+grpc:
+  server:
+    security:
+      enabled: false
+  client:
+    default:
+      negotiation-type: plaintext
+      security:
+        trustCertCollection: ~
+    project-config-service:
+      address: dns:///project-config-service:9093
+      negotiation-type: plaintext
+      security:
+        trustCertCollection: ~
+
+logging:
+  level:
+    root: INFO
+    com.example: INFO

@@ -104,12 +104,12 @@ grpc:
   server:
     port: ${GRPC_SERVER_PORT:9094}
     security:
-      enabled: ${GRPC_SERVER_SECURITY_ENABLED:true}
+      enabled: true
       certificateChain: file:/certs/server.crt
       privateKey: file:/certs/server.key
   client:
     default:
-      negotiation-type: ${GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE:TLS}
+      negotiation-type: TLS
       security:
         trustCertCollection: file:/certs/ca.crt
     project-config-service:
@@ -231,34 +231,3 @@ springdoc:
     enabled: true
     persist-authorization: true
 
----
-# ==============================================
-# DOCKER PROFILE
-# ==============================================
-spring:
-  config:
-    activate:
-      on-profile: docker
-
-  datasource:
-    url: jdbc:postgresql://postgres-sync:5432/sync_db?serverTimezone=UTC&ApplicationName=sync-service
-
-  data:
-    redis:
-      host: redis
-
-server:
-  port: 8080
-
-grpc:
-  server:
-    security:
-      enabled: true
-  client:
-    project-config-service:
-      negotiation-type: TLS
-
-logging:
-  level:
-    root: INFO
-    com.example: INFO

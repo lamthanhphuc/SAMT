@@ -108,12 +108,12 @@ grpc:
     permit-keep-alive-without-calls: true
     max-inbound-message-size: 4MB
     security:
-      enabled: ${GRPC_SERVER_SECURITY_ENABLED:true}
+      enabled: true
       certificateChain: file:/certs/server.crt
       privateKey: file:/certs/server.key
   client:
     default:
-      negotiation-type: ${GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE:TLS}
+      negotiation-type: TLS
       security:
         trustCertCollection: file:/certs/ca.crt
     user-group-service:
@@ -275,32 +275,4 @@ logging:
     org.hibernate.SQL: ${SQL_LOG_LEVEL:WARN}
   pattern:
     console: "%d{HH:mm:ss.SSS} [%X{correlationId}] [%thread] %-5level %logger{36} - %msg%n"
-
----
-# ==============================================
-# DOCKER PROFILE
-# ==============================================
-spring:
-  config:
-    activate:
-      on-profile: docker
-
-  datasource:
-    url: jdbc:postgresql://postgres-projectconfig:5432/projectconfig_db
-
-server:
-  port: 8080
-
-grpc:
-  server:
-    security:
-      enabled: true
-  client:
-    user-group-service:
-      negotiation-type: TLS
-
-logging:
-  level:
-    root: INFO
-    com.samt.projectconfig: INFO
 

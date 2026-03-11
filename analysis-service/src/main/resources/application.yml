@@ -30,6 +30,7 @@ spring:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:localhost}
       port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${redis_password:${REDIS_PASSWORD:}}
       timeout: 3000ms
       lettuce:
         pool:

@@ -1,0 +1,6 @@
+grpc:
+  client:
+    default:
+      negotiation-type: plaintext
+    sync-service:
+      negotiation-type: plaintext

@@ -1,5 +1,3 @@
-version: "3.9"
-
 # ==============================================
 # SAMT MICROSERVICES - DOCKER COMPOSE
 # ==============================================
@@ -20,7 +18,8 @@ services:
   postgres-identity:
     image: postgres:15-alpine@sha256:fceb6f86328c36f2438fae3b851b0cc57c4a7e69a58c866d9ce24281f2cf0c9c
     container_name: postgres-identity
-    env_file: .env
+    env_file:
+      - .env
     environment:
       POSTGRES_DB: ${DB_IDENTITY_NAME:-samt_identity}
       POSTGRES_USER: ${POSTGRES_USER:?⚠️ POSTGRES_USER is required - create .env file}
@@ -29,7 +28,7 @@ services:
     volumes:
       - identity_data:/var/lib/postgresql/data
     ports:
-      - "5433:5432"
+      - "${POSTGRES_IDENTITY_PORT:-5433}:5432"
     networks:
       - samt-network
     deploy:
@@ -51,7 +50,8 @@ services:
   postgres-core:
     image: postgres:15-alpine@sha256:fceb6f86328c36f2438fae3b851b0cc57c4a7e69a58c866d9ce24281f2cf0c9c
     container_name: postgres-core
-    env_file: .env
+    env_file:
+      - .env
     environment:
       POSTGRES_DB: ${DB_CORE_NAME:-samt_core}
       POSTGRES_USER: ${POSTGRES_USER:?⚠️ POSTGRES_USER is required}
@@ -60,7 +60,7 @@ services:
     volumes:
       - core_data:/var/lib/postgresql/data
     ports:
-      - "5434:5432"
+      - "${POSTGRES_CORE_PORT:-5434}:5432"
     networks:
       - samt-network
     deploy:
@@ -82,7 +82,8 @@ services:
   postgres-projectconfig:
     image: postgres:15-alpine@sha256:fceb6f86328c36f2438fae3b851b0cc57c4a7e69a58c866d9ce24281f2cf0c9c
     container_name: postgres-projectconfig
-    env_file: .env
+    env_file:
+      - .env
     environment:
       POSTGRES_DB: ${DB_PROJECTCONFIG_NAME:-projectconfig_db}
       POSTGRES_USER: ${POSTGRES_USER:?⚠️ POSTGRES_USER is required}
@@ -91,7 +92,7 @@ services:
     volumes:
       - projectconfig_data:/var/lib/postgresql/data
     ports:
-      - "5435:5432"
+      - "${POSTGRES_PROJECTCONFIG_PORT:-5435}:5432"
     networks:
       - samt-network
     deploy:
@@ -113,7 +114,8 @@ services:
   postgres-usergroup:
     image: postgres:15-alpine@sha256:fceb6f86328c36f2438fae3b851b0cc57c4a7e69a58c866d9ce24281f2cf0c9c
     container_name: postgres-usergroup
-    env_file: .env
+    env_file:
+      - .env
     environment:
       POSTGRES_DB: ${DB_USERGROUP_NAME:-samt_usergroup}
       POSTGRES_USER: ${POSTGRES_USER:?⚠️ POSTGRES_USER is required}
@@ -122,7 +124,7 @@ services:
     volumes:
       - usergroup_data:/var/lib/postgresql/data
     ports:
-      - "5436:5432"
+      - "${POSTGRES_USERGROUP_PORT:-5436}:5432"
     networks:
       - samt-network
     deploy:
@@ -144,7 +146,8 @@ services:
   postgres-sync:
     image: postgres:15-alpine@sha256:fceb6f86328c36f2438fae3b851b0cc57c4a7e69a58c866d9ce24281f2cf0c9c
     container_name: postgres-sync
-    env_file: .env
+    env_file:
+      - .env
     environment:
       POSTGRES_DB: ${DB_SYNC_NAME:-sync_db}
       POSTGRES_USER: ${POSTGRES_USER:?⚠️ POSTGRES_USER is required}
@@ -153,7 +156,7 @@ services:
     volumes:
       - sync_data:/var/lib/postgresql/data
     ports:
-      - "5437:5432"
+      - "${POSTGRES_SYNC_PORT:-5437}:5432"
     networks:
       - samt-network
     deploy:
@@ -175,7 +178,8 @@ services:
   postgres-analysis:
     image: postgres:15-alpine@sha256:fceb6f86328c36f2438fae3b851b0cc57c4a7e69a58c866d9ce24281f2cf0c9c
     container_name: postgres-analysis
-    env_file: .env
+    env_file:
+      - .env
     environment:
       POSTGRES_DB: ${DB_ANALYSIS_NAME:-samt_analysis}
       POSTGRES_USER: ${POSTGRES_USER:?⚠️ POSTGRES_USER is required}
@@ -184,7 +188,7 @@ services:
     volumes:
       - analysis_data:/var/lib/postgresql/data
     ports:
-      - "5438:5432"
+      - "${POSTGRES_ANALYSIS_PORT:-5438}:5432"
     networks:
       - samt-network
     deploy:
@@ -206,7 +210,8 @@ services:
   postgres-report:
     image: postgres:15-alpine@sha256:fceb6f86328c36f2438fae3b851b0cc57c4a7e69a58c866d9ce24281f2cf0c9c
     container_name: postgres-report
-    env_file: .env
+    env_file:
+      - .env
     environment:
       POSTGRES_DB: ${DB_REPORT_NAME:-samt_report}
       POSTGRES_USER: ${POSTGRES_USER:?⚠️ POSTGRES_USER is required}
@@ -215,7 +220,7 @@ services:
     volumes:
       - report_data:/var/lib/postgresql/data
     ports:
-      - "5439:5432"
+      - "${POSTGRES_REPORT_PORT:-5439}:5432"
     networks:
       - samt-network
     deploy:
@@ -263,6 +268,8 @@ services:
           fi
         fi
         exec /etc/confluent/docker/run
+    ports:
+      - "${KAFKA_PORT:-9092}:29092"
     volumes:
       - kafka_data:/var/lib/kafka/data
     networks:
@@ -286,7 +293,10 @@ services:
   redis:
     image: redis:7-alpine@sha256:8b81dd37ff027bec4e516d41acfbe9fe2460070dc6d4a4570a2ac5b9d59df065
     container_name: redis
-    env_file: .env
+    env_file:
+      - .env
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - create .env file}
     # SECURITY: avoid passing secrets in process arguments. The password comes from env at runtime
     # and is written into a restrictive config file before starting redis-server.
     command:
@@ -302,9 +312,8 @@ services:
           --maxmemory-policy allkeys-lru \
           --protected-mode yes \
           --bind 0.0.0.0
-    # ❌ REMOVED: Port mapping for security (no external access)
-    # ports:
-    #   - "${REDIS_PORT:-6379}:6379"
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -335,7 +344,8 @@ services:
       context: .
       dockerfile: api-gateway/Dockerfile
     container_name: api-gateway
-    env_file: .env
+    env_file:
+      - .env
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
       SERVER_PORT: 8080
@@ -418,7 +428,8 @@ services:
       context: .
       dockerfile: identity-service/Dockerfile
     container_name: identity-service
-    env_file: .env
+    env_file:
+      - .env
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
       SERVER_PORT: ${IDENTITY_SERVICE_PORT:-8081}
@@ -426,6 +437,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-identity:5432/${DB_IDENTITY_NAME:-samt_identity}?serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - create .env file}
@@ -435,8 +447,6 @@ services:
       # Identity JWT signing key (required - mounted from host)
       JWT_PRIVATE_KEY_PATH: /certs/identity-jwt-private.pkcs8.pem
       JWT_KEY_ID: ${JWT_KEY_ID:-identity-local-1}
-      # Local/dev: allow running without gRPC TLS material
-      GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-true}
     ports:
       - "${IDENTITY_SERVICE_PORT:-8081}:${IDENTITY_SERVICE_PORT:-8081}"
     expose:
@@ -480,7 +490,8 @@ services:
       context: .
       dockerfile: user-group-service/Dockerfile
     container_name: user-group-service
-    env_file: .env
+    env_file:
+      - .env
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
       SERVER_PORT: ${USER_GROUP_SERVICE_PORT:-8082}
@@ -494,14 +505,13 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - create .env file}
       JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
-      # SECURITY DEFAULTS: TLS/mTLS by default. Override explicitly for local dev if needed.
-      GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-true}
-      GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE: ${GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE:-TLS}
     ports:
       - "${USER_GROUP_SERVICE_PORT:-8082}:${USER_GROUP_SERVICE_PORT:-8082}"
     expose:
       - "${USER_GROUP_SERVICE_PORT:-8082}"
       - "${USER_GROUP_SERVICE_GRPC_PORT:-9095}"
+    volumes:
+      - ./.local-certs:/certs:ro
     depends_on:
       postgres-usergroup:
         condition: service_healthy
@@ -542,7 +552,8 @@ services:
       context: .
       dockerfile: project-config-service/Dockerfile
     container_name: project-config-service
-    env_file: .env
+    env_file:
+      - .env
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
       SERVER_PORT: ${PROJECT_CONFIG_SERVICE_PORT:-8084}
@@ -550,6 +561,10 @@ services:
       DATABASE_URL: jdbc:postgresql://postgres-projectconfig:5432/${DB_PROJECTCONFIG_NAME:-projectconfig_db}
       DATABASE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?⚠️ REDIS_PASSWORD is required - create .env file}
+      ENCRYPTION_SECRET_KEY: ${ENCRYPTION_SECRET_KEY:?⚠️ ENCRYPTION_SECRET_KEY is required - create .env file}
       JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms384m -Xmx768m}
       DB_POOL_SIZE: ${PROJECT_CONFIG_DB_POOL_SIZE:-30}
       DB_POOL_MIN_IDLE: ${PROJECT_CONFIG_DB_POOL_MIN_IDLE:-10}
@@ -558,15 +573,16 @@ services:
       VERIFICATION_ASYNC_QUEUE_CAPACITY: ${VERIFICATION_ASYNC_QUEUE_CAPACITY:-300}
       VERIFICATION_ASYNC_KEEP_ALIVE_SECONDS: ${VERIFICATION_ASYNC_KEEP_ALIVE_SECONDS:-60}
       GRPC_USER_GROUP_DEADLINE_MS: ${GRPC_USER_GROUP_DEADLINE_MS:-5000}
-      # SECURITY DEFAULTS: TLS/mTLS by default. Override explicitly for local dev if needed.
-      GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-true}
-      GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE: ${GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE:-TLS}
     ports:
       - "${PROJECT_CONFIG_SERVICE_PORT:-8084}:${PROJECT_CONFIG_SERVICE_PORT:-8084}"
     expose:
       - "${PROJECT_CONFIG_SERVICE_PORT:-8084}"
+    volumes:
+      - ./.local-certs:/certs:ro
     depends_on:
       postgres-projectconfig:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       user-group-service:
         condition: service_started
@@ -601,7 +617,8 @@ services:
       context: .
       dockerfile: sync-service/Dockerfile
     container_name: sync-service
-    env_file: .env
+    env_file:
+      - .env
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
       SERVER_PORT: ${SYNC_SERVICE_PORT:-8083}
@@ -618,13 +635,12 @@ services:
       SYNC_ASYNC_CORE_POOL: ${SYNC_ASYNC_CORE_POOL:-24}
       SYNC_ASYNC_MAX_POOL: ${SYNC_ASYNC_MAX_POOL:-48}
       SYNC_ASYNC_QUEUE_CAPACITY: ${SYNC_ASYNC_QUEUE_CAPACITY:-300}
-      # SECURITY DEFAULTS: TLS/mTLS by default. Override explicitly for local dev if needed.
-      GRPC_SERVER_SECURITY_ENABLED: ${GRPC_SERVER_SECURITY_ENABLED:-true}
-      GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE: ${GRPC_CLIENT_DEFAULT_NEGOTIATION_TYPE:-TLS}
     ports:
       - "${SYNC_SERVICE_PORT:-8083}:${SYNC_SERVICE_PORT:-8083}"
     expose:
       - "${SYNC_SERVICE_PORT:-8083}"
+    volumes:
+      - ./.local-certs:/certs:ro
     depends_on:
       postgres-sync:
         condition: service_healthy
@@ -663,7 +679,8 @@ services:
       context: .
       dockerfile: analysis-service/Dockerfile
     container_name: analysis-service
-    env_file: .env
+    env_file:
+      - .env
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
       SERVER_PORT: ${ANALYSIS_SERVICE_PORT:-8087}
@@ -714,7 +731,8 @@ services:
       context: .
       dockerfile: report-service/Dockerfile
     container_name: report-service
-    env_file: .env
+    env_file:
+      - .env
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
       SERVER_PORT: ${REPORT_SERVICE_PORT:-8088}
@@ -729,6 +747,8 @@ services:
       - "${REPORT_SERVICE_PORT:-8088}:${REPORT_SERVICE_PORT:-8088}"
     expose:
       - "${REPORT_SERVICE_PORT:-8088}"
+    volumes:
+      - ./.local-certs:/certs:ro
     depends_on:
       postgres-report:
         condition: service_healthy
@@ -765,7 +785,8 @@ services:
       context: .
       dockerfile: notification-service/Dockerfile
     container_name: notification-service
-    env_file: .env
+    env_file:
+      - .env
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
       SERVER_PORT: ${NOTIFICATION_SERVICE_PORT:-8085}
@@ -840,3 +861,4 @@ volumes:
     driver: local
   kafka_data:
     driver: local
+

@@ -1,0 +1,30 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres-usergroup:5432/samt_usergroup?serverTimezone=UTC&ApplicationName=usergroup-service
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+  kafka:
+    enabled: ${KAFKA_ENABLED:true}
+    bootstrap-servers: kafka:29092
+
+server:
+  port: 8082
+
+grpc:
+  server:
+    port: 9095
+    security:
+      enabled: false
+  client:
+    default:
+      negotiation-type: plaintext
+    identity-service:
+      address: dns:///identity-service:9091
+      negotiation-type: plaintext
+
+logging:
+  level:
+    root: INFO
+    com.example.user_groupservice: INFO
+    io.grpc: WARN

@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres-projectconfig:5432/projectconfig_db
+
+server:
+  port: 8080
+
+grpc:
+  server:
+    security:
+      enabled: false
+  client:
+    default:
+      negotiation-type: plaintext
+      security:
+        trustCertCollection: ~
+    user-group-service:
+      address: dns:///user-group-service:9095
+      negotiation-type: plaintext
+      security:
+        trustCertCollection: ~
+
+logging:
+  level:
+    root: INFO
+    com.samt.projectconfig: INFO

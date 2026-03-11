@@ -7,3 +7,6 @@ grpc:
   server:
     security:
       enabled: false
+  client:
+    default:
+      negotiation-type: plaintext

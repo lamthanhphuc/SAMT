@@ -133,38 +133,3 @@ logging:
     org.hibernate.type.descriptor.sql: WARN
     io.grpc: WARN
 
----
-# ==============================================
-# DOCKER PROFILE
-# ==============================================
-spring:
-  config:
-    activate:
-      on-profile: docker
-
-  datasource:
-    url: jdbc:postgresql://postgres-usergroup:5432/samt_usergroup?serverTimezone=UTC&ApplicationName=usergroup-service
-    hikari:
-      maximum-pool-size: 20
-      minimum-idle: 5
-
-  kafka:
-    enabled: ${KAFKA_ENABLED:true}  # Enabled by default in Docker
-    bootstrap-servers: kafka:29092
-
-grpc:
-  server:
-    port: 9095  # Keep consistent gRPC port
-  client:
-    identity-service:
-      address: dns:///identity-service:9091
-      negotiation-type: PLAINTEXT
-
-server:
-  port: 8082  # Keep consistent REST API port
-
-logging:
-  level:
-    root: INFO
-    com.example.user_groupservice: INFO
-    io.grpc: WARN
