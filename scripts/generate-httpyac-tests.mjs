@@ -718,11 +718,12 @@ function requiresAuthentication(pathKey, operation) {
 function postResponseScriptForCase(pathKey, method, caseKind) {
   if (pathKey === '/api/auth/login' && method.toLowerCase() === 'post' && caseKind === 'happy') {
     return [
-      'if (response.status === 200 && response.body && response.body.accessToken) {',
-      "  client.global.set('adminAccessToken', response.body.accessToken);",
+      'const authData = response.body && response.body.data ? response.body.data : response.body;',
+      'if (response.status === 200 && authData && authData.accessToken) {',
+      "  client.global.set('adminAccessToken', authData.accessToken);",
       '}',
-      'if (response.status === 200 && response.body && response.body.refreshToken) {',
-      "  client.global.set('adminRefreshToken', response.body.refreshToken);",
+      'if (response.status === 200 && authData && authData.refreshToken) {',
+      "  client.global.set('adminRefreshToken', authData.refreshToken);",
       '}'
     ].join('\n');
   }

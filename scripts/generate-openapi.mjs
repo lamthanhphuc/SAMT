@@ -223,12 +223,12 @@ function applyOperationOverrides(doc) {
   const logout = doc.paths?.['/api/auth/logout']?.post;
   if (logout) {
     logout.security = [{ bearerAuth: [] }];
-    if (logout.responses?.['200']) {
-      logout.responses['204'] = logout.responses['200'];
-      delete logout.responses['200'];
-    } else if (!logout.responses?.['204']) {
+    if (logout.responses?.['204'] && !logout.responses?.['200']) {
+      logout.responses['200'] = logout.responses['204'];
+      delete logout.responses['204'];
+    } else if (!logout.responses?.['200']) {
       logout.responses = logout.responses || {};
-      logout.responses['204'] = { description: 'No Content' };
+      logout.responses['200'] = { description: 'OK' };
     }
   }
 

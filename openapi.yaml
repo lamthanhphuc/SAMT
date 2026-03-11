@@ -41,13 +41,13 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_ExternalAccountsResponse'
+                $ref: '#/components/schemas/identity_ApiResponseExternalAccountsResponse'
         '400':
           description: User is deleted
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_ExternalAccountsResponse'
+                $ref: '#/components/schemas/identity_ApiResponseExternalAccountsResponse'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
@@ -57,13 +57,13 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_ExternalAccountsResponse'
+                $ref: '#/components/schemas/identity_ApiResponseExternalAccountsResponse'
         '409':
           description: External account already mapped to another user
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_ExternalAccountsResponse'
+                $ref: '#/components/schemas/identity_ApiResponseExternalAccountsResponse'
         '500':
           $ref: '#/components/responses/Error500'
       security:
@@ -72,6 +72,7 @@ paths:
     post:
       tags:
         - auth-controller
+      summary: Register user
       operationId: register
       requestBody:
         content:
@@ -81,13 +82,17 @@ paths:
         required: true
       responses:
         '201':
-          description: OK
+          description: User registered
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_RegisterResponse'
+                $ref: '#/components/schemas/identity_ApiResponse'
         '400':
-          $ref: '#/components/responses/Error400'
+          description: Bad request
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/identity_ApiResponse'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
@@ -95,13 +100,18 @@ paths:
         '404':
           $ref: '#/components/responses/Error404'
         '409':
-          $ref: '#/components/responses/Error409'
+          description: Email already exists
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/identity_ApiResponse'
         '500':
           $ref: '#/components/responses/Error500'
   /api/auth/refresh:
     post:
       tags:
         - auth-controller
+      summary: Refresh access token
       operationId: refresh
       requestBody:
         content:
@@ -111,15 +121,19 @@ paths:
         required: true
       responses:
         '200':
-          description: OK
+          description: Refresh succeeded
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_LoginResponse'
+                $ref: '#/components/schemas/identity_ApiResponse'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
-          $ref: '#/components/responses/Error401'
+          description: Unauthorized
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/identity_ApiResponse'
         '403':
           $ref: '#/components/responses/Error403'
         '404':
@@ -132,6 +146,7 @@ paths:
     post:
       tags:
         - auth-controller
+      summary: Logout user
       operationId: logout
       requestBody:
         content:
@@ -140,12 +155,20 @@ paths:
               $ref: '#/components/schemas/identity_LogoutRequest'
         required: true
       responses:
-        '204':
-          description: OK
+        '200':
+          description: Logout succeeded
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/identity_ApiResponse'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
-          $ref: '#/components/responses/Error401'
+          description: Unauthorized
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/identity_ApiResponse'
         '403':
           $ref: '#/components/responses/Error403'
         '404':
@@ -160,6 +183,7 @@ paths:
     post:
       tags:
         - auth-controller
+      summary: Login user
       operationId: login
       requestBody:
         content:
@@ -169,17 +193,25 @@ paths:
         required: true
       responses:
         '200':
-          description: OK
+          description: Login succeeded
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_LoginResponse'
+                $ref: '#/components/schemas/identity_ApiResponse'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
-          $ref: '#/components/responses/Error401'
+          description: Unauthorized
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/identity_ApiResponse'
         '403':
-          $ref: '#/components/responses/Error403'
+          description: Forbidden
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/identity_ApiResponse'
         '404':
           $ref: '#/components/responses/Error404'
         '409':
@@ -205,7 +237,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_AdminCreateUserResponse'
+                $ref: '#/components/schemas/identity_ApiResponseAdminCreateUserResponse'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -215,7 +247,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_AdminCreateUserResponse'
+                $ref: '#/components/schemas/identity_ApiResponseAdminCreateUserResponse'
         '404':
           $ref: '#/components/responses/Error404'
         '409':
@@ -223,7 +255,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_AdminCreateUserResponse'
+                $ref: '#/components/schemas/identity_ApiResponseAdminCreateUserResponse'
         '500':
           $ref: '#/components/responses/Error500'
       security:
@@ -250,7 +282,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_AdminActionResponse'
+                $ref: '#/components/schemas/identity_ApiResponseAdminActionResponse'
         '400':
           description: Bad Request
         '401':
@@ -262,7 +294,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_AdminActionResponse'
+                $ref: '#/components/schemas/identity_ApiResponseAdminActionResponse'
         '409':
           $ref: '#/components/responses/Error409'
         '500':
@@ -291,13 +323,13 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_AdminActionResponse'
+                $ref: '#/components/schemas/identity_ApiResponseAdminActionResponse'
         '400':
           description: User is not deleted
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_AdminActionResponse'
+                $ref: '#/components/schemas/identity_ApiResponseAdminActionResponse'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
@@ -307,7 +339,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_AdminActionResponse'
+                $ref: '#/components/schemas/identity_ApiResponseAdminActionResponse'
         '409':
           $ref: '#/components/responses/Error409'
         '500':
@@ -342,7 +374,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_AdminActionResponse'
+                $ref: '#/components/schemas/identity_ApiResponseAdminActionResponse'
         '400':
           description: Bad Request
         '401':
@@ -354,7 +386,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_AdminActionResponse'
+                $ref: '#/components/schemas/identity_ApiResponseAdminActionResponse'
         '409':
           $ref: '#/components/responses/Error409'
         '500':
@@ -380,7 +412,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_PageAuditLog'
+                $ref: '#/components/schemas/identity_ApiResponsePageAuditLog'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -428,7 +460,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_PageAuditLog'
+                $ref: '#/components/schemas/identity_ApiResponsePageAuditLog'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -475,7 +507,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_PageAuditLog'
+                $ref: '#/components/schemas/identity_ApiResponsePageAuditLog'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -516,7 +548,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_PageAuditLog'
+                $ref: '#/components/schemas/identity_ApiResponsePageAuditLog'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -577,7 +609,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_AdminActionResponse'
+                $ref: '#/components/schemas/identity_ApiResponseAdminActionResponse'
         '400':
           description: Bad Request
         '401':
@@ -587,13 +619,13 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_AdminActionResponse'
+                $ref: '#/components/schemas/identity_ApiResponseAdminActionResponse'
         '404':
           description: User not found
           content:
             '*/*':
               schema:
-                $ref: '#/components/schemas/identity_AdminActionResponse'
+                $ref: '#/components/schemas/identity_ApiResponseAdminActionResponse'
         '409':
           $ref: '#/components/responses/Error409'
         '500':
@@ -1372,6 +1404,7 @@ paths:
     get:
       tags:
         - project-config-controller
+      summary: Get configuration by id
       operationId: getConfig
       parameters:
         - name: id
@@ -1382,13 +1415,11 @@ paths:
             format: uuid
       responses:
         '200':
-          description: OK
+          description: Configuration retrieved
           content:
             '*/*':
               schema:
-                type: object
-                additionalProperties:
-                  type: object
+                $ref: '#/components/schemas/projectConfig_ApiResponse'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -1396,7 +1427,11 @@ paths:
         '403':
           $ref: '#/components/responses/Error403'
         '404':
-          $ref: '#/components/responses/Error404'
+          description: Configuration not found
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/projectConfig_ApiResponse'
         '409':
           $ref: '#/components/responses/Error409'
         '500':
@@ -1424,9 +1459,7 @@ paths:
           content:
             '*/*':
               schema:
-                type: object
-                additionalProperties:
-                  type: object
+                $ref: '#/components/schemas/projectConfig_ApiResponseConfigResponse'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -1456,9 +1489,7 @@ paths:
           content:
             '*/*':
               schema:
-                type: object
-                additionalProperties:
-                  type: object
+                $ref: '#/components/schemas/projectConfig_ApiResponseDeleteResponse'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -1475,6 +1506,7 @@ paths:
     post:
       tags:
         - project-config-controller
+      summary: Create configuration
       operationId: createConfig
       requestBody:
         content:
@@ -1490,7 +1522,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/projectConfig_ConfigEnvelope'
         '400':
-          $ref: '#/components/responses/Error400'
+          description: Bad request
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/projectConfig_ApiResponse'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
@@ -1498,7 +1534,11 @@ paths:
         '404':
           $ref: '#/components/responses/Error404'
         '409':
-          $ref: '#/components/responses/Error409'
+          description: Conflict
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/projectConfig_ApiResponse'
         '500':
           $ref: '#/components/responses/Error500'
         '503':
@@ -1511,6 +1551,7 @@ paths:
     post:
       tags:
         - project-config-controller
+      summary: Verify configuration
       operationId: verifyConfig
       parameters:
         - name: id
@@ -1533,11 +1574,21 @@ paths:
         '403':
           $ref: '#/components/responses/Error403'
         '404':
-          $ref: '#/components/responses/Error404'
+          description: Configuration not found
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/projectConfig_ApiResponse'
         '409':
           $ref: '#/components/responses/Error409'
         '500':
           $ref: '#/components/responses/Error500'
+        '503':
+          description: Verification service unavailable
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/projectConfig_ApiResponse'
   /api/project-configs/admin/{id}/restore:
     post:
       tags:
@@ -1556,9 +1607,7 @@ paths:
           content:
             '*/*':
               schema:
-                type: object
-                additionalProperties:
-                  type: object
+                $ref: '#/components/schemas/projectConfig_ApiResponseRestoreResponse'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -1589,9 +1638,7 @@ paths:
           content:
             '*/*':
               schema:
-                type: object
-                additionalProperties:
-                  type: object
+                $ref: '#/components/schemas/projectConfig_DecryptedTokensResponse'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -1647,6 +1694,28 @@ components:
         githubUsername:
           type: string
           pattern: ^[a-zA-Z0-9-]{1,39}$
+    identity_ApiResponseExternalAccountsResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/identity_ExternalAccountsResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
     identity_ExternalAccountsResponse:
       type: object
       properties:
@@ -1710,38 +1779,34 @@ components:
         - confirmPassword
         - fullName
         - role
-    identity_RegisterResponse:
+    identity_ApiResponse:
       type: object
       properties:
-        user:
-          $ref: '#/components/schemas/identity_UserDto'
-        accessToken:
+        timestamp:
           type: string
-        refreshToken:
-          type: string
-        tokenType:
-          type: string
-        expiresIn:
+        status:
           type: integer
-          format: int64
+          format: int32
+        success:
+          type: boolean
+        data:
+          type: object
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
     identity_RefreshTokenRequest:
       type: object
       properties:
         refreshToken:
           type: string
           minLength: 1
-    identity_LoginResponse:
-      type: object
-      properties:
-        accessToken:
-          type: string
-        refreshToken:
-          type: string
-        tokenType:
-          type: string
-        expiresIn:
-          type: integer
-          format: int64
     identity_LogoutRequest:
       type: object
       properties:
@@ -1786,6 +1851,28 @@ components:
           $ref: '#/components/schemas/identity_UserDto'
         temporaryPassword:
           type: string
+    identity_ApiResponseAdminCreateUserResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/identity_AdminCreateUserResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
     identity_AdminActionResponse:
       type: object
       properties:
@@ -1793,6 +1880,28 @@ components:
           type: string
         userId:
           type: string
+    identity_ApiResponseAdminActionResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/identity_AdminActionResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
     identity_Pageable:
       type: object
       properties:
@@ -1808,6 +1917,28 @@ components:
           type: array
           items:
             type: string
+    identity_ApiResponsePageAuditLog:
+      type: object
+      properties:
+        timestamp:
+          type: string
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/identity_PageAuditLog'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
     identity_AuditLog:
       type: object
       properties:
@@ -1887,15 +2018,15 @@ components:
           format: int32
         sort:
           $ref: '#/components/schemas/identity_SortObject'
+        first:
+          type: boolean
+        last:
+          type: boolean
         numberOfElements:
           type: integer
           format: int32
         pageable:
           $ref: '#/components/schemas/identity_PageableObject'
-        first:
-          type: boolean
-        last:
-          type: boolean
         empty:
           type: boolean
     identity_PageableObject:
@@ -1921,9 +2052,9 @@ components:
       properties:
         empty:
           type: boolean
-        sorted:
-          type: boolean
         unsorted:
+          type: boolean
+        sorted:
           type: boolean
     userGroup_UpdateUserRequest:
       type: object
@@ -2234,6 +2365,10 @@ components:
           maxLength: 255
           minLength: 0
           pattern: https?://[a-zA-Z0-9.-]+\.(atlassian\.net|jira\.com)(/.*)?
+        jiraEmail:
+          type: string
+          maxLength: 255
+          minLength: 1
         jiraApiToken:
           type: string
           maxLength: 500
@@ -2249,6 +2384,60 @@ components:
           maxLength: 255
           minLength: 40
           pattern: ^ghp_[A-Za-z0-9]{36,}$
+    projectConfig_ApiResponseConfigResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/projectConfig_ConfigResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    projectConfig_ConfigResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        groupId:
+          type: integer
+          format: int64
+        jiraHostUrl:
+          type: string
+        jiraEmail:
+          type: string
+        jiraApiToken:
+          type: string
+        githubRepoUrl:
+          type: string
+        githubToken:
+          type: string
+        state:
+          type: string
+        lastVerifiedAt:
+          type: string
+          format: date-time
+        invalidReason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
     projectConfig_CreateConfigRequest:
       type: object
       properties:
@@ -2261,6 +2450,10 @@ components:
           maxLength: 255
           minLength: 0
           pattern: https?://[a-zA-Z0-9.-]+\.(atlassian\.net|jira\.com)(/.*)?
+        jiraEmail:
+          type: string
+          maxLength: 255
+          minLength: 0
         jiraApiToken:
           type: string
           maxLength: 500
@@ -2282,6 +2475,120 @@ components:
         - jiraApiToken
         - githubRepoUrl
         - githubToken
+    projectConfig_ApiResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          type: object
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    projectConfig_ApiResponseRestoreResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/projectConfig_RestoreResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    projectConfig_RestoreResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        configId:
+          type: string
+          format: uuid
+        restoredAt:
+          type: string
+          format: date-time
+        state:
+          type: string
+    projectConfig_DecryptedTokensResponse:
+      type: object
+      properties:
+        configId:
+          type: string
+          format: uuid
+        groupId:
+          type: integer
+          format: int64
+        jiraHostUrl:
+          type: string
+        jiraEmail:
+          type: string
+        jiraApiToken:
+          type: string
+        githubRepoUrl:
+          type: string
+        githubToken:
+          type: string
+        state:
+          type: string
+    projectConfig_ApiResponseDeleteResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/projectConfig_DeleteResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    projectConfig_DeleteResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        configId:
+          type: string
+          format: uuid
+        deletedAt:
+          type: string
+          format: date-time
+        retentionDays:
+          type: integer
+          format: int32
     StandardError:
       type: object
       properties:

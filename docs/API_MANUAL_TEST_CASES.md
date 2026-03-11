@@ -333,13 +333,13 @@ For any endpoint that requires JWT:
 ```json
 { "refreshToken": "<refresh-token>" }
 ```
-- **Expected Status Code**: `204`
-- **Expected Response**: No body.
+- **Expected Status Code**: `200`
+- **Expected Response**: Standard API response envelope with `success=true`.
 - **Database verification**:
   - `refresh_tokens.token=<refresh-token>` is `revoked=true` if it exists.
   - `audit_logs`: contains `LOGOUT` (if enabled).
 
-#### IDS-AUTH-LOGOUT-002 – Logout with unknown refresh token still returns 204
+#### IDS-AUTH-LOGOUT-002 – Logout with unknown refresh token still returns 200
 - **Endpoint**: `/api/auth/logout`
 - **HTTP Method**: `POST`
 - **Preconditions**: Valid access token.
@@ -347,8 +347,8 @@ For any endpoint that requires JWT:
 ```json
 { "refreshToken": "00000000-0000-0000-0000-000000000000" }
 ```
-- **Expected Status Code**: `204`
-- **Expected Response**: No body.
+- **Expected Status Code**: `200`
+- **Expected Response**: Standard API response envelope with `success=true`.
 - **Database verification**: No changes.
 
 #### IDS-AUTH-LOGOUT-003 – Missing/invalid access token

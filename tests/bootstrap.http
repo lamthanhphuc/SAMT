@@ -23,11 +23,12 @@ Content-Type: application/json
 > {%
 client.test("admin login", function () {
   client.assert(response.status === 200);
-  client.assert(response.body.accessToken);
-  client.global.set("adminAccessToken", response.body.accessToken);
-  client.global.set("adminRefreshToken", response.body.refreshToken || "");
-  client.global.set("adminToken", response.body.accessToken);
-  client.global.set("fixtureAdminAccessToken", response.body.accessToken);
+  const authData = response.body && response.body.data ? response.body.data : response.body;
+  client.assert(authData && authData.accessToken);
+  client.global.set("adminAccessToken", authData.accessToken);
+  client.global.set("adminRefreshToken", authData.refreshToken || "");
+  client.global.set("adminToken", authData.accessToken);
+  client.global.set("fixtureAdminAccessToken", authData.accessToken);
   const runId = Date.now();
   client.global.set("fixtureJiraAccountId", `QAJIRA${runId}XYZ`);
   client.global.set("fixtureGithubUsername", `qaadmin${runId}`);
@@ -53,8 +54,9 @@ Content-Type: application/json
 > {%
 client.test("ensure qa lecturer", function () {
   client.assert([201, 409].includes(response.status));
-  if (response.status === 201 && response.body?.user?.id) {
-    client.global.set("fixtureLecturerId", String(response.body.user.id));
+  const responseData = response.body && response.body.data ? response.body.data : response.body;
+  if (response.status === 201 && responseData?.user?.id) {
+    client.global.set("fixtureLecturerId", String(responseData.user.id));
   }
 });
 %}
@@ -94,8 +96,9 @@ Content-Type: application/json
 > {%
 client.test("ensure qa student2", function () {
   client.assert(response.status === 201);
-  client.assert(response.body?.user?.id);
-  client.global.set("fixtureStudent2Id", String(response.body.user.id));
+  const responseData = response.body && response.body.data ? response.body.data : response.body;
+  client.assert(responseData?.user?.id);
+  client.global.set("fixtureStudent2Id", String(responseData.user.id));
 });
 %}
 
@@ -115,8 +118,9 @@ Content-Type: application/json
 > {%
 client.test("ensure admin lifecycle user", function () {
   client.assert(response.status === 201);
-  client.assert(response.body?.user?.id);
-  client.global.set("fixtureAdminLifecycleUserId", String(response.body.user.id));
+  const responseData = response.body && response.body.data ? response.body.data : response.body;
+  client.assert(responseData?.user?.id);
+  client.global.set("fixtureAdminLifecycleUserId", String(responseData.user.id));
 });
 %}
 
@@ -136,8 +140,9 @@ Content-Type: application/json
 > {%
 client.test("ensure stateful member user", function () {
   client.assert(response.status === 201);
-  client.assert(response.body?.user?.id);
-  client.global.set("fixtureStatefulMemberUserId", String(response.body.user.id));
+  const responseData = response.body && response.body.data ? response.body.data : response.body;
+  client.assert(responseData?.user?.id);
+  client.global.set("fixtureStatefulMemberUserId", String(responseData.user.id));
 });
 %}
 
@@ -154,10 +159,11 @@ Content-Type: application/json
 > {%
 client.test("lecturer login", function () {
   client.assert(response.status === 200);
-  client.assert(response.body.accessToken);
-  const lecturerPayload = JSON.parse(Buffer.from(response.body.accessToken.split('.')[1], 'base64url').toString('utf8'));
-  client.global.set("lecturerAccessToken", response.body.accessToken);
-  client.global.set("fixtureLecturerAccessToken", response.body.accessToken);
+  const authData = response.body && response.body.data ? response.body.data : response.body;
+  client.assert(authData && authData.accessToken);
+  const lecturerPayload = JSON.parse(Buffer.from(authData.accessToken.split('.')[1], 'base64url').toString('utf8'));
+  client.global.set("lecturerAccessToken", authData.accessToken);
+  client.global.set("fixtureLecturerAccessToken", authData.accessToken);
   client.global.set("fixtureLecturerId", client.global.get("fixtureLecturerId") || lecturerPayload.sub);
 });
 %}
@@ -175,11 +181,12 @@ Content-Type: application/json
 > {%
 client.test("student login", function () {
   client.assert(response.status === 200);
-  client.assert(response.body.accessToken);
-  const studentPayload = JSON.parse(Buffer.from(response.body.accessToken.split('.')[1], 'base64url').toString('utf8'));
-  client.global.set("studentAccessToken", response.body.accessToken);
-  client.global.set("studentToken", response.body.accessToken);
-  client.global.set("fixtureStudentAccessToken", response.body.accessToken);
+  const authData = response.body && response.body.data ? response.body.data : response.body;
+  client.assert(authData && authData.accessToken);
+  const studentPayload = JSON.parse(Buffer.from(authData.accessToken.split('.')[1], 'base64url').toString('utf8'));
+  client.global.set("studentAccessToken", authData.accessToken);
+  client.global.set("studentToken", authData.accessToken);
+  client.global.set("fixtureStudentAccessToken", authData.accessToken);
   client.global.set("fixtureUserId", studentPayload.sub);
 });
 %}

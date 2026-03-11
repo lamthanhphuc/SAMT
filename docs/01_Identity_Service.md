@@ -460,11 +460,11 @@ public class User {
 }
 ```
 
-**Success Response (204 No Content):** Empty body
+**Success Response (200 OK):** Standard API response envelope with `success: true`
 
 **Behavior:**
 - Revokes the provided refresh token
-- Idempotent: returns 204 even if token not found/already revoked
+- Idempotent: returns 200 even if token not found/already revoked
 - Access token remains valid until expiration (JWT cannot be revoked)
 
 ---

@@ -248,7 +248,7 @@ No single envelope across all modules. Observed patterns:
 | POST | `/api/auth/register` | `identity_RegisterRequest` | `identity_RegisterResponse` | Public Register page |
 | POST | `/api/auth/login` | `identity_LoginRequest` | `identity_LoginResponse` | Login page |
 | POST | `/api/auth/refresh` | `identity_RefreshTokenRequest` | `identity_LoginResponse` | Token refresh interceptor |
-| POST | `/api/auth/logout` | `identity_LogoutRequest` | `204` | Logout action |
+| POST | `/api/auth/logout` | `identity_LogoutRequest` | `200` | Logout action |
 
 ### Identity Admin
 | Method | Endpoint | Request | Response | Frontend usage |

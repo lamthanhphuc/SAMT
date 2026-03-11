@@ -11,8 +11,8 @@ export const options = {
 };
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:9080';
-const ADMIN_EMAIL = __ENV.ADMIN_EMAIL || 'admin@example.com';
-const ADMIN_PASSWORD = __ENV.ADMIN_PASSWORD || 'password';
+const ADMIN_EMAIL = __ENV.ADMIN_EMAIL || 'admin@samt.local';
+const ADMIN_PASSWORD = __ENV.ADMIN_PASSWORD || 'Str0ng@Pass!';
 
 export default function () {
   const healthRes = http.get(`${BASE_URL}/api/health`);
@@ -34,7 +34,7 @@ export default function () {
   if (loginRes.status === 200) {
     try {
       const body = JSON.parse(loginRes.body);
-      token = body.accessToken || '';
+      token = body?.data?.accessToken || body?.accessToken || '';
     } catch (_err) {
       token = '';
     }

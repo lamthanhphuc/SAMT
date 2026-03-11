@@ -604,6 +604,7 @@ Content-Type: application/json
 {
   "groupId": 0,
   "jiraHostUrl": "https://example.atlassian.net",
+  "jiraEmail": "jiraemai",
   "jiraApiToken": "ATATTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
   "githubRepoUrl": "https://github.com/example-org/example-repo",
   "githubToken": "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"

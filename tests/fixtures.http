@@ -44,8 +44,9 @@ Content-Type: application/json
 > {%
 client.test("create fixture semester", function () {
   client.assert([200, 201, 409].includes(response.status));
-  if (response.body && response.body.id) {
-    client.global.set('fixtureSemesterId', response.body.id);
+  const responseData = response.body && response.body.data ? response.body.data : response.body;
+  if (responseData && responseData.id) {
+    client.global.set('fixtureSemesterId', responseData.id);
   }
 });
 %}
@@ -58,10 +59,11 @@ Authorization: Bearer {{adminAccessToken}}
 > {%
 client.test("resolve fixture semester", function () {
   client.assert(response.status === 200);
-  const content = Array.isArray(response.body)
-    ? response.body
-    : response.body && Array.isArray(response.body.content)
-      ? response.body.content
+  const responseData = response.body && response.body.data ? response.body.data : response.body;
+  const content = Array.isArray(responseData)
+    ? responseData
+    : responseData && Array.isArray(responseData.content)
+      ? responseData.content
       : [];
   const semester = content.find((item) => item.semesterCode === request.variables.get('semesterCode'));
   client.assert(!!semester, 'QA semester not found');
@@ -84,24 +86,26 @@ Content-Type: application/json
 > {%
 client.test("create fixture group", function () {
   client.assert([200, 201, 409].includes(response.status));
-  if (response.body && response.body.id) {
-    client.global.set('fixtureGroupId', response.body.id);
+  const responseData = response.body && response.body.data ? response.body.data : response.body;
+  if (responseData && responseData.id) {
+    client.global.set('fixtureGroupId', responseData.id);
   }
 });
 %}
 
 ### Resolve fixture group
 # @name resolveFixtureGroup
-GET {{baseUrl}}/api/groups?page=0&size=200&semesterId={{fixtureSemesterId}}
+GET {{baseUrl}}/api/groups?page=0&size=100&semesterId={{fixtureSemesterId}}
 Authorization: Bearer {{adminAccessToken}}
 
 > {%
 client.test("resolve fixture group", function () {
   client.assert(response.status === 200);
-  const content = Array.isArray(response.body)
-    ? response.body
-    : response.body && Array.isArray(response.body.content)
-      ? response.body.content
+  const responseData = response.body && response.body.data ? response.body.data : response.body;
+  const content = Array.isArray(responseData)
+    ? responseData
+    : responseData && Array.isArray(responseData.content)
+      ? responseData.content
       : [];
   const group = content.find((item) => item.groupName === request.variables.get('groupName'));
   client.assert(!!group, 'QA group not found');
@@ -124,24 +128,26 @@ Content-Type: application/json
 > {%
 client.test("create empty group fixture", function () {
   client.assert([200, 201, 409].includes(response.status));
-  if (response.body && response.body.id) {
-    client.global.set('fixtureEmptyGroupId', response.body.id);
+  const responseData = response.body && response.body.data ? response.body.data : response.body;
+  if (responseData && responseData.id) {
+    client.global.set('fixtureEmptyGroupId', responseData.id);
   }
 });
 %}
 
 ### Resolve empty group fixture
 # @name resolveEmptyGroupFixture
-GET {{baseUrl}}/api/groups?page=0&size=200&semesterId={{fixtureSemesterId}}
+GET {{baseUrl}}/api/groups?page=0&size=100&semesterId={{fixtureSemesterId}}
 Authorization: Bearer {{adminAccessToken}}
 
 > {%
 client.test("resolve empty group fixture", function () {
   client.assert(response.status === 200);
-  const content = Array.isArray(response.body)
-    ? response.body
-    : response.body && Array.isArray(response.body.content)
-      ? response.body.content
+  const responseData = response.body && response.body.data ? response.body.data : response.body;
+  const content = Array.isArray(responseData)
+    ? responseData
+    : responseData && Array.isArray(responseData.content)
+      ? responseData.content
       : [];
   const group = content.find((item) => item.groupName === request.variables.get('emptyGroupName'));
   client.assert(!!group, 'Empty group fixture not found');
@@ -164,24 +170,26 @@ Content-Type: application/json
 > {%
 client.test("create deletable config group fixture", function () {
   client.assert([200, 201, 409].includes(response.status));
-  if (response.body && response.body.id) {
-    client.global.set('fixtureDeletableConfigGroupId', response.body.id);
+  const responseData = response.body && response.body.data ? response.body.data : response.body;
+  if (responseData && responseData.id) {
+    client.global.set('fixtureDeletableConfigGroupId', responseData.id);
   }
 });
 %}
 
 ### Resolve deletable config group fixture
 # @name resolveDeletableConfigGroupFixture
-GET {{baseUrl}}/api/groups?page=0&size=200&semesterId={{fixtureSemesterId}}
+GET {{baseUrl}}/api/groups?page=0&size=100&semesterId={{fixtureSemesterId}}
 Authorization: Bearer {{adminAccessToken}}
 
 > {%
 client.test("resolve deletable config group fixture", function () {
   client.assert(response.status === 200);
-  const content = Array.isArray(response.body)
-    ? response.body
-    : response.body && Array.isArray(response.body.content)
-      ? response.body.content
+  const responseData = response.body && response.body.data ? response.body.data : response.body;
+  const content = Array.isArray(responseData)
+    ? responseData
+    : responseData && Array.isArray(responseData.content)
+      ? responseData.content
       : [];
   const group = content.find((item) => item.groupName === request.variables.get('deletableConfigGroupName'));
   client.assert(!!group, 'Deletable config group fixture not found');
@@ -243,10 +251,11 @@ Authorization: Bearer {{adminAccessToken}}
 > {%
 client.test("resolve existing lifecycle membership", function () {
   client.assert(response.status === 200);
-  const groups = Array.isArray(response.body)
-    ? response.body
-    : response.body && Array.isArray(response.body.content)
-      ? response.body.content
+  const responseData = response.body && response.body.data ? response.body.data : response.body;
+  const groups = Array.isArray(responseData)
+    ? responseData
+    : responseData && Array.isArray(responseData.content)
+      ? responseData.content
       : [];
   const existingGroup = groups[0];
   client.global.set('fixtureStatefulExistingGroupId', existingGroup ? (existingGroup.groupId || existingGroup.id) : 999999999);
