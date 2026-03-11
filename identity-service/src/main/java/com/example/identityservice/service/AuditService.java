@@ -293,6 +293,24 @@ public class AuditService {
         );
     }
 
+    /**
+     * Log current-user profile update.
+     */
+    @Async
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void logProfileUpdated(User user, String oldValue, String newValue) {
+        createAuditLog(
+                "USER",
+                user.getId(),
+                AuditAction.UPDATE,
+                user.getId(),
+                user.getEmail(),
+                AuditLog.AuditOutcome.SUCCESS,
+                oldValue,
+                newValue
+        );
+    }
+
     // ==================== Internal ====================
 
     private void createAuditLog(
