@@ -8,7 +8,6 @@
 ## Changed Files
 
 - penapi.yaml
-- ests/api-auth.http
 - ests/api-project-configs.http
 
 ## Commands

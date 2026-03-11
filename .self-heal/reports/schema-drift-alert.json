@@ -1,12 +1,11 @@
 {
-  "generatedAt": "2026-03-11T07:33:24.094Z",
+  "generatedAt": "2026-03-11T09:00:37.822Z",
   "driftDetected": true,
   "openapiChanged": false,
   "generatedTestsChanged": false,
   "overrideStateChanged": false,
   "changedFiles": [
     "penapi.yaml",
-    "ests/api-auth.http",
     "ests/api-project-configs.http"
   ],
   "commands": [
