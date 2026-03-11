@@ -1,6 +1,3 @@
--- Flyway non-transactional migration
--- Migration:non-transactional
-
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_sync_jobs_correlation_id 
+CREATE INDEX IF NOT EXISTS idx_sync_jobs_correlation_id 
     ON sync_jobs(correlation_id) 
     WHERE correlation_id IS NOT NULL;

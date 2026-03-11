@@ -134,11 +134,18 @@ public class AuthController {
      * 
      * Design decisions (from SRS):
      * - Idempotent: calling multiple times has same effect
-     * - Silent failure: if token not found/already revoked, still return 204
+     * - Silent failure: if token not found/already revoked, still return 200
      * 
      * @param request LogoutRequest with refreshToken
-     * @return 204 No Content
+     * @return 200 OK
      */
+    @Operation(summary = "Logout user")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Logout succeeded",
+            content = @Content(schema = @Schema(implementation = com.example.common.api.ApiResponse.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized",
+            content = @Content(schema = @Schema(implementation = com.example.common.api.ApiResponse.class)))
+    })
     @PostMapping("/logout")
     public ResponseEntity<com.example.common.api.ApiResponse<Void>> logout(
         @Valid @RequestBody LogoutRequest request,

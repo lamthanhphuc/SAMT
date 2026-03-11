@@ -2,6 +2,7 @@ package com.example.identityservice.service;
 
 import com.example.identityservice.entity.AuditAction;
 import com.example.identityservice.entity.User;
+import com.example.identityservice.event.IdentityEventPublisher;
 import com.example.identityservice.exception.ConflictException;
 import com.example.identityservice.exception.EmailAlreadyExistsException;
 import com.example.identityservice.exception.InvalidUserStateException;
@@ -30,18 +31,21 @@ public class UserAdminService {
     private final AuditService auditService;
     private final SecurityContextHelper securityContextHelper;
     private final PasswordEncoder passwordEncoder;
+    private final IdentityEventPublisher identityEventPublisher;
 
     public UserAdminService(
             UserRepository userRepository,
             RefreshTokenService refreshTokenService,
             AuditService auditService,
             SecurityContextHelper securityContextHelper,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            IdentityEventPublisher identityEventPublisher) {
         this.userRepository = userRepository;
         this.refreshTokenService = refreshTokenService;
         this.auditService = auditService;
         this.securityContextHelper = securityContextHelper;
         this.passwordEncoder = passwordEncoder;
+        this.identityEventPublisher = identityEventPublisher;
     }
 
     /**
@@ -118,6 +122,14 @@ public class UserAdminService {
 
         // Revoke all tokens (user can't refresh anymore)
         refreshTokenService.revokeAllTokens(user);
+
+        // Publish deletion event so downstream services can clean up references.
+        identityEventPublisher.publishUserDeletedEvent(
+            user.getId(),
+            user.getEmail(),
+            user.getRole().name(),
+            actorId
+        );
 
         // Audit
         auditService.logUserDeleted(user, actorId);

@@ -26,10 +26,15 @@ public class GrpcJwtServerInterceptor implements ServerInterceptor {
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
+    private final GatewayInternalJwtValidator gatewayInternalJwtValidator;
 
-    public GrpcJwtServerInterceptor(JwtService jwtService, UserRepository userRepository) {
+    public GrpcJwtServerInterceptor(
+            JwtService jwtService,
+            UserRepository userRepository,
+            GatewayInternalJwtValidator gatewayInternalJwtValidator) {
         this.jwtService = jwtService;
         this.userRepository = userRepository;
+        this.gatewayInternalJwtValidator = gatewayInternalJwtValidator;
     }
 
     @Override
@@ -50,16 +55,9 @@ public class GrpcJwtServerInterceptor implements ServerInterceptor {
         }
 
         String token = authHeader.substring(7);
-        if (!jwtService.validateToken(token) || jwtService.isTokenExpired(token)) {
+        Long userId = extractUserId(token);
+        if (userId == null) {
             call.close(Status.UNAUTHENTICATED.withDescription("Invalid or expired token"), new Metadata());
-            return new ServerCall.Listener<>() {};
-        }
-
-        Long userId;
-        try {
-            userId = jwtService.extractUserId(token);
-        } catch (RuntimeException ex) {
-            call.close(Status.UNAUTHENTICATED.withDescription("Invalid token subject"), new Metadata());
             return new ServerCall.Listener<>() {};
         }
 
@@ -73,6 +71,18 @@ public class GrpcJwtServerInterceptor implements ServerInterceptor {
         }
 
         return next.startCall(call, headers);
+    }
+
+    private Long extractUserId(String token) {
+        try {
+            if (jwtService.validateToken(token) && !jwtService.isTokenExpired(token)) {
+                return jwtService.extractUserId(token);
+            }
+        } catch (RuntimeException ignored) {
+            // Fall through to gateway internal JWT validation.
+        }
+
+        return gatewayInternalJwtValidator.validateAndExtractUserId(token);
     }
 
     private boolean isUnprotectedControlMethod(String fullMethodName) {
