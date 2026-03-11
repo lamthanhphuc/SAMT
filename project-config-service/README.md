@@ -83,7 +83,7 @@ ProjectConfig Service **consumes** gRPC APIs from User-Group Service for group v
 
 **Dependency:** Project-Config Service requires User-Group Service to be running for all config operations.
 
-**📄 See:** **[docs/ProjectConfig/GRPC_CONTRACT.md](../docs/ProjectConfig/GRPC_CONTRACT.md)** for complete gRPC integration documentation, including error handling and retry strategies.
+**📄 See:** **[docs/services/project-config/grpc-contract.md](../docs/services/project-config/grpc-contract.md)** for complete gRPC integration documentation, including error handling and retry strategies.
 
 ---
 
@@ -465,7 +465,7 @@ Full test requires:
 
 ### ⚠️ CRITICAL: gRPC Client Not Implemented
 
-Authorization checks (LEADER, MEMBER) currently **SKIPPED**. See [ISSUES.md](../docs/ProjectConfig/ISSUES.md#issue-001-grpc-client-to-user-group-service).
+Authorization checks (LEADER, MEMBER) currently **SKIPPED**. See [issue-register.md](../docs/audits/issue-register.md).
 
 **Impact:** 
 - Any user can create configs for any group
@@ -545,10 +545,10 @@ project-config-service/
 
 ## 📞 Support
 
-- **Documentation:** `docs/ProjectConfig/`
-- **Issues:** `docs/ProjectConfig/ISSUES.md`
-- **API Contract:** `docs/ProjectConfig/02_API_Contract.md`
-- **Security Design:** `docs/ProjectConfig/SECURITY.md`
+- **Documentation:** [docs/services/project-config/README.md](../docs/services/project-config/README.md)
+- **Issues:** [docs/audits/issue-register.md](../docs/audits/issue-register.md)
+- **API Contract:** [docs/services/project-config/api-contract.md](../docs/services/project-config/api-contract.md)
+- **Security Design:** [docs/services/project-config/security.md](../docs/services/project-config/security.md)
 
 ---
 
