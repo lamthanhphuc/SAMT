@@ -88,11 +88,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/identity_ApiResponse'
         '400':
-          description: Bad request
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/identity_ApiResponse'
+          $ref: '#/components/responses/Error400'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
@@ -100,11 +96,7 @@ paths:
         '404':
           $ref: '#/components/responses/Error404'
         '409':
-          description: Email already exists
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/identity_ApiResponse'
+          $ref: '#/components/responses/Error409'
         '500':
           $ref: '#/components/responses/Error500'
   /api/auth/refresh:
@@ -129,11 +121,7 @@ paths:
         '400':
           $ref: '#/components/responses/Error400'
         '401':
-          description: Unauthorized
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/identity_ApiResponse'
+          $ref: '#/components/responses/Error401'
         '403':
           $ref: '#/components/responses/Error403'
         '404':
@@ -164,11 +152,7 @@ paths:
         '400':
           $ref: '#/components/responses/Error400'
         '401':
-          description: Unauthorized
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/identity_ApiResponse'
+          $ref: '#/components/responses/Error401'
         '403':
           $ref: '#/components/responses/Error403'
         '404':
@@ -201,17 +185,9 @@ paths:
         '400':
           $ref: '#/components/responses/Error400'
         '401':
-          description: Unauthorized
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/identity_ApiResponse'
+          $ref: '#/components/responses/Error401'
         '403':
-          description: Forbidden
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/identity_ApiResponse'
+          $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
         '409':
@@ -1095,15 +1071,30 @@ paths:
             type: integer
             format: int64
             minimum: 1
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+            minimum: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 20
+            maximum: 100
+            minimum: 1
       responses:
         '200':
           description: OK
           content:
             '*/*':
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/userGroup_MemberResponse'
+                $ref: '#/components/schemas/userGroup_PageResponseMemberResponse'
         '400':
           description: Bad Request
         '401':
@@ -1542,11 +1533,7 @@ paths:
         '500':
           $ref: '#/components/responses/Error500'
         '503':
-          description: Service Unavailable
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StandardError'
+          $ref: '#/components/responses/Error503'
   /api/project-configs/{id}/verify:
     post:
       tags:
@@ -1584,11 +1571,7 @@ paths:
         '500':
           $ref: '#/components/responses/Error500'
         '503':
-          description: Verification service unavailable
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/projectConfig_ApiResponse'
+          $ref: '#/components/responses/Error503'
   /api/project-configs/admin/{id}/restore:
     post:
       tags:
@@ -2018,15 +2001,15 @@ components:
           format: int32
         sort:
           $ref: '#/components/schemas/identity_SortObject'
-        first:
-          type: boolean
-        last:
-          type: boolean
         numberOfElements:
           type: integer
           format: int32
         pageable:
           $ref: '#/components/schemas/identity_PageableObject'
+        first:
+          type: boolean
+        last:
+          type: boolean
         empty:
           type: boolean
     identity_PageableObject:
@@ -2052,9 +2035,9 @@ components:
       properties:
         empty:
           type: boolean
-        unsorted:
-          type: boolean
         sorted:
+          type: boolean
+        unsorted:
           type: boolean
     userGroup_UpdateUserRequest:
       type: object
@@ -2357,6 +2340,25 @@ components:
           nullable: true
         role:
           type: string
+    userGroup_PageResponseMemberResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/userGroup_MemberResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     projectConfig_UpdateConfigRequest:
       type: object
       properties:
@@ -2592,30 +2594,33 @@ components:
         retentionDays:
           type: integer
           format: int32
-    StandardError:
+    ProblemDetails:
       type: object
       properties:
-        statusCode:
+        type:
+          type: string
+          format: uri
+          example: https://api.example.com/errors/invalid-request
+        title:
+          type: string
+          example: Invalid request
+        status:
           type: integer
+          format: int32
           example: 400
-        error:
-          oneOf:
-            - type: string
-              example: Bad Request
-            - type: object
-              properties:
-                code:
-                  type: integer
-                  example: 401
-                message:
-                  type: string
-                  example: Unauthorized
-        message:
+        detail:
           type: string
           example: Invalid UUID
+        instance:
+          type: string
+          example: /api/project-configs/invalid-id
         timestamp:
           type: string
           format: date-time
+      additionalProperties: true
+    StandardError:
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetails'
     identity_JwksKey:
       type: object
       properties:
@@ -2700,37 +2705,43 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/StandardError'
+            $ref: '#/components/schemas/ProblemDetails'
     Error401:
       description: 401 error
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/StandardError'
+            $ref: '#/components/schemas/ProblemDetails'
     Error403:
       description: 403 error
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/StandardError'
+            $ref: '#/components/schemas/ProblemDetails'
     Error404:
       description: 404 error
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/StandardError'
+            $ref: '#/components/schemas/ProblemDetails'
     Error409:
       description: 409 error
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/StandardError'
+            $ref: '#/components/schemas/ProblemDetails'
     Error500:
       description: 500 error
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/StandardError'
+            $ref: '#/components/schemas/ProblemDetails'
+    Error503:
+      description: 503 error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
   parameters: {}
   examples: {}
   requestBodies: {}
