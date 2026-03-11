@@ -1,0 +1,22 @@
+{
+  "generatedAt": "2026-03-11T07:33:24.094Z",
+  "driftDetected": true,
+  "openapiChanged": false,
+  "generatedTestsChanged": false,
+  "overrideStateChanged": false,
+  "changedFiles": [
+    "penapi.yaml",
+    "ests/api-auth.http",
+    "ests/api-project-configs.http"
+  ],
+  "commands": [
+    {
+      "command": "npm run openapi:generate",
+      "status": 0
+    },
+    {
+      "command": "npm run tests:generate",
+      "status": 0
+    }
+  ]
+}
