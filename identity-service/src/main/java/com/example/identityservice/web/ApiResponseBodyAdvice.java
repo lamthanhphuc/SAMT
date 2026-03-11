@@ -5,6 +5,7 @@ import com.example.common.api.ApiResponseFactory;
 import org.slf4j.MDC;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
@@ -36,7 +37,7 @@ public class ApiResponseBodyAdvice implements ResponseBodyAdvice<Object> {
         }
 
         String path = servletRequest.getServletRequest().getRequestURI();
-        if (body == null || body instanceof ApiResponse<?> || shouldSkip(path)) {
+        if (body == null || body instanceof ApiResponse<?> || body instanceof ProblemDetail || shouldSkip(path)) {
             return body;
         }
 

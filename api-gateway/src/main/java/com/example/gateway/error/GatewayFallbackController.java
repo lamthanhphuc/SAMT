@@ -1,10 +1,10 @@
 package com.example.gateway.error;
 
-import com.example.common.api.ApiResponse;
-import com.example.common.api.ApiResponseFactory;
+import com.example.common.api.ApiProblemDetailsFactory;
 import com.example.gateway.filter.CorrelationIdWebFilter;
 import org.springframework.cloud.gateway.support.ServerWebExchangeUtils;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,18 +19,18 @@ import java.util.Set;
 public class GatewayFallbackController {
 
     @RequestMapping("/__gateway/fallback/{service}")
-    public Mono<ResponseEntity<ApiResponse<Void>>> fallback(@PathVariable("service") String service, org.springframework.web.server.ServerWebExchange exchange) {
+    public Mono<ResponseEntity<ProblemDetail>> fallback(@PathVariable("service") String service, org.springframework.web.server.ServerWebExchange exchange) {
         String correlationId = GatewayErrorResponseWriter.resolveCorrelationId(
             exchange.getRequest().getHeaders().getFirst(GatewayErrorResponseWriter.HEADER_NAME)
         );
         exchange.getResponse().getHeaders().set(GatewayErrorResponseWriter.HEADER_NAME, correlationId);
 
-        ApiResponse<Void> body = ApiResponseFactory.error(
-            HttpStatus.SERVICE_UNAVAILABLE.value(),
-            HttpStatus.SERVICE_UNAVAILABLE.getReasonPhrase(),
+        ProblemDetail body = ApiProblemDetailsFactory.problemDetail(
+            HttpStatus.SERVICE_UNAVAILABLE,
+            "external-service-unavailable",
+            "External service unavailable",
             humanMessage(service),
-            resolveOriginalPath(exchange),
-            correlationId
+            resolveOriginalPath(exchange)
         );
         return Mono.just(ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body));
     }

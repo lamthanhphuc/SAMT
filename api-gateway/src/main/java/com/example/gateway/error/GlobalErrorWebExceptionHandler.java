@@ -1,7 +1,6 @@
 package com.example.gateway.error;
 
-import com.example.common.api.ApiResponse;
-import com.example.common.api.ApiResponseFactory;
+import com.example.common.api.ApiProblemDetailsFactory;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.handler.timeout.ReadTimeoutException;
@@ -17,6 +16,7 @@ import org.springframework.core.io.buffer.DataBufferLimitException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.codec.ServerCodecConfigurer;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
@@ -79,16 +79,16 @@ public class GlobalErrorWebExceptionHandler extends AbstractErrorWebExceptionHan
         // ✅ PRODUCTION-SAFE: Log only generic info with correlation ID
         logger.warn("Gateway error handled. Status={}, Path={}, CorrelationId={}", status.value(), request.path(), correlationId);
 
-        ApiResponse<Void> body = ApiResponseFactory.error(
-            status.value(),
-            status.getReasonPhrase(),
+        ProblemDetail body = ApiProblemDetailsFactory.problemDetail(
+            status,
+            typeFor(status),
+            titleFor(status),
             genericMessage,
-            request.path(),
-            correlationId
+            request.path()
         );
 
         ServerResponse.BodyBuilder responseBuilder = ServerResponse.status(status)
-            .contentType(MediaType.APPLICATION_JSON)
+            .contentType(MediaType.APPLICATION_PROBLEM_JSON)
             .header(GatewayErrorResponseWriter.HEADER_NAME, correlationId);
 
         if (ex instanceof MethodNotAllowedException methodNotAllowedException) {
@@ -188,5 +188,33 @@ public class GlobalErrorWebExceptionHandler extends AbstractErrorWebExceptionHan
             default:
                 return "Internal server error";
         }
+    }
+
+    private String typeFor(HttpStatus status) {
+        return switch (status) {
+            case BAD_REQUEST -> "invalid-request";
+            case UNAUTHORIZED -> "unauthorized";
+            case FORBIDDEN -> "access-denied";
+            case NOT_FOUND -> "resource-not-found";
+            case METHOD_NOT_ALLOWED -> "method-not-allowed";
+            case TOO_MANY_REQUESTS -> "rate-limit-exceeded";
+            case PAYLOAD_TOO_LARGE -> "payload-too-large";
+            case SERVICE_UNAVAILABLE -> "external-service-unavailable";
+            default -> "internal-server-error";
+        };
+    }
+
+    private String titleFor(HttpStatus status) {
+        return switch (status) {
+            case BAD_REQUEST -> "Invalid request";
+            case UNAUTHORIZED -> "Unauthorized";
+            case FORBIDDEN -> "Access denied";
+            case NOT_FOUND -> "Resource not found";
+            case METHOD_NOT_ALLOWED -> "Method not allowed";
+            case TOO_MANY_REQUESTS -> "Rate limit exceeded";
+            case PAYLOAD_TOO_LARGE -> "Payload too large";
+            case SERVICE_UNAVAILABLE -> "External service unavailable";
+            default -> "Internal server error";
+        };
     }
 }

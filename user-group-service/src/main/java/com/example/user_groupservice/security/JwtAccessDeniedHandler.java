@@ -1,6 +1,6 @@
 package com.example.user_groupservice.security;
 
-import com.example.common.api.ApiResponseFactory;
+import com.example.common.api.ApiProblemDetailsFactory;
 import com.example.user_groupservice.web.CorrelationIdFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.MDC;
 import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
@@ -23,19 +24,17 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) throws IOException {
         String correlationId = resolveCorrelationId(request);
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-        response.setHeader(CorrelationIdFilter.HEADER_NAME, correlationId);
-        objectMapper.writeValue(
-            response.getOutputStream(),
-            ApiResponseFactory.error(
-                HttpServletResponse.SC_FORBIDDEN,
-                "Forbidden",
-                "You do not have permission to perform this action",
-                request.getRequestURI(),
-                correlationId
-            )
+        ProblemDetail body = ApiProblemDetailsFactory.problemDetail(
+            org.springframework.http.HttpStatus.FORBIDDEN,
+            "access-denied",
+            "Access denied",
+            "You do not have permission to perform this action",
+            request.getRequestURI()
         );
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+        response.setHeader(CorrelationIdFilter.HEADER_NAME, correlationId);
+        objectMapper.writeValue(response.getOutputStream(), body);
     }
 
     private String resolveCorrelationId(HttpServletRequest request) {

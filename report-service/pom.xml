@@ -23,6 +23,12 @@
 
 	<dependencies>
 
+		<dependency>
+			<groupId>com.example</groupId>
+			<artifactId>common-contracts</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
 		<!-- Spring Boot -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

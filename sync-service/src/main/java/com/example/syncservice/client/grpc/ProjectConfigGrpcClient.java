@@ -17,11 +17,13 @@ import com.example.syncservice.client.grpc.InternalListVerifiedConfigsResponse;
 import com.example.syncservice.client.grpc.ProjectConfigInternalServiceGrpc;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.UUID;
 import java.util.Objects;
 import java.util.Map;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 /**
@@ -36,6 +38,8 @@ import java.util.stream.Collectors;
 @Component
 @Slf4j
 public class ProjectConfigGrpcClient {
+
+    private static final String INTEGRATION_CONFIG_NOT_VERIFIED_CODE = "INTEGRATION_CONFIG_NOT_VERIFIED";
 
     @GrpcClient("project-config-service")
     private ProjectConfigInternalServiceGrpc.ProjectConfigInternalServiceBlockingStub projectConfigStub;
@@ -94,8 +98,15 @@ public class ProjectConfigGrpcClient {
             if (code == Status.Code.PERMISSION_DENIED || code == Status.Code.UNAUTHENTICATED) {
                 throw new NonRetryableGrpcClientException("Service authentication failed", e);
             }
-            if (code == Status.Code.INVALID_ARGUMENT || code == Status.Code.FAILED_PRECONDITION) {
+            if (code == Status.Code.INVALID_ARGUMENT) {
                 throw new NonRetryableGrpcClientException("Invalid request for config " + configId, e);
+            }
+            if (code == Status.Code.FAILED_PRECONDITION) {
+                throw NonRetryableGrpcClientException.integrationConfigurationNotVerified(
+                    e.getStatus().getDescription(),
+                    configId,
+                    e
+                );
             }
 
             // Transient transport/server failures are retryable by resilience4j.
@@ -186,8 +197,114 @@ public class ProjectConfigGrpcClient {
     }
 
     public static class NonRetryableGrpcClientException extends GrpcClientException {
+        private final String errorTitle;
+        private final String details;
+        private final String configState;
+        private final List<String> failedServices;
+
         public NonRetryableGrpcClientException(String message, Throwable cause) {
             super(message, cause);
+            this.errorTitle = null;
+            this.details = message;
+            this.configState = null;
+            this.failedServices = List.of();
+        }
+
+        public NonRetryableGrpcClientException(
+            String errorTitle,
+            String details,
+            String configState,
+            List<String> failedServices,
+            Throwable cause
+        ) {
+            super(details == null || details.isBlank() ? errorTitle : details, cause);
+            this.errorTitle = errorTitle;
+            this.details = details;
+            this.configState = configState;
+            this.failedServices = failedServices == null ? List.of() : List.copyOf(failedServices);
+        }
+
+        public static NonRetryableGrpcClientException integrationConfigurationNotVerified(
+            String description,
+            UUID configId,
+            Throwable cause
+        ) {
+            ParsedPrecondition parsed = ParsedPrecondition.from(description);
+            String details = parsed.details();
+            if (details == null || details.isBlank()) {
+                details = "Configuration " + configId + " must be verified before sync";
+            }
+
+            return new NonRetryableGrpcClientException(
+                "Integration configuration not verified",
+                details,
+                parsed.configState(),
+                parseFailedServices(details),
+                cause
+            );
+        }
+
+        public boolean isIntegrationConfigurationNotVerified() {
+            return errorTitle != null && !errorTitle.isBlank();
+        }
+
+        public String getErrorTitle() {
+            return errorTitle;
+        }
+
+        public String getDetails() {
+            return details;
+        }
+
+        public String getConfigState() {
+            return configState;
+        }
+
+        public List<String> getFailedServices() {
+            return failedServices;
+        }
+
+        private static List<String> parseFailedServices(String details) {
+            if (details == null || details.isBlank()) {
+                return List.of();
+            }
+
+            List<String> services = new ArrayList<>();
+            String[] segments = details.split(";");
+            for (String segment : segments) {
+                String trimmed = segment.trim();
+                int colonIndex = trimmed.indexOf(':');
+                String serviceName = colonIndex >= 0 ? trimmed.substring(0, colonIndex) : trimmed;
+                String normalized = serviceName.trim().toLowerCase(Locale.ROOT);
+                if (("jira".equals(normalized) || "github".equals(normalized)) && !services.contains(normalized)) {
+                    services.add(normalized);
+                }
+            }
+            return services;
+        }
+
+        private record ParsedPrecondition(String configState, String details) {
+            private static ParsedPrecondition from(String description) {
+                if (description == null || description.isBlank()) {
+                    return new ParsedPrecondition(null, null);
+                }
+                if (!description.startsWith(INTEGRATION_CONFIG_NOT_VERIFIED_CODE + "|")) {
+                    return new ParsedPrecondition(null, description);
+                }
+
+                String configState = null;
+                String details = null;
+                String[] segments = description.split("\\|");
+                for (String segment : segments) {
+                    if (segment.startsWith("state=")) {
+                        configState = segment.substring("state=".length());
+                    } else if (segment.startsWith("details=")) {
+                        details = segment.substring("details=".length());
+                    }
+                }
+
+                return new ParsedPrecondition(configState, details);
+            }
         }
     }
 

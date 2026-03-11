@@ -2,6 +2,7 @@ package com.example.syncservice.controller;
 
 import com.example.common.api.ApiResponse;
 import com.example.common.api.ApiResponseFactory;
+import com.example.common.api.ApiProblemDetails;
 import com.example.syncservice.dto.SyncAllResultDto;
 import com.example.syncservice.dto.SyncRequestDto;
 import com.example.syncservice.dto.SyncResultDto;
@@ -88,7 +89,7 @@ public class SyncController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Configuration not found",
             content = @Content(schema = @Schema(implementation = com.example.common.api.ApiResponse.class))),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "503", description = "At least one downstream sync failed",
-            content = @Content(schema = @Schema(implementation = com.example.common.api.ApiResponse.class)))
+            content = @Content(schema = @Schema(implementation = com.example.common.api.ApiProblemDetails.class)))
     })
     public CompletableFuture<ResponseEntity<ApiResponse<SyncAllResultDto>>> syncAll(
         @Valid @RequestBody SyncRequestDto request,
@@ -125,18 +126,10 @@ public class SyncController {
 
         return jiraFuture.thenCombine(githubFuture, (jiraOutcome, githubOutcome) -> {
                 if (jiraOutcome.throwable() != null) {
-                    return buildSyncUnavailableResponse(
-                        servletRequest,
-                        correlationId,
-                        jiraOutcome.throwable()
-                    );
+                    throw propagate(jiraOutcome.throwable());
                 }
                 if (githubOutcome.throwable() != null) {
-                    return buildSyncUnavailableResponse(
-                        servletRequest,
-                        correlationId,
-                        githubOutcome.throwable()
-                    );
+                    throw propagate(githubOutcome.throwable());
                 }
 
                 SyncResultDto jiraResult = jiraOutcome.toResult();
@@ -163,29 +156,7 @@ public class SyncController {
                         degraded
                     )
                 );
-            })
-            .exceptionally(throwable -> buildSyncUnavailableResponse(servletRequest, correlationId, throwable))
-            ;
-    }
-
-    private ResponseEntity<ApiResponse<SyncAllResultDto>> buildSyncUnavailableResponse(
-        HttpServletRequest request,
-        String correlationId,
-        Throwable throwable
-    ) {
-        String message = throwable == null ? "Sync service is temporarily unavailable" : throwable.getMessage();
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-            .body(new ApiResponse<>(
-                java.time.OffsetDateTime.now().toString(),
-                HttpStatus.SERVICE_UNAVAILABLE.value(),
-                false,
-                null,
-                HttpStatus.SERVICE_UNAVAILABLE.getReasonPhrase(),
-                message,
-                request.getRequestURI(),
-                correlationId,
-                null
-            ));
+            });
     }
 
     private ResponseEntity<ApiResponse<SyncResultDto>> buildSuccessResponse(
@@ -236,6 +207,20 @@ public class SyncController {
         } catch (NumberFormatException ex) {
             throw new BadCredentialsException("Invalid authenticated user identifier", ex);
         }
+    }
+
+    private RuntimeException propagate(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null
+            && (current instanceof java.util.concurrent.CompletionException
+                || current instanceof java.util.concurrent.ExecutionException)
+            && current.getCause() != null) {
+            current = current.getCause();
+        }
+        if (current instanceof RuntimeException runtimeException) {
+            return runtimeException;
+        }
+        return new IllegalStateException(current == null ? "Sync service is temporarily unavailable" : current.getMessage(), current);
     }
 
     private record SyncBranchOutcome(SyncResultDto fallbackResult, Throwable throwable) {
