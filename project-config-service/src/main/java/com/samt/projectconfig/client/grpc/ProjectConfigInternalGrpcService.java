@@ -16,7 +16,6 @@ import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -32,8 +31,7 @@ public class ProjectConfigInternalGrpcService extends ProjectConfigInternalServi
     private final ProjectConfigService projectConfigService;
 
     @Override
-    @Transactional(readOnly = true)
-    public void internalGetDecryptedConfig(
+    public final void internalGetDecryptedConfig(
         InternalGetDecryptedConfigRequest request,
         StreamObserver<InternalGetDecryptedConfigResponse> responseObserver
     ) {
@@ -50,7 +48,7 @@ public class ProjectConfigInternalGrpcService extends ProjectConfigInternalServi
 
             log.info("gRPC InternalGetDecryptedConfig called: configId={}", configId);
 
-            DecryptedTokensResponse response = projectConfigService.getDecryptedTokens(configId);
+            DecryptedTokensResponse response = projectConfigService.getDecryptedTokensWithoutTransaction(configId);
 
             InternalGetDecryptedConfigResponse grpcResponse = InternalGetDecryptedConfigResponse.newBuilder()
                 .setConfigId(response.configId().toString())
@@ -82,8 +80,7 @@ public class ProjectConfigInternalGrpcService extends ProjectConfigInternalServi
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public void internalListVerifiedConfigs(
+    public final void internalListVerifiedConfigs(
         InternalListVerifiedConfigsRequest request,
         StreamObserver<InternalListVerifiedConfigsResponse> responseObserver
     ) {

@@ -47,6 +47,8 @@ import java.util.concurrent.TimeoutException;
 @Slf4j
 public class ProjectConfigService {
 
+    private static final String INTEGRATION_CONFIG_NOT_VERIFIED_CODE = "INTEGRATION_CONFIG_NOT_VERIFIED";
+
     private final ConcurrentMap<UUID, CompletableFuture<VerificationResponse>> inFlightVerifications = new ConcurrentHashMap<>();
     
     private final ProjectConfigRepository repository;
@@ -718,8 +720,15 @@ public class ProjectConfigService {
      * @param id Config ID
      * @return Decrypted tokens
      */
-    @Transactional(readOnly = true)
+    @Transactional(
+        readOnly = true,
+        noRollbackFor = {ConfigNotFoundException.class, ForbiddenException.class}
+    )
     public DecryptedTokensResponse getDecryptedTokens(UUID id) {
+        return getDecryptedTokensWithoutTransaction(id);
+    }
+
+    public DecryptedTokensResponse getDecryptedTokensWithoutTransaction(UUID id) {
         ProjectConfig config = repository.findById(id)
             .orElseThrow(() -> new ConfigNotFoundException(id));
 
@@ -759,7 +768,7 @@ public class ProjectConfigService {
 
     private DecryptedTokensResponse toDecryptedTokensResponse(ProjectConfig config) {
         if (!"VERIFIED".equals(config.getState())) {
-            throw new ForbiddenException("Configuration not verified (state: " + config.getState() + ")");
+            throw new ForbiddenException(buildIntegrationConfigNotVerifiedDescription(config));
         }
 
         String jiraToken = decryptToken(config.getId(), "Jira", config.getJiraApiTokenEncrypted());
@@ -787,6 +796,33 @@ public class ProjectConfigService {
 
         return userGroupClient.checkGroupMembership(config.getGroupId(), userId)
             .thenApply(memberResponse -> null);
+    }
+
+    private String buildIntegrationConfigNotVerifiedDescription(ProjectConfig config) {
+        String state = config.getState() == null || config.getState().isBlank()
+            ? "UNKNOWN"
+            : config.getState();
+        String details = switch (state) {
+            case "INVALID" -> firstNonBlank(
+                config.getInvalidReason(),
+                "Jira/GitHub credentials invalid"
+            );
+            case "DRAFT" -> "Configuration must be verified before sync";
+            case "DELETED" -> "Configuration has been deleted and cannot be synced";
+            default -> "Configuration state is " + state;
+        };
+
+        return INTEGRATION_CONFIG_NOT_VERIFIED_CODE
+            + "|state=" + sanitizeGrpcSegment(state)
+            + "|details=" + sanitizeGrpcSegment(details);
+    }
+
+    private String sanitizeGrpcSegment(String value) {
+        return value == null ? "" : value.replace("|", "/");
+    }
+
+    private String firstNonBlank(String primary, String fallback) {
+        return primary == null || primary.isBlank() ? fallback : primary;
     }
 
     private String decryptToken(UUID configId, String tokenName, String encryptedValue) {
