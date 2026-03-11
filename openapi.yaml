@@ -2369,6 +2369,7 @@ components:
           type: string
           maxLength: 255
           minLength: 1
+          format: email
         jiraApiToken:
           type: string
           maxLength: 500
@@ -2383,7 +2384,7 @@ components:
           type: string
           maxLength: 255
           minLength: 40
-          pattern: ^ghp_[A-Za-z0-9]{36,}$
+          pattern: ^(ghp_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]+)$
     projectConfig_ApiResponseConfigResponse:
       type: object
       properties:
@@ -2454,6 +2455,7 @@ components:
           type: string
           maxLength: 255
           minLength: 0
+          format: email
         jiraApiToken:
           type: string
           maxLength: 500
@@ -2468,10 +2470,11 @@ components:
           type: string
           maxLength: 255
           minLength: 40
-          pattern: ^ghp_[A-Za-z0-9]{36,}$
+          pattern: ^(ghp_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]+)$
       required:
         - groupId
         - jiraHostUrl
+        - jiraEmail
         - jiraApiToken
         - githubRepoUrl
         - githubToken
@@ -2650,6 +2653,9 @@ components:
           format: int64
         jiraHostUrl:
           type: string
+        jiraEmail:
+          type: string
+          format: email
         jiraApiToken:
           type: string
         githubRepoUrl:

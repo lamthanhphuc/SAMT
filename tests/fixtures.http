@@ -11,6 +11,7 @@
 @emptyGroupName = SE2601-G2
 @deletableConfigGroupName = SE2601-G3
 @jiraHostUrl = https://example.atlassian.net
+@jiraEmail = qa.integration@samt.local
 @jiraApiToken = ATATTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 @githubRepoUrl = https://github.com/example-org/example-repo
 @githubToken = ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
@@ -293,6 +294,7 @@ Content-Type: application/json
 {
   "groupId": {{fixtureGroupId}},
   "jiraHostUrl": "{{jiraHostUrl}}",
+  "jiraEmail": "{{jiraEmail}}",
   "jiraApiToken": "{{jiraApiToken}}",
   "githubRepoUrl": "{{githubRepoUrl}}",
   "githubToken": "{{githubToken}}"
@@ -331,6 +333,7 @@ Content-Type: application/json
 {
   "groupId": {{fixtureDeletableConfigGroupId}},
   "jiraHostUrl": "{{jiraHostUrl}}",
+  "jiraEmail": "{{jiraEmail}}",
   "jiraApiToken": "{{jiraApiToken}}",
   "githubRepoUrl": "{{githubRepoUrl}}",
   "githubToken": "{{githubToken}}"

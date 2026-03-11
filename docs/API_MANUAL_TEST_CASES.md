@@ -1101,12 +1101,14 @@ For any endpoint that requires JWT:
 {
   "groupId": 1,
   "jiraHostUrl": "https://example.atlassian.net",
+  "jiraEmail": "integration@example.com",
   "jiraApiToken": "ATATTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
   "githubRepoUrl": "https://github.com/example-org/example-repo",
   "githubToken": "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 }
 ```
 > Notes:
+> - Jira email must be a valid email address.
 > - Jira token must be **100–500** chars and match `^ATATT...`.
 > - GitHub token must be **40–255** chars and match `^ghp_...`.
 
@@ -1126,6 +1128,7 @@ For any endpoint that requires JWT:
 {
   "groupId": 1,
   "jiraHostUrl": "http://evil.example.com",
+  "jiraEmail": "not-an-email",
   "jiraApiToken": "ATATT...",
   "githubRepoUrl": "https://github.com/org/repo",
   "githubToken": "ghp_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"

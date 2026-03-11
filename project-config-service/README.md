@@ -163,7 +163,8 @@ Content-Type: application/json
 {
   "groupId": 1,
   "jiraHostUrl": "https://your-domain.atlassian.net",
-  "jiraToken": "ATATT3xFfGF0...",
+  "jiraEmail": "integration@example.com",
+  "jiraApiToken": "ATATT3xFfGF0...",
   "githubRepoUrl": "https://github.com/owner/repo",
   "githubToken": "ghp_1234567890..."
 }
@@ -176,7 +177,8 @@ Content-Type: application/json
     "id": "123e4567-e89b-12d3-a456-426614174000",
     "groupId": 1,
     "jiraHostUrl": "https://your-domain.atlassian.net",
-    "jiraToken": "ATA***f0ab",
+    "jiraEmail": "integration@example.com",
+    "jiraApiToken": "ATA***f0ab",
     "githubRepoUrl": "https://github.com/owner/repo",
     "githubToken": "ghp_***xyz9",
     "state": "DRAFT",
@@ -199,7 +201,8 @@ Authorization: Bearer <JWT>
 Content-Type: application/json
 
 {
-  "jiraToken": "ATATT3xFfGF0...",  // Optional
+  "jiraEmail": "integration@example.com",  // Optional
+  "jiraApiToken": "ATATT3xFfGF0...",  // Optional
   "githubToken": "ghp_new..."       // Optional
 }
 ```
@@ -255,7 +258,7 @@ Authorization: Bearer <internal-jwt>
 ```json
 {
   "configId": "123e4567-e89b-12d3-a456-426614174000",
-  "jiraToken": "ATATT3xFfGF0abc123...",
+  "jiraApiToken": "ATATT3xFfGF0abc123...",
   "githubToken": "ghp_1234567890abcdef..."
 }
 ```
@@ -433,7 +436,8 @@ curl -X POST http://localhost:9080/api/project-configs \
   -d '{
     "groupId": 1,
     "jiraHostUrl": "https://test.atlassian.net",
-    "jiraToken": "ATATT3xFfGF0...",
+    "jiraEmail": "integration@example.com",
+    "jiraApiToken": "ATATT3xFfGF0...",
     "githubRepoUrl": "https://github.com/test/repo",
     "githubToken": "ghp_1234567890..."
   }'

@@ -168,11 +168,16 @@ function applySchemaOverrides(doc) {
 
   const createConfig = schemas.projectConfig_CreateConfigRequest;
   if (createConfig) {
-    createConfig.required = ['groupId', 'jiraHostUrl', 'jiraApiToken', 'githubRepoUrl', 'githubToken'];
+    createConfig.required = ['groupId', 'jiraHostUrl', 'jiraEmail', 'jiraApiToken', 'githubRepoUrl', 'githubToken'];
     patchProperty(createConfig, 'groupId', { type: 'integer', format: 'int64', minimum: 1 });
     patchProperty(createConfig, 'jiraHostUrl', {
       maxLength: 255,
       pattern: 'https?://[a-zA-Z0-9.-]+\\.(atlassian\\.net|jira\\.com)(/.*)?'
+    });
+    patchProperty(createConfig, 'jiraEmail', {
+      type: 'string',
+      format: 'email',
+      maxLength: 255
     });
     patchProperty(createConfig, 'jiraApiToken', {
       minLength: 100,
@@ -186,7 +191,7 @@ function applySchemaOverrides(doc) {
     patchProperty(createConfig, 'githubToken', {
       minLength: 40,
       maxLength: 255,
-      pattern: '^ghp_[A-Za-z0-9]{36,}$'
+      pattern: '^(ghp_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]+)$'
     });
   }
 
@@ -195,6 +200,11 @@ function applySchemaOverrides(doc) {
     patchProperty(updateConfig, 'jiraHostUrl', {
       maxLength: 255,
       pattern: 'https?://[a-zA-Z0-9.-]+\\.(atlassian\\.net|jira\\.com)(/.*)?'
+    });
+    patchProperty(updateConfig, 'jiraEmail', {
+      type: 'string',
+      format: 'email',
+      maxLength: 255
     });
     patchProperty(updateConfig, 'jiraApiToken', {
       minLength: 100,
@@ -208,7 +218,7 @@ function applySchemaOverrides(doc) {
     patchProperty(updateConfig, 'githubToken', {
       minLength: 40,
       maxLength: 255,
-      pattern: '^ghp_[A-Za-z0-9]{36,}$'
+      pattern: '^(ghp_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]+)$'
     });
   }
 }
