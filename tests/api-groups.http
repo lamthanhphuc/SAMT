@@ -15,7 +15,7 @@
 
 ### GET_/api/groups/{groupId}/members_happy
 # @name GET__api_groups__groupId__members_happy
-GET {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}/members
+GET {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}/members?page=0&size=20
 Authorization: Bearer {{adminAccessToken}}
 
 
@@ -33,7 +33,7 @@ client.test("GET_/api/groups/{groupId}/members_happy -> [200]", function () {
 
 ### GET_/api/groups/{groupId}/members_unauthorized
 # @name GET__api_groups__groupId__members_unauthorized
-GET {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}/members
+GET {{baseUrl}}/api/groups/{{fixtureEmptyGroupId}}/members?page=0&size=20
 Authorization: Bearer {{missingToken}}
 
 
@@ -51,7 +51,7 @@ client.test("GET_/api/groups/{groupId}/members_unauthorized -> [401]", function 
 
 ### GET_/api/groups/{groupId}/members_invalid_uuid
 # @name GET__api_groups__groupId__members_invalid_uuid
-GET {{baseUrl}}/api/groups/{{invalidUuid}}/members
+GET {{baseUrl}}/api/groups/{{invalidUuid}}/members?page=0&size=20
 Authorization: Bearer {{adminAccessToken}}
 
 
@@ -69,7 +69,7 @@ client.test("GET_/api/groups/{groupId}/members_invalid_uuid -> [400, 401]", func
 
 ### GET_/api/groups/{groupId}/members_not_found
 # @name GET__api_groups__groupId__members_not_found
-GET {{baseUrl}}/api/groups/999999999/members
+GET {{baseUrl}}/api/groups/999999999/members?page=0&size=20
 Authorization: Bearer {{adminAccessToken}}
 
 

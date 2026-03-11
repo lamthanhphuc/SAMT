@@ -2,18 +2,20 @@ package com.example.user_groupservice.controller;
 
 import com.example.user_groupservice.dto.request.AddMemberRequest;
 import com.example.user_groupservice.dto.response.MemberResponse;
+import com.example.user_groupservice.dto.response.PageResponse;
 import com.example.user_groupservice.security.CurrentUser;
 import com.example.user_groupservice.service.GroupMemberService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * Controller for Group Member operations
@@ -30,6 +32,7 @@ import java.util.List;
 @RequestMapping("/api/groups/{groupId}/members")
 @RequiredArgsConstructor
 @Slf4j
+@Validated
 public class GroupMemberController {
     
     private final GroupMemberService memberService;
@@ -53,9 +56,12 @@ public class GroupMemberController {
      */
     @GetMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<MemberResponse>> getGroupMembers(@PathVariable Long groupId) {
-        log.info("Getting members of group {}", groupId);
-        List<MemberResponse> response = memberService.getGroupMembers(groupId);
+    public ResponseEntity<PageResponse<MemberResponse>> getGroupMembers(
+            @PathVariable Long groupId,
+            @RequestParam(defaultValue = "0") @Min(value = 0, message = "page must be greater than or equal to 0") int page,
+            @RequestParam(defaultValue = "50") @Min(value = 1, message = "size must be greater than 0") @Max(value = 100, message = "size must be less than or equal to 100") int size) {
+        log.info("Getting members of group {} with page={} size={}", groupId, page, size);
+        PageResponse<MemberResponse> response = memberService.getGroupMembers(groupId, page, size);
         return ResponseEntity.ok(response);
     }
     

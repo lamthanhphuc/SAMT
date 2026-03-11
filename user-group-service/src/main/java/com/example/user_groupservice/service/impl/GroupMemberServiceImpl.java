@@ -1,5 +1,6 @@
 package com.example.user_groupservice.service.impl;
 
+import com.example.user_groupservice.dto.response.PageResponse;
 import com.example.user_groupservice.dto.response.MemberResponse;
 import com.example.user_groupservice.entity.Group;
 import com.example.user_groupservice.entity.GroupRole;
@@ -17,12 +18,12 @@ import com.example.user_groupservice.repository.UserSemesterMembershipRepository
 import com.example.user_groupservice.service.GroupMemberService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * Implementation of GroupMemberService using UserSemesterMembership entity
@@ -90,18 +91,27 @@ public class GroupMemberServiceImpl implements GroupMemberService {
     }
     
     @Override
-    public List<MemberResponse> getGroupMembers(Long groupId) {
-        log.info("Getting members of group: {}", groupId);
+    public PageResponse<MemberResponse> getGroupMembers(Long groupId, int page, int size) {
+        log.info("Getting members of group: groupId={}, page={}, size={}", groupId, page, size);
         
         // Validate group exists
         groupRepository.findByIdAndNotDeleted(groupId)
             .orElseThrow(() -> ResourceNotFoundException.groupNotFound(groupId));
         
-        List<UserSemesterMembership> memberships = membershipRepository.findAllByGroupId(groupId);
-        
-        return memberships.stream()
-            .map(this::toMemberResponse)
-            .collect(Collectors.toList());
+        Page<UserSemesterMembership> memberships = membershipRepository.findAllByGroupId(
+            groupId,
+            PageRequest.of(page, size)
+        );
+
+        return PageResponse.of(
+            memberships.getContent().stream()
+                .map(this::toMemberResponse)
+                .toList(),
+            page,
+            size,
+            memberships.getTotalElements(),
+            memberships.getTotalPages()
+        );
     }
     
     @Override

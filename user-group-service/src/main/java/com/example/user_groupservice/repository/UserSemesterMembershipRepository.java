@@ -6,6 +6,8 @@ import com.example.user_groupservice.entity.UserSemesterMembershipId;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -102,6 +104,15 @@ public interface UserSemesterMembershipRepository
     @Query("SELECT usm FROM UserSemesterMembership usm " +
            "WHERE usm.id.userId = :userId AND usm.deletedAt IS NULL")
     List<UserSemesterMembership> findAllByUserId(@Param("userId") Long userId);
+
+    /**
+     * Find memberships for a user with pagination.
+     */
+    @Query("SELECT usm FROM UserSemesterMembership usm " +
+           "WHERE usm.id.userId = :userId AND usm.deletedAt IS NULL " +
+           "ORDER BY usm.id.semesterId DESC, usm.joinedAt DESC")
+    Page<UserSemesterMembership> findAllByUserId(@Param("userId") Long userId,
+                                                 Pageable pageable);
     
     /**
      * Find all memberships in a specific group (respects soft delete).
@@ -109,6 +120,15 @@ public interface UserSemesterMembershipRepository
     @Query("SELECT usm FROM UserSemesterMembership usm " +
            "WHERE usm.groupId = :groupId AND usm.deletedAt IS NULL")
     List<UserSemesterMembership> findAllByGroupId(@Param("groupId") Long groupId);
+
+    /**
+     * Find memberships in a specific group with pagination.
+     */
+    @Query("SELECT usm FROM UserSemesterMembership usm " +
+           "WHERE usm.groupId = :groupId AND usm.deletedAt IS NULL " +
+           "ORDER BY usm.groupRole ASC, usm.joinedAt DESC")
+    Page<UserSemesterMembership> findAllByGroupId(@Param("groupId") Long groupId,
+                                                  Pageable pageable);
     
     /**
      * Find all memberships for a specific user (including soft deleted).
@@ -123,6 +143,15 @@ public interface UserSemesterMembershipRepository
     @Query("SELECT usm FROM UserSemesterMembership usm " +
            "WHERE usm.id.semesterId = :semesterId AND usm.deletedAt IS NULL")
     List<UserSemesterMembership> findAllBySemesterId(@Param("semesterId") Long semesterId);
+
+    /**
+     * Find memberships in a specific semester with pagination.
+     */
+    @Query("SELECT usm FROM UserSemesterMembership usm " +
+           "WHERE usm.id.semesterId = :semesterId AND usm.deletedAt IS NULL " +
+           "ORDER BY usm.groupId ASC, usm.joinedAt DESC")
+    Page<UserSemesterMembership> findAllBySemesterId(@Param("semesterId") Long semesterId,
+                                                     Pageable pageable);
     
     /**
      * Find membership by composite ID (respects soft delete).

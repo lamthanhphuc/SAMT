@@ -25,6 +25,7 @@ import com.example.user_groupservice.grpc.GrpcExceptionHandler;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +42,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @Transactional(readOnly = true)
 public class UserServiceImpl implements UserService {
+
+        private static final int MAX_GROUP_MEMBERSHIPS_FETCH = 200;
     
     private final IdentityServiceClient identityServiceClient;
     private final UserSemesterMembershipRepository membershipRepository;
@@ -147,7 +150,10 @@ public class UserServiceImpl implements UserService {
         }
         
         // Get user memberships
-        List<UserSemesterMembership> memberships = membershipRepository.findAllByUserId(userId);
+        List<UserSemesterMembership> memberships = membershipRepository.findAllByUserId(
+                userId,
+                PageRequest.of(0, MAX_GROUP_MEMBERSHIPS_FETCH)
+        ).getContent();
         
         // Get all unique group IDs
         List<Long> groupIds = memberships.stream()

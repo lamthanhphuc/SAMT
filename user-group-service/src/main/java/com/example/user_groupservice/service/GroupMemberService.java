@@ -1,7 +1,7 @@
 package com.example.user_groupservice.service;
 
+import com.example.user_groupservice.dto.response.PageResponse;
 import com.example.user_groupservice.dto.response.MemberResponse;
-import java.util.List;
 
 /**
  * Service interface for group member operations.
@@ -25,9 +25,11 @@ public interface GroupMemberService {
     /**
      * Get all members of a group
      * @param groupId Group ID
-     * @return List of MemberResponse
+      * @param page Page number (0-based)
+      * @param size Page size
+      * @return Paginated list of MemberResponse
      */
-    List<MemberResponse> getGroupMembers(Long groupId);
+     PageResponse<MemberResponse> getGroupMembers(Long groupId, int page, int size);
     
     /**
      * Promote member to LEADER
