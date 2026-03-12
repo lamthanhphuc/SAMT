@@ -1,21 +1,22 @@
 # Self-Healing API Test Report
 
-- Final status: passed
+- Final status: failed
 - Iterations: 1
 - Unexpected HTTP 500 detected: no
-
-- Contract cases: 1103/1103 passed (265 skipped)
 
 ## Iterations
 
 ### Iteration 1
-- Result: passed
-- Diagnostics: 0
+- Result: failed
+- Diagnostics: 45
 - Repairs applied: 0
 
 ## Diagnostic Summary
 
+- schema_mismatch: 29
+- invalid_payload_generated: 6
+- authorization_failure: 10
 
 ## Validation Constraints
 
-- DTO files scanned with validation annotations: 15
+- DTO files scanned with validation annotations: 18

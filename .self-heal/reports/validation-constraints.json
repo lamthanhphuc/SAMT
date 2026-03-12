@@ -1,13 +1,54 @@
 [
   {
-    "file": "analysis-service/src/main/java/com/example/analysisservice/config/ProdSecretsProperties.java",
+    "file": "analysis-service/src/main/java/com/example/analysisservice/config/OpenAiProperties.java",
     "fields": [
       {
-        "field": "datasourcePassword",
+        "field": "key",
         "annotations": [
           {
             "annotation": "NotBlank",
-            "args": "message = \"SPRING_DATASOURCE_PASSWORD environment variable must be set (non-blank)\""
+            "args": ""
+          }
+        ]
+      },
+      {
+        "field": "url",
+        "annotations": [
+          {
+            "annotation": "NotBlank",
+            "args": ""
+          }
+        ]
+      },
+      {
+        "field": "model",
+        "annotations": [
+          {
+            "annotation": "NotBlank",
+            "args": ""
+          }
+        ]
+      },
+      {
+        "field": "timeout",
+        "annotations": [
+          {
+            "annotation": "Min",
+            "args": "100"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "analysis-service/src/main/java/com/example/analysisservice/dto/request/AiRequest.java",
+    "fields": [
+      {
+        "field": "rawRequirements",
+        "annotations": [
+          {
+            "annotation": "NotBlank",
+            "args": ""
           }
         ]
       }
@@ -120,14 +161,41 @@
     ]
   },
   {
-    "file": "report-service/src/main/java/com/example/reportservice/config/ProdSecretsProperties.java",
+    "file": "report-service/src/main/java/com/example/reportservice/config/AiServiceProperties.java",
     "fields": [
       {
-        "field": "datasourcePassword",
+        "field": "url",
         "annotations": [
           {
             "annotation": "NotBlank",
-            "args": "message = \"SPRING_DATASOURCE_PASSWORD environment variable must be set (non-blank)\""
+            "args": ""
+          }
+        ]
+      },
+      {
+        "field": "timeout",
+        "annotations": [
+          {
+            "annotation": "Min",
+            "args": "100"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "report-service/src/main/java/com/example/reportservice/dto/request/ReportRequest.java",
+    "fields": [
+      {
+        "field": "projectConfigId",
+        "annotations": [
+          {
+            "annotation": "NotNull",
+            "args": ""
+          },
+          {
+            "annotation": "Min",
+            "args": "1"
           }
         ]
       }
@@ -232,6 +300,10 @@
           {
             "annotation": "NotBlank",
             "args": "message = \"Semester code is required\""
+          },
+          {
+            "annotation": "Pattern",
+            "args": "regexp = \".*\\\\S.*\", message = \"Semester code must contain at least one non-whitespace character\""
           }
         ]
       },
@@ -241,6 +313,10 @@
           {
             "annotation": "NotBlank",
             "args": "message = \"Semester name is required\""
+          },
+          {
+            "annotation": "Pattern",
+            "args": "regexp = \".*\\\\S.*\", message = \"Semester name must contain at least one non-whitespace character\""
           }
         ]
       },
@@ -290,6 +366,10 @@
           {
             "annotation": "NotNull",
             "args": "message = \"Lecturer ID is required\""
+          },
+          {
+            "annotation": "Positive",
+            "args": "message = \"Lecturer ID must be greater than 0\""
           }
         ]
       }
@@ -308,6 +388,20 @@
           {
             "annotation": "Positive",
             "args": "message = \"Lecturer ID must be greater than 0\""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "user-group-service/src/main/java/com/example/user_groupservice/dto/request/UpdateSemesterRequest.java",
+    "fields": [
+      {
+        "field": "semesterName",
+        "annotations": [
+          {
+            "annotation": "Pattern",
+            "args": "regexp = \".*\\\\S.*\", message = \"Semester name must contain at least one non-whitespace character\""
           }
         ]
       }

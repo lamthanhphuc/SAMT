@@ -1,0 +1,1856 @@
+{
+  "generatedAt": "2026-03-12T05:00:16.680Z",
+  "baseUrl": "http://localhost:9080",
+  "sources": {
+    "openapi": "openapi.yaml",
+    "gatewayRoutes": "api-gateway/src/main/java/com/example/gateway/config/GatewayRoutesConfig.java",
+    "publicPaths": "api-gateway/src/main/java/com/example/gateway/security/PublicEndpointPaths.java",
+    "controllersScanned": 55
+  },
+  "summary": {
+    "operations": 45,
+    "publicEndpoints": 4,
+    "protectedEndpoints": 41,
+    "services": [
+      {
+        "service": "identity-service",
+        "operations": 15,
+        "publicEndpoints": 4,
+        "protectedEndpoints": 11
+      },
+      {
+        "service": "user-group-service",
+        "operations": 22,
+        "publicEndpoints": 0,
+        "protectedEndpoints": 22
+      },
+      {
+        "service": "project-config-service",
+        "operations": 8,
+        "publicEndpoints": 0,
+        "protectedEndpoints": 8
+      }
+    ]
+  },
+  "gatewayRoutes": [
+    {
+      "id": "identity-jwks",
+      "pathPatterns": [
+        "/.well-known/jwks.json"
+      ],
+      "uriTarget": "identityServiceUri",
+      "stripPrefix": 0
+    },
+    {
+      "id": "identity-swagger",
+      "pathPatterns": [
+        "/identity/v3/api-docs/**",
+        "/identity/v3/api-docs"
+      ],
+      "uriTarget": "identityServiceUri",
+      "stripPrefix": 1
+    },
+    {
+      "id": "user-group-swagger",
+      "pathPatterns": [
+        "/user-group/v3/api-docs/**",
+        "/user-group/v3/api-docs"
+      ],
+      "uriTarget": "userGroupServiceUri",
+      "stripPrefix": 1
+    },
+    {
+      "id": "project-config-swagger",
+      "pathPatterns": [
+        "/project-config/v3/api-docs/**",
+        "/project-config/v3/api-docs"
+      ],
+      "uriTarget": "projectConfigServiceUri",
+      "stripPrefix": 1
+    },
+    {
+      "id": "sync-swagger",
+      "pathPatterns": [
+        "/sync/v3/api-docs/**",
+        "/sync/v3/api-docs"
+      ],
+      "uriTarget": "syncServiceUri",
+      "stripPrefix": 1
+    },
+    {
+      "id": "analysis-swagger",
+      "pathPatterns": [
+        "/analysis/v3/api-docs/**",
+        "/analysis/v3/api-docs"
+      ],
+      "uriTarget": "analysisServiceUri",
+      "stripPrefix": 1
+    },
+    {
+      "id": "report-swagger",
+      "pathPatterns": [
+        "/report/v3/api-docs/**",
+        "/report/v3/api-docs"
+      ],
+      "uriTarget": "reportServiceUri",
+      "stripPrefix": 1
+    },
+    {
+      "id": "notification-swagger",
+      "pathPatterns": [
+        "/notification/v3/api-docs/**",
+        "/notification/v3/api-docs"
+      ],
+      "uriTarget": "notificationServiceUri",
+      "stripPrefix": 1
+    },
+    {
+      "id": "identity-login",
+      "pathPatterns": [
+        "/api/identity/login"
+      ],
+      "uriTarget": "identityServiceUri",
+      "stripPrefix": 2
+    },
+    {
+      "id": "identity-auth-login",
+      "pathPatterns": [
+        "/api/auth/login"
+      ],
+      "uriTarget": "identityServiceUri",
+      "stripPrefix": 0
+    },
+    {
+      "id": "identity-auth-api",
+      "pathPatterns": [
+        "/api/auth/**",
+        "/api/admin/**"
+      ],
+      "uriTarget": "identityServiceUri",
+      "stripPrefix": 0
+    },
+    {
+      "id": "identity-service-api",
+      "pathPatterns": [
+        "/api/identity/**"
+      ],
+      "uriTarget": "identityServiceUri",
+      "stripPrefix": 2
+    },
+    {
+      "id": "user-group-service-api",
+      "pathPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "uriTarget": "userGroupServiceUri",
+      "stripPrefix": 0
+    },
+    {
+      "id": "project-config-service-api",
+      "pathPatterns": [
+        "/api/project-configs/**"
+      ],
+      "uriTarget": "projectConfigServiceUri",
+      "stripPrefix": 0
+    },
+    {
+      "id": "sync-service-api",
+      "pathPatterns": [
+        "/api/sync/**"
+      ],
+      "uriTarget": "syncServiceUri",
+      "stripPrefix": 0
+    },
+    {
+      "id": "analysis-service-api",
+      "pathPatterns": [
+        "/api/analysis/**"
+      ],
+      "uriTarget": "analysisServiceUri",
+      "stripPrefix": 2
+    },
+    {
+      "id": "report-service-api",
+      "pathPatterns": [
+        "/api/reports/**"
+      ],
+      "uriTarget": "reportServiceUri",
+      "stripPrefix": 2
+    },
+    {
+      "id": "notification-service-api",
+      "pathPatterns": [
+        "/api/notifications/**"
+      ],
+      "uriTarget": "notificationServiceUri",
+      "stripPrefix": 2
+    }
+  ],
+  "publicPaths": {
+    "exact": [
+      "/api/auth/register",
+      "/api/auth/login",
+      "/api/auth/refresh",
+      "/actuator/health",
+      "/.well-known/internal-jwks.json",
+      "/.well-known/jwks.json",
+      "/swagger-ui.html",
+      "/swagger-resources"
+    ],
+    "prefixes": [
+      "/swagger-ui/",
+      "/v3/api-docs",
+      "/webjars/",
+      "/swagger-resources/",
+      "/identity/v3/api-docs",
+      "/user-group/v3/api-docs",
+      "/project-config/v3/api-docs",
+      "/sync/v3/api-docs",
+      "/analysis/v3/api-docs",
+      "/report/v3/api-docs",
+      "/notification/v3/api-docs",
+      "/__gateway/fallback/",
+      "/v3/api-docs/",
+      "/identity/v3/api-docs/",
+      "/user-group/v3/api-docs/",
+      "/project-config/v3/api-docs/",
+      "/sync/v3/api-docs/",
+      "/analysis/v3/api-docs/",
+      "/report/v3/api-docs/",
+      "/notification/v3/api-docs/"
+    ]
+  },
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/.well-known/jwks.json",
+      "summary": null,
+      "operationId": "jwks",
+      "tags": [
+        "jwks-controller"
+      ],
+      "service": "identity-service",
+      "gatewayRouteId": "identity-jwks",
+      "gatewayPatterns": [
+        "/.well-known/jwks.json"
+      ],
+      "controllerFile": "identity-service/src/main/java/com/example/identityservice/controller/JwksController.java",
+      "handler": "jwks",
+      "rolesExpression": null,
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": false,
+      "testCoverage": {
+        "generatedSuite": null,
+        "legacySuite": []
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/audit/actor/{actorId}",
+      "summary": "Get audit logs by actor",
+      "operationId": "getAuditByActor",
+      "tags": [
+        "Admin"
+      ],
+      "service": "identity-service",
+      "gatewayRouteId": "identity-auth-api",
+      "gatewayPatterns": [
+        "/api/auth/**",
+        "/api/admin/**"
+      ],
+      "controllerFile": "identity-service/src/main/java/com/example/identityservice/controller/AdminController.java",
+      "handler": "getAuditByActor",
+      "rolesExpression": null,
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-auth.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/audit/entity/{entityType}/{entityId}",
+      "summary": "Get audit logs for entity",
+      "operationId": "getAuditByEntity",
+      "tags": [
+        "Admin"
+      ],
+      "service": "identity-service",
+      "gatewayRouteId": "identity-auth-api",
+      "gatewayPatterns": [
+        "/api/auth/**",
+        "/api/admin/**"
+      ],
+      "controllerFile": "identity-service/src/main/java/com/example/identityservice/controller/AdminController.java",
+      "handler": "getAuditByEntity",
+      "rolesExpression": null,
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-auth.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/audit/range",
+      "summary": "Get audit logs by date range",
+      "operationId": "getAuditByDateRange",
+      "tags": [
+        "Admin"
+      ],
+      "service": "identity-service",
+      "gatewayRouteId": "identity-auth-api",
+      "gatewayPatterns": [
+        "/api/auth/**",
+        "/api/admin/**"
+      ],
+      "controllerFile": "identity-service/src/main/java/com/example/identityservice/controller/AdminController.java",
+      "handler": "getAuditByDateRange",
+      "rolesExpression": null,
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-auth.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/audit/security-events",
+      "summary": "Get security events",
+      "operationId": "getSecurityEvents",
+      "tags": [
+        "Admin"
+      ],
+      "service": "identity-service",
+      "gatewayRouteId": "identity-auth-api",
+      "gatewayPatterns": [
+        "/api/auth/**",
+        "/api/admin/**"
+      ],
+      "controllerFile": "identity-service/src/main/java/com/example/identityservice/controller/AdminController.java",
+      "handler": "getSecurityEvents",
+      "rolesExpression": null,
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-auth.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/users",
+      "summary": "Create user account (Admin only)",
+      "operationId": "createUser",
+      "tags": [
+        "Admin"
+      ],
+      "service": "identity-service",
+      "gatewayRouteId": "identity-auth-api",
+      "gatewayPatterns": [
+        "/api/auth/**",
+        "/api/admin/**"
+      ],
+      "controllerFile": "identity-service/src/main/java/com/example/identityservice/controller/AdminController.java",
+      "handler": "createUser",
+      "rolesExpression": "hasRole('ADMIN')",
+      "requestBodySchema": "#/components/schemas/identity_AdminCreateUserRequest",
+      "responseCodes": [
+        "201",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-auth.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/users/{userId}",
+      "summary": "Soft delete user",
+      "operationId": "deleteUser",
+      "tags": [
+        "Admin"
+      ],
+      "service": "identity-service",
+      "gatewayRouteId": "identity-auth-api",
+      "gatewayPatterns": [
+        "/api/auth/**",
+        "/api/admin/**"
+      ],
+      "controllerFile": "identity-service/src/main/java/com/example/identityservice/controller/AdminController.java",
+      "handler": "deleteUser",
+      "rolesExpression": null,
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-auth.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/users/{userId}/external-accounts",
+      "summary": "Map/unmap external accounts",
+      "operationId": "updateExternalAccounts",
+      "tags": [
+        "Admin"
+      ],
+      "service": "identity-service",
+      "gatewayRouteId": "identity-auth-api",
+      "gatewayPatterns": [
+        "/api/auth/**",
+        "/api/admin/**"
+      ],
+      "controllerFile": "identity-service/src/main/java/com/example/identityservice/controller/AdminController.java",
+      "handler": "updateExternalAccounts",
+      "rolesExpression": null,
+      "requestBodySchema": "#/components/schemas/identity_ExternalAccountsRequest",
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-auth.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/users/{userId}/lock",
+      "summary": "Lock user account",
+      "operationId": "lockUser",
+      "tags": [
+        "Admin"
+      ],
+      "service": "identity-service",
+      "gatewayRouteId": "identity-auth-api",
+      "gatewayPatterns": [
+        "/api/auth/**",
+        "/api/admin/**"
+      ],
+      "controllerFile": "identity-service/src/main/java/com/example/identityservice/controller/AdminController.java",
+      "handler": "lockUser",
+      "rolesExpression": null,
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-auth.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/users/{userId}/restore",
+      "summary": "Restore deleted user",
+      "operationId": "restoreUser",
+      "tags": [
+        "Admin"
+      ],
+      "service": "identity-service",
+      "gatewayRouteId": "identity-auth-api",
+      "gatewayPatterns": [
+        "/api/auth/**",
+        "/api/admin/**"
+      ],
+      "controllerFile": "identity-service/src/main/java/com/example/identityservice/controller/AdminController.java",
+      "handler": "restoreUser",
+      "rolesExpression": null,
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-auth.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/users/{userId}/unlock",
+      "summary": "Unlock user account",
+      "operationId": "unlockUser",
+      "tags": [
+        "Admin"
+      ],
+      "service": "identity-service",
+      "gatewayRouteId": "identity-auth-api",
+      "gatewayPatterns": [
+        "/api/auth/**",
+        "/api/admin/**"
+      ],
+      "controllerFile": "identity-service/src/main/java/com/example/identityservice/controller/AdminController.java",
+      "handler": "unlockUser",
+      "rolesExpression": null,
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-auth.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "summary": "Login user",
+      "operationId": "login",
+      "tags": [
+        "auth-controller"
+      ],
+      "service": "identity-service",
+      "gatewayRouteId": "identity-auth-login",
+      "gatewayPatterns": [
+        "/api/auth/login"
+      ],
+      "controllerFile": "identity-service/src/main/java/com/example/identityservice/controller/AuthController.java",
+      "handler": "login",
+      "rolesExpression": null,
+      "requestBodySchema": "#/components/schemas/identity_LoginRequest",
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": false,
+      "testCoverage": {
+        "generatedSuite": "tests/api-auth.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout",
+      "summary": "Logout user",
+      "operationId": "logout",
+      "tags": [
+        "auth-controller"
+      ],
+      "service": "identity-service",
+      "gatewayRouteId": "identity-auth-api",
+      "gatewayPatterns": [
+        "/api/auth/**",
+        "/api/admin/**"
+      ],
+      "controllerFile": "identity-service/src/main/java/com/example/identityservice/controller/AuthController.java",
+      "handler": "logout",
+      "rolesExpression": null,
+      "requestBodySchema": "#/components/schemas/identity_LogoutRequest",
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-auth.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/refresh",
+      "summary": "Refresh access token",
+      "operationId": "refresh",
+      "tags": [
+        "auth-controller"
+      ],
+      "service": "identity-service",
+      "gatewayRouteId": "identity-auth-api",
+      "gatewayPatterns": [
+        "/api/auth/**",
+        "/api/admin/**"
+      ],
+      "controllerFile": "identity-service/src/main/java/com/example/identityservice/controller/AuthController.java",
+      "handler": "refresh",
+      "rolesExpression": null,
+      "requestBodySchema": "#/components/schemas/identity_RefreshTokenRequest",
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": false,
+      "testCoverage": {
+        "generatedSuite": "tests/api-auth.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/register",
+      "summary": "Register user",
+      "operationId": "register",
+      "tags": [
+        "auth-controller"
+      ],
+      "service": "identity-service",
+      "gatewayRouteId": "identity-auth-api",
+      "gatewayPatterns": [
+        "/api/auth/**",
+        "/api/admin/**"
+      ],
+      "controllerFile": "identity-service/src/main/java/com/example/identityservice/controller/AuthController.java",
+      "handler": "register",
+      "rolesExpression": null,
+      "requestBodySchema": "#/components/schemas/identity_RegisterRequest",
+      "responseCodes": [
+        "201",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": false,
+      "testCoverage": {
+        "generatedSuite": "tests/api-auth.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/groups",
+      "summary": null,
+      "operationId": "listGroups",
+      "tags": [
+        "group-controller"
+      ],
+      "service": "user-group-service",
+      "gatewayRouteId": "user-group-service-api",
+      "gatewayPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "controllerFile": "user-group-service/src/main/java/com/example/user_groupservice/controller/GroupController.java",
+      "handler": "listGroups",
+      "rolesExpression": "isAuthenticated()",
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-groups.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/groups",
+      "summary": null,
+      "operationId": "createGroup",
+      "tags": [
+        "group-controller"
+      ],
+      "service": "user-group-service",
+      "gatewayRouteId": "user-group-service-api",
+      "gatewayPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "controllerFile": "user-group-service/src/main/java/com/example/user_groupservice/controller/GroupController.java",
+      "handler": "createGroup",
+      "rolesExpression": "hasRole('ADMIN')",
+      "requestBodySchema": "#/components/schemas/userGroup_CreateGroupRequest",
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-groups.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/groups/{groupId}",
+      "summary": null,
+      "operationId": "deleteGroup",
+      "tags": [
+        "group-controller"
+      ],
+      "service": "user-group-service",
+      "gatewayRouteId": "user-group-service-api",
+      "gatewayPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "controllerFile": "user-group-service/src/main/java/com/example/user_groupservice/controller/GroupController.java",
+      "handler": "deleteGroup",
+      "rolesExpression": "hasRole('ADMIN')",
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "204",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-groups.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/groups/{groupId}",
+      "summary": null,
+      "operationId": "getGroupById",
+      "tags": [
+        "group-controller"
+      ],
+      "service": "user-group-service",
+      "gatewayRouteId": "user-group-service-api",
+      "gatewayPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "controllerFile": "user-group-service/src/main/java/com/example/user_groupservice/controller/GroupController.java",
+      "handler": "getGroupById",
+      "rolesExpression": "isAuthenticated()",
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-groups.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/groups/{groupId}",
+      "summary": null,
+      "operationId": "updateGroup",
+      "tags": [
+        "group-controller"
+      ],
+      "service": "user-group-service",
+      "gatewayRouteId": "user-group-service-api",
+      "gatewayPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "controllerFile": "user-group-service/src/main/java/com/example/user_groupservice/controller/GroupController.java",
+      "handler": "updateGroup",
+      "rolesExpression": "hasRole('ADMIN')",
+      "requestBodySchema": "#/components/schemas/userGroup_UpdateGroupRequest",
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-groups.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/groups/{groupId}/lecturer",
+      "summary": null,
+      "operationId": "updateGroupLecturer",
+      "tags": [
+        "group-controller"
+      ],
+      "service": "user-group-service",
+      "gatewayRouteId": "user-group-service-api",
+      "gatewayPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "controllerFile": "user-group-service/src/main/java/com/example/user_groupservice/controller/GroupController.java",
+      "handler": "updateGroupLecturer",
+      "rolesExpression": "hasRole('ADMIN')",
+      "requestBodySchema": "#/components/schemas/userGroup_UpdateLecturerRequest",
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-groups.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/groups/{groupId}/members",
+      "summary": null,
+      "operationId": "getGroupMembers",
+      "tags": [
+        "group-member-controller"
+      ],
+      "service": "user-group-service",
+      "gatewayRouteId": "user-group-service-api",
+      "gatewayPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "controllerFile": "user-group-service/src/main/java/com/example/user_groupservice/controller/GroupMemberController.java",
+      "handler": "getGroupMembers",
+      "rolesExpression": "isAuthenticated()",
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-groups.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/groups/{groupId}/members",
+      "summary": null,
+      "operationId": "addMember",
+      "tags": [
+        "group-member-controller"
+      ],
+      "service": "user-group-service",
+      "gatewayRouteId": "user-group-service-api",
+      "gatewayPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "controllerFile": "user-group-service/src/main/java/com/example/user_groupservice/controller/GroupMemberController.java",
+      "handler": "addMember",
+      "rolesExpression": "hasRole('ADMIN') or hasRole('LECTURER')",
+      "requestBodySchema": "#/components/schemas/userGroup_AddMemberRequest",
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-groups.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/groups/{groupId}/members/{userId}",
+      "summary": null,
+      "operationId": "removeMember",
+      "tags": [
+        "group-member-controller"
+      ],
+      "service": "user-group-service",
+      "gatewayRouteId": "user-group-service-api",
+      "gatewayPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "controllerFile": "user-group-service/src/main/java/com/example/user_groupservice/controller/GroupMemberController.java",
+      "handler": "removeMember",
+      "rolesExpression": "hasRole('ADMIN')",
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "204",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-groups.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/groups/{groupId}/members/{userId}/demote",
+      "summary": null,
+      "operationId": "demoteToMember",
+      "tags": [
+        "group-member-controller"
+      ],
+      "service": "user-group-service",
+      "gatewayRouteId": "user-group-service-api",
+      "gatewayPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "controllerFile": "user-group-service/src/main/java/com/example/user_groupservice/controller/GroupMemberController.java",
+      "handler": "demoteToMember",
+      "rolesExpression": "hasRole('ADMIN') or hasRole('LECTURER')",
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-groups.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/groups/{groupId}/members/{userId}/promote",
+      "summary": null,
+      "operationId": "promoteToLeader",
+      "tags": [
+        "group-member-controller"
+      ],
+      "service": "user-group-service",
+      "gatewayRouteId": "user-group-service-api",
+      "gatewayPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "controllerFile": "user-group-service/src/main/java/com/example/user_groupservice/controller/GroupMemberController.java",
+      "handler": "promoteToLeader",
+      "rolesExpression": "hasRole('ADMIN') or hasRole('LECTURER')",
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-groups.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/project-configs",
+      "summary": "Create configuration",
+      "operationId": "createConfig",
+      "tags": [
+        "project-config-controller"
+      ],
+      "service": "project-config-service",
+      "gatewayRouteId": "project-config-service-api",
+      "gatewayPatterns": [
+        "/api/project-configs/**"
+      ],
+      "controllerFile": "project-config-service/src/main/java/com/samt/projectconfig/controller/ProjectConfigController.java",
+      "handler": "createConfig",
+      "rolesExpression": null,
+      "requestBodySchema": "#/components/schemas/projectConfig_CreateConfigRequest",
+      "responseCodes": [
+        "201",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500",
+        "503"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-project-configs.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/project-configs/{id}",
+      "summary": null,
+      "operationId": "deleteConfig",
+      "tags": [
+        "project-config-controller"
+      ],
+      "service": "project-config-service",
+      "gatewayRouteId": "project-config-service-api",
+      "gatewayPatterns": [
+        "/api/project-configs/**"
+      ],
+      "controllerFile": "project-config-service/src/main/java/com/samt/projectconfig/controller/ProjectConfigController.java",
+      "handler": "deleteConfig",
+      "rolesExpression": null,
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-project-configs.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/project-configs/{id}",
+      "summary": "Get configuration by id",
+      "operationId": "getConfig",
+      "tags": [
+        "project-config-controller"
+      ],
+      "service": "project-config-service",
+      "gatewayRouteId": "project-config-service-api",
+      "gatewayPatterns": [
+        "/api/project-configs/**"
+      ],
+      "controllerFile": "project-config-service/src/main/java/com/samt/projectconfig/controller/ProjectConfigController.java",
+      "handler": "getConfig",
+      "rolesExpression": null,
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-project-configs.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/project-configs/{id}",
+      "summary": null,
+      "operationId": "updateConfig",
+      "tags": [
+        "project-config-controller"
+      ],
+      "service": "project-config-service",
+      "gatewayRouteId": "project-config-service-api",
+      "gatewayPatterns": [
+        "/api/project-configs/**"
+      ],
+      "controllerFile": "project-config-service/src/main/java/com/samt/projectconfig/controller/ProjectConfigController.java",
+      "handler": "updateConfig",
+      "rolesExpression": null,
+      "requestBodySchema": "#/components/schemas/projectConfig_UpdateConfigRequest",
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-project-configs.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/project-configs/{id}/verify",
+      "summary": "Verify configuration",
+      "operationId": "verifyConfig",
+      "tags": [
+        "project-config-controller"
+      ],
+      "service": "project-config-service",
+      "gatewayRouteId": "project-config-service-api",
+      "gatewayPatterns": [
+        "/api/project-configs/**"
+      ],
+      "controllerFile": "project-config-service/src/main/java/com/samt/projectconfig/controller/ProjectConfigController.java",
+      "handler": "verifyConfig",
+      "rolesExpression": null,
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500",
+        "503"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-project-configs.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/project-configs/admin/{id}/restore",
+      "summary": null,
+      "operationId": "restoreConfig",
+      "tags": [
+        "project-config-controller"
+      ],
+      "service": "project-config-service",
+      "gatewayRouteId": "project-config-service-api",
+      "gatewayPatterns": [
+        "/api/project-configs/**"
+      ],
+      "controllerFile": "project-config-service/src/main/java/com/samt/projectconfig/controller/ProjectConfigController.java",
+      "handler": "restoreConfig",
+      "rolesExpression": null,
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-project-configs.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/project-configs/group/{groupId}",
+      "summary": null,
+      "operationId": "getConfigByGroupId",
+      "tags": [
+        "project-config-controller"
+      ],
+      "service": "project-config-service",
+      "gatewayRouteId": "project-config-service-api",
+      "gatewayPatterns": [
+        "/api/project-configs/**"
+      ],
+      "controllerFile": "project-config-service/src/main/java/com/samt/projectconfig/controller/ProjectConfigController.java",
+      "handler": "getConfigByGroupId",
+      "rolesExpression": null,
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-project-configs.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/semesters",
+      "summary": null,
+      "operationId": "listAllSemesters",
+      "tags": [
+        "semester-controller"
+      ],
+      "service": "user-group-service",
+      "gatewayRouteId": "user-group-service-api",
+      "gatewayPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "controllerFile": "user-group-service/src/main/java/com/example/user_groupservice/controller/SemesterController.java",
+      "handler": "listAllSemesters",
+      "rolesExpression": "isAuthenticated()",
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-semesters.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/semesters",
+      "summary": null,
+      "operationId": "createSemester",
+      "tags": [
+        "semester-controller"
+      ],
+      "service": "user-group-service",
+      "gatewayRouteId": "user-group-service-api",
+      "gatewayPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "controllerFile": "user-group-service/src/main/java/com/example/user_groupservice/controller/SemesterController.java",
+      "handler": "createSemester",
+      "rolesExpression": "hasRole('ADMIN')",
+      "requestBodySchema": "#/components/schemas/userGroup_CreateSemesterRequest",
+      "responseCodes": [
+        "201",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-semesters.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/semesters/{id}",
+      "summary": null,
+      "operationId": "getSemesterById",
+      "tags": [
+        "semester-controller"
+      ],
+      "service": "user-group-service",
+      "gatewayRouteId": "user-group-service-api",
+      "gatewayPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "controllerFile": "user-group-service/src/main/java/com/example/user_groupservice/controller/SemesterController.java",
+      "handler": "getSemesterById",
+      "rolesExpression": "isAuthenticated()",
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-semesters.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/semesters/{id}",
+      "summary": null,
+      "operationId": "updateSemester",
+      "tags": [
+        "semester-controller"
+      ],
+      "service": "user-group-service",
+      "gatewayRouteId": "user-group-service-api",
+      "gatewayPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "controllerFile": "user-group-service/src/main/java/com/example/user_groupservice/controller/SemesterController.java",
+      "handler": "updateSemester",
+      "rolesExpression": "hasRole('ADMIN')",
+      "requestBodySchema": "#/components/schemas/userGroup_UpdateSemesterRequest",
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-semesters.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/semesters/{id}/activate",
+      "summary": null,
+      "operationId": "activateSemester",
+      "tags": [
+        "semester-controller"
+      ],
+      "service": "user-group-service",
+      "gatewayRouteId": "user-group-service-api",
+      "gatewayPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "controllerFile": "user-group-service/src/main/java/com/example/user_groupservice/controller/SemesterController.java",
+      "handler": "activateSemester",
+      "rolesExpression": "hasRole('ADMIN')",
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "204",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-semesters.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/semesters/active",
+      "summary": null,
+      "operationId": "getActiveSemester",
+      "tags": [
+        "semester-controller"
+      ],
+      "service": "user-group-service",
+      "gatewayRouteId": "user-group-service-api",
+      "gatewayPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "controllerFile": "user-group-service/src/main/java/com/example/user_groupservice/controller/SemesterController.java",
+      "handler": "getActiveSemester",
+      "rolesExpression": "isAuthenticated()",
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-semesters.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/semesters/code/{code}",
+      "summary": null,
+      "operationId": "getSemesterByCode",
+      "tags": [
+        "semester-controller"
+      ],
+      "service": "user-group-service",
+      "gatewayRouteId": "user-group-service-api",
+      "gatewayPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "controllerFile": "user-group-service/src/main/java/com/example/user_groupservice/controller/SemesterController.java",
+      "handler": "getSemesterByCode",
+      "rolesExpression": "isAuthenticated()",
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-semesters.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/users",
+      "summary": null,
+      "operationId": "listUsers",
+      "tags": [
+        "user-controller"
+      ],
+      "service": "user-group-service",
+      "gatewayRouteId": "user-group-service-api",
+      "gatewayPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "controllerFile": "user-group-service/src/main/java/com/example/user_groupservice/controller/UserController.java",
+      "handler": "listUsers",
+      "rolesExpression": "hasRole('ADMIN')",
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-groups.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/{userId}",
+      "summary": null,
+      "operationId": "getUserById",
+      "tags": [
+        "user-controller"
+      ],
+      "service": "user-group-service",
+      "gatewayRouteId": "user-group-service-api",
+      "gatewayPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "controllerFile": "user-group-service/src/main/java/com/example/user_groupservice/controller/UserController.java",
+      "handler": "getUserById",
+      "rolesExpression": "isAuthenticated()",
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-groups.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/users/{userId}",
+      "summary": null,
+      "operationId": "updateUser",
+      "tags": [
+        "user-controller"
+      ],
+      "service": "user-group-service",
+      "gatewayRouteId": "user-group-service-api",
+      "gatewayPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "controllerFile": "user-group-service/src/main/java/com/example/user_groupservice/controller/UserController.java",
+      "handler": "updateUser",
+      "rolesExpression": "isAuthenticated()",
+      "requestBodySchema": "#/components/schemas/userGroup_UpdateUserRequest",
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-groups.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/{userId}/groups",
+      "summary": null,
+      "operationId": "getUserGroups",
+      "tags": [
+        "user-controller"
+      ],
+      "service": "user-group-service",
+      "gatewayRouteId": "user-group-service-api",
+      "gatewayPatterns": [
+        "/api/groups/**",
+        "/api/users/**",
+        "/api/semesters/**"
+      ],
+      "controllerFile": "user-group-service/src/main/java/com/example/user_groupservice/controller/UserController.java",
+      "handler": "getUserGroups",
+      "rolesExpression": "isAuthenticated()",
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": "tests/api-groups.http",
+        "legacySuite": [
+          "api-smoke.http",
+          "api-regression.http"
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/internal/project-configs/{id}/tokens",
+      "summary": null,
+      "operationId": "getDecryptedTokens",
+      "tags": [
+        "internal-config-controller"
+      ],
+      "service": "project-config-service",
+      "gatewayRouteId": null,
+      "gatewayPatterns": [],
+      "controllerFile": "project-config-service/src/main/java/com/samt/projectconfig/controller/InternalConfigController.java",
+      "handler": "getDecryptedTokens",
+      "rolesExpression": "authentication != null and authentication.name == 'sync-service'",
+      "requestBodySchema": null,
+      "responseCodes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "404",
+        "409",
+        "500"
+      ],
+      "requiresAuth": true,
+      "testCoverage": {
+        "generatedSuite": null,
+        "legacySuite": []
+      }
+    }
+  ]
+}

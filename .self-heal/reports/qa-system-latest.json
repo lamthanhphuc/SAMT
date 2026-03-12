@@ -1,0 +1,288 @@
+{
+  "generatedAt": "2026-03-12T04:48:36.554Z",
+  "completedAt": null,
+  "baseUrl": "http://localhost:9080",
+  "composeRecoveryEnabled": false,
+  "autoFixEnabled": true,
+  "maxIterations": 3,
+  "finalStatus": "failed",
+  "iterations": [
+    {
+      "iteration": 1,
+      "status": "failed",
+      "stages": [
+        {
+          "id": "discover",
+          "command": "node scripts/qa-discover.mjs",
+          "iteration": 1,
+          "attempt": 1,
+          "status": 0,
+          "durationMs": 497,
+          "recovery": null,
+          "outputFile": ".self-heal/reports/qa-system-latest-iter1-discover-attempt1.log"
+        },
+        {
+          "id": "openapi",
+          "command": "npm run openapi:generate",
+          "iteration": 1,
+          "attempt": 1,
+          "status": 0,
+          "durationMs": 1220,
+          "recovery": null,
+          "outputFile": ".self-heal/reports/qa-system-latest-iter1-openapi-attempt1.log"
+        },
+        {
+          "id": "generate-tests",
+          "command": "npm run tests:generate",
+          "iteration": 1,
+          "attempt": 1,
+          "status": 0,
+          "durationMs": 1015,
+          "recovery": null,
+          "outputFile": ".self-heal/reports/qa-system-latest-iter1-generate-tests-attempt1.log"
+        },
+        {
+          "id": "security",
+          "command": "node scripts/qa-security-probe.mjs",
+          "iteration": 1,
+          "attempt": 1,
+          "status": 0,
+          "durationMs": 583,
+          "recovery": null,
+          "outputFile": ".self-heal/reports/qa-system-latest-iter1-security-attempt1.log"
+        },
+        {
+          "id": "bootstrap",
+          "command": "npm run tests:bootstrap",
+          "iteration": 1,
+          "attempt": 1,
+          "status": 0,
+          "durationMs": 3249,
+          "recovery": null,
+          "outputFile": ".self-heal/reports/qa-system-latest-iter1-bootstrap-attempt1.log"
+        },
+        {
+          "id": "fixtures",
+          "command": "npm run tests:fixtures",
+          "iteration": 1,
+          "attempt": 1,
+          "status": 0,
+          "durationMs": 3690,
+          "recovery": null,
+          "outputFile": ".self-heal/reports/qa-system-latest-iter1-fixtures-attempt1.log"
+        },
+        {
+          "id": "smoke",
+          "command": "npm run test:smoke",
+          "iteration": 1,
+          "attempt": 1,
+          "status": 0,
+          "durationMs": 2522,
+          "recovery": null,
+          "outputFile": ".self-heal/reports/qa-system-latest-iter1-smoke-attempt1.log"
+        },
+        {
+          "id": "regression",
+          "command": "npm run tests:regression",
+          "iteration": 1,
+          "attempt": 1,
+          "status": 0,
+          "durationMs": 227424,
+          "recovery": null,
+          "outputFile": ".self-heal/reports/qa-system-latest-iter1-regression-attempt1.log"
+        },
+        {
+          "id": "contract",
+          "command": "npm run tests:contract:strict",
+          "iteration": 1,
+          "attempt": 1,
+          "status": 1,
+          "durationMs": 108060,
+          "recovery": null,
+          "outputFile": ".self-heal/reports/qa-system-latest-iter1-contract-attempt1.log"
+        },
+        {
+          "id": "contract-self-heal",
+          "command": "node scripts/self-heal-orchestrator.mjs --ci --max-iterations=2",
+          "iteration": 1,
+          "attempt": 1,
+          "status": 1,
+          "durationMs": 290139,
+          "recovery": null,
+          "outputFile": ".self-heal/reports/qa-system-latest-iter1-contract-self-heal-attempt1.log"
+        },
+        {
+          "id": "contract",
+          "command": "npm run tests:contract:strict",
+          "iteration": 1,
+          "attempt": 2,
+          "status": 1,
+          "durationMs": 61180,
+          "recovery": {
+            "type": "self-heal"
+          },
+          "outputFile": ".self-heal/reports/qa-system-latest-iter1-contract-attempt2.log"
+        },
+        {
+          "id": "contract-auto-fix",
+          "command": "node scripts/qa-auto-fix.mjs",
+          "iteration": 1,
+          "attempt": 1,
+          "status": 0,
+          "durationMs": 280,
+          "recovery": null,
+          "outputFile": ".self-heal/reports/qa-system-latest-iter1-contract-auto-fix-attempt1.log"
+        }
+      ],
+      "autoFix": {
+        "status": "changed",
+        "outputFile": ".self-heal/reports/qa-system-latest-iter1-contract-auto-fix-attempt1.log"
+      },
+      "failure": {
+        "stageId": "contract",
+        "outputFile": ".self-heal/reports/qa-system-latest-iter1-contract-attempt2.log"
+      }
+    }
+  ],
+  "stages": [
+    {
+      "id": "discover",
+      "command": "node scripts/qa-discover.mjs",
+      "iteration": 1,
+      "attempt": 1,
+      "status": 0,
+      "durationMs": 497,
+      "recovery": null,
+      "outputFile": ".self-heal/reports/qa-system-latest-iter1-discover-attempt1.log"
+    },
+    {
+      "id": "openapi",
+      "command": "npm run openapi:generate",
+      "iteration": 1,
+      "attempt": 1,
+      "status": 0,
+      "durationMs": 1220,
+      "recovery": null,
+      "outputFile": ".self-heal/reports/qa-system-latest-iter1-openapi-attempt1.log"
+    },
+    {
+      "id": "generate-tests",
+      "command": "npm run tests:generate",
+      "iteration": 1,
+      "attempt": 1,
+      "status": 0,
+      "durationMs": 1015,
+      "recovery": null,
+      "outputFile": ".self-heal/reports/qa-system-latest-iter1-generate-tests-attempt1.log"
+    },
+    {
+      "id": "security",
+      "command": "node scripts/qa-security-probe.mjs",
+      "iteration": 1,
+      "attempt": 1,
+      "status": 0,
+      "durationMs": 583,
+      "recovery": null,
+      "outputFile": ".self-heal/reports/qa-system-latest-iter1-security-attempt1.log"
+    },
+    {
+      "id": "bootstrap",
+      "command": "npm run tests:bootstrap",
+      "iteration": 1,
+      "attempt": 1,
+      "status": 0,
+      "durationMs": 3249,
+      "recovery": null,
+      "outputFile": ".self-heal/reports/qa-system-latest-iter1-bootstrap-attempt1.log"
+    },
+    {
+      "id": "fixtures",
+      "command": "npm run tests:fixtures",
+      "iteration": 1,
+      "attempt": 1,
+      "status": 0,
+      "durationMs": 3690,
+      "recovery": null,
+      "outputFile": ".self-heal/reports/qa-system-latest-iter1-fixtures-attempt1.log"
+    },
+    {
+      "id": "smoke",
+      "command": "npm run test:smoke",
+      "iteration": 1,
+      "attempt": 1,
+      "status": 0,
+      "durationMs": 2522,
+      "recovery": null,
+      "outputFile": ".self-heal/reports/qa-system-latest-iter1-smoke-attempt1.log"
+    },
+    {
+      "id": "regression",
+      "command": "npm run tests:regression",
+      "iteration": 1,
+      "attempt": 1,
+      "status": 0,
+      "durationMs": 227424,
+      "recovery": null,
+      "outputFile": ".self-heal/reports/qa-system-latest-iter1-regression-attempt1.log"
+    },
+    {
+      "id": "contract",
+      "command": "npm run tests:contract:strict",
+      "iteration": 1,
+      "attempt": 1,
+      "status": 1,
+      "durationMs": 108060,
+      "recovery": null,
+      "outputFile": ".self-heal/reports/qa-system-latest-iter1-contract-attempt1.log"
+    },
+    {
+      "id": "contract-self-heal",
+      "command": "node scripts/self-heal-orchestrator.mjs --ci --max-iterations=2",
+      "iteration": 1,
+      "attempt": 1,
+      "status": 1,
+      "durationMs": 290139,
+      "recovery": null,
+      "outputFile": ".self-heal/reports/qa-system-latest-iter1-contract-self-heal-attempt1.log"
+    },
+    {
+      "id": "contract",
+      "command": "npm run tests:contract:strict",
+      "iteration": 1,
+      "attempt": 2,
+      "status": 1,
+      "durationMs": 61180,
+      "recovery": {
+        "type": "self-heal"
+      },
+      "outputFile": ".self-heal/reports/qa-system-latest-iter1-contract-attempt2.log"
+    },
+    {
+      "id": "contract-auto-fix",
+      "command": "node scripts/qa-auto-fix.mjs",
+      "iteration": 1,
+      "attempt": 1,
+      "status": 0,
+      "durationMs": 280,
+      "recovery": null,
+      "outputFile": ".self-heal/reports/qa-system-latest-iter1-contract-auto-fix-attempt1.log"
+    }
+  ],
+  "generatedArtifacts": [
+    "qa/endpoints.json",
+    "qa/endpoints.md",
+    ".self-heal/reports/security-probe.json",
+    ".self-heal/reports/load-test.json",
+    ".self-heal/reports/external-integrations.json",
+    ".self-heal/reports/contract-metrics.json",
+    ".self-heal/reports/fuzz-metrics.json",
+    ".self-heal/reports/auto-fix.json",
+    ".self-heal/reports/architecture-health.json",
+    ".self-heal/reports/qa-dashboard.json",
+    ".self-heal/reports/qa-dashboard.html"
+  ],
+  "failure": {
+    "stageId": "contract",
+    "outputFile": ".self-heal/reports/qa-system-latest-iter1-contract-attempt2.log"
+  }
+}

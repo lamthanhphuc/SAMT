@@ -1,0 +1,620 @@
+{
+  "generatedAt": "2026-03-12T05:00:16.399Z",
+  "sourceReport": ".self-heal/reports/qa-system-latest.json",
+  "summary": {
+    "total": 82,
+    "byCategory": {
+      "schema_mismatch": 51,
+      "authorization_failure": 20,
+      "invalid_payload_generated": 11
+    }
+  },
+  "classification": [
+    {
+      "category": "schema mismatch",
+      "count": 43
+    },
+    {
+      "category": "authorization failure",
+      "count": 20
+    },
+    {
+      "category": "missing required fields",
+      "count": 10
+    },
+    {
+      "category": "contract drift",
+      "count": 4
+    },
+    {
+      "category": "test payload errors",
+      "count": 4
+    },
+    {
+      "category": "invalid enum",
+      "count": 1
+    }
+  ],
+  "findings": [
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/admin/audit/entity/{entityType}/{entityId}",
+      "category": "schema mismatch",
+      "rootCause": "Network Error\n\nConnection failed\n\n    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/auth/logout",
+      "category": "schema mismatch",
+      "rootCause": "Network Error\n\nConnection failed\n\n    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/groups",
+      "category": "schema mismatch",
+      "rootCause": "Network Error\n\nConnection failed\n\n    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/groups/{groupId}/members",
+      "category": "schema mismatch",
+      "rootCause": "Network Error\n\nConnection failed\n\n    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable\n\nNeed more help?\n    Join our Discord server: https://discord.gg/R9ASRAmHnA\n=================================== FAILURES ===================================",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/groups",
+      "category": "authorization failure",
+      "rootCause": "1. Test Case ID: 8jpNfP\n\n- API rejected schema-compliant request\n\n    Valid data should have been accepted\n    Expected: 2xx, 401, 403, 404, 409, 5xx\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/validation-error\",\"title\":\"Validation failed\",\"status\":400,\"detail\":\"Validation failed\",\"instance\":\"/api/groups\",\"timestamp\":\"2026-03-12T04:53:29.674228080Z\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' 'http://api-gateway:8080/api/groups?page=0&semesterId=0&lecturerId=0'",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/groups",
+      "category": "missing required fields",
+      "rootCause": "1. Test Case ID: YZ2FGM\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/validation-error\",\"title\":\"Validation failed\",\"status\":400,\"detail\":\"Lecturer ID is required\",\"instance\":\"/api/groups\",\"timestamp\":\"2026-03-12T04:53:30.324781282Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"groupName\": \"AA00-G0\", \"semesterId\": 1}' http://api-gateway:8080/api/groups",
+      "minimalSafeChange": "Patch test payload templates to include the missing field while preserving existing request shape."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/semesters",
+      "category": "authorization failure",
+      "rootCause": "1. Test Case ID: EMxU1e\n\n- API accepted schema-violating request\n\n    Invalid data should have been rejected\n    Expected: 400, 401, 403, 404, 406, 422, 428, 5xx\n    Invalid component: in body - object with unexpected properties\n\n[201] Created:\n\n    `{\"timestamp\":\"2026-03-12T04:53:32.302218815Z\",\"status\":201,\"success\":true,\"data\":{\"id\":24,\"semesterCode\":\"0\",\"semesterName\":\"0\",\"startDate\":\"2000-01-01\",\"endDate\":\"2000-01-01\",\"isActive\":false,\"createdAt\":\"2026-03-12T04:53:32.225526991Z\",\"updatedAt\":\"2026-03-12T04:53:32.225528592Z\"},\"path\":\"/api/semesters\",\"correlationId\":\"7b27c70e-dc90-494b-a04d-54057a7e25f7\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"endDate\": \"2000-01-01\", \"semesterCode\": \"0\", \"semesterName\": \"0\", \"startDate\": \"2000-01-01\", \"x-schemathesis-unknown-property\": 42}' http://api-gateway:8080/api/semesters",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/admin/audit/security-events",
+      "category": "authorization failure",
+      "rootCause": "1. Test Case ID: zuHGdd\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[401] Unauthorized:\n\n    `{\"type\":\"https://api.example.com/errors/unauthorized\",\"title\":\"Unauthorized\",\"status\":401,\"detail\":\"Unauthorized\",\"instance\":\"/api/admin/audit/security-events\",\"timestamp\":\"2026-03-12T04:53:32.412697283Z\"}`\n\nReproduce with:\n\n    curl -X GET 'http://api-gateway:8080/api/admin/audit/security-events?arg0=page&arg0=size&arg0=sort'",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "put /api/semesters/active",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: jNBb5F\n\n- Unsupported methods\n\n    Unsupported method PUT returned 400, expected 405 Method Not Allowed\n\n    Return 405 for methods not listed in the OpenAPI spec\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/invalid-request\",\"title\":\"Invalid request\",\"status\":400,\"detail\":\"Invalid value for parameter 'id'\",\"instance\":\"/api/semesters/active\",\"timestamp\":\"2026-03-12T04:53:32.536295280Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' http://api-gateway:8080/api/semesters/active",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/semesters",
+      "category": "contract drift",
+      "rootCause": "1. Test Case ID: t6YAes\n\n- Response violates schema\n\n    {\"correlationId\":\"750e8f4f-2152-434c-bb64-812531791fd2\",\"data\":[{\"createdAt\":\"2026-03-12T02:12:59.615542Z\",\"endDate\":\"2026-08-31\",\"id\":13,\"isActive\":false,\"semesterCode\":\"REG1773281579609\",\"semesterName\":\"Regression Semester 1773281579609\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-12T02:13:02.151037Z\"},{\"createdAt\":\"2026-03-12T02:13:02.130112Z\",\"endDate\":\"2026-08-31\",\"id\":14,\"isActive\":false,\"semesterCode\":\"AUTO1773281582118\",\"semesterName\":\"Auto Semester 1773281582118\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-12T03:40:14.031915Z\"},{\"createdAt\":\"2026-03-11T04:37:45.032537Z\",\"endDate\":\"2026-08-31\",\"id\":3,\"isActive\":false,\"semesterCode\":\"AUTO1773203864\",\"semesterName\":\"Auto Semester 1773203864\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-11T04:38:12.376265Z\"},{\"createdAt\":\"2026-03-11T04:38:12.342341Z\",\"endDate\":\"2026-08-31\",\"id\":4,\"isActive\":false,\"semesterCode\":\"AUTO1773203892\",\"semesterName\":\"Auto Semester 1773203892\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-11T04:42:35.608046Z\"},{\"createdAt\":\"2026-03-11T04:42:35.317705Z\",\"endDate\":\"2026-08-31\",\"id\":5,\"isActive\":false,\"semesterCode\":\"AUTO1773204155\",\"semesterName\":\"Auto Semester 1773204155\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-11T04:42:53.863993Z\"},{\"createdAt\":\"2026-03-11T04:42:53.826368Z\",\"endDate\":\"2026-08-31\",\"id\":6,\"isActive\":false,\"semesterCode\":\"AUTO1773204173\",\"semesterName\":\"Auto Semester 1773204173\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-11T04:44:46.337821Z\"},{\"createdAt\":\"2026-03-11T04:44:46.309013Z\",\"endDate\":\"2026-08-31\",\"id\":7,\"isActive\":false,\"semesterCode\":\"AUTO1773204286\",\"semesterName\":\"Auto Semester 1773204286\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-11T04:45:43.069940Z\"},{\"createdAt\":\"2026-03-11T04:45:42.902807Z\",\"endDate\":\"2026-08-31\",\"id\":8,\"isActive\":false,\"semesterCode\":\"AUTO1773204342\",\"semesterName\":\"Auto Semester 1773204342\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-11T04:45:57.571780Z\"},{\"createdAt\":\"2026-03-11T04:45:57.544124Z\",\"endDate\":\"2026-08-31\",\"id\":9,\"isActive\":false,\"semesterCode\":\"AUTO1773204357\",\"semesterName\":\"Auto Semester 1773204357\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-11T07:15:31.161835Z\"},{\"createdAt\":\"2026-03-12T02:12:17.108628Z\",\"endDate\":\"2026-08-31\",\"id\":11,\"isActive\":false,\"semesterCode\":\"REG1773281537084\",\"semesterName\":\"Regression Semester 1773281537084\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-12T02:12:17.108628Z\"},{\"createdAt\":\"2026-03-12T02:12:25.241012Z\",\"endDate\":\"2026-08-31\",\"id\":12,\"isActive\":false,\"semesterCode\":\"AUTO1773281545225\",\"semesterName\":\"Auto Semester 1773281545225\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-12T02:12:25.241012Z\"},{\"createdAt\":\"2026-03-11T07:15:11.825177Z\",\"endDate\":\"2026-06-05\",\"id\":10,\"isActive\":true,\"semesterCode\":\"QA-2026-S1\",\"semesterName\":\"Updated Generated Semester\",\"startDate\":\"2026-01-20\",\"updatedAt\":\"2026-03-12T04:49:11.355545Z\"},{\"createdAt\":\"2026-03-12T04:47:15.260428Z\",\"endDate\":\"2026-05-30\",\"id\":23,\"isActive\":false,\"semesterCode\":\"QA5146-S1\",\"semesterName\":\"QA Load 1773290835146\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T04:49:11.355591Z\"},{\"createdAt\":\"2026-03-12T03:39:41.676674Z\",\"endDate\":\"2026-05-30\",\"id\":15,\"isActive\":false,\"semesterCode\":\"QA0109-S1\",\"semesterName\":\"QA Integration 2033940109\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T03:39:41.676676Z\"},{\"createdAt\":\"2026-03-12T03:40:13.947100Z\",\"endDate\":\"2026-05-30\",\"id\":16,\"isActive\":false,\"semesterCode\":\"QA3832-S1\",\"semesterName\":\"QA Integration 2034013832\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T03:46:45.507663Z\"},{\"createdAt\":\"2026-03-12T04:37:16.051915Z\",\"endDate\":\"2026-05-30\",\"id\":17,\"isActive\":false,\"semesterCode\":\"QA5751-S1\",\"semesterName\":\"QA Load 1773290235751\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T04:39:07.146902Z\"},{\"createdAt\":\"2026-03-12T04:39:07.118904Z\",\"endDate\":\"2026-05-30\",\"id\":18,\"isActive\":false,\"semesterCode\":\"QA6983-S1\",\"semesterName\":\"QA Load 1773290346983\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T04:40:32.070337Z\"},{\"createdAt\":\"2026-03-12T04:40:32.043317Z\",\"endDate\":\"2026-05-30\",\"id\":19,\"isActive\":false,\"semesterCode\":\"QA1912-S1\",\"semesterName\":\"QA Load 1773290431912\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T04:41:34.043783Z\"},{\"createdAt\":\"2026-03-12T04:41:34.019774Z\",\"endDate\":\"2026-05-30\",\"id\":20,\"isActive\":false,\"semesterCode\":\"QA3907-S1\",\"semesterName\":\"QA Load 1773290493907\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T04:42:36.058642Z\"},{\"createdAt\":\"2026-03-12T04:42:36.034765Z\",\"endDate\":\"2026-05-30\",\"id\":21,\"isActive\":false,\"semesterCode\":\"QA5914-S1\",\"semesterName\":\"QA Load 1773290555914\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T04:46:48.128699Z\"},{\"createdAt\":\"2026-03-12T04:46:48.097653Z\",\"endDate\":\"2026-05-30\",\"id\":22,\"isActive\":false,\"semesterCode\":\"QA7936-S1\",\"semesterName\":\"QA Load 1773290807936\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T04:47:15.283130Z\"},{\"createdAt\":\"2026-03-11T03:58:32.115378Z\",\"endDate\":\"2025-05-31\",\"id\":1,\"isActive\":false,\"semesterCode\":\"SPRING2025\",\"semesterName\":\"Spring Semester 2025\",\"startDate\":\"2025-01-01\",\"updatedAt\":\"2026-03-11T04:37:45.229636Z\"},{\"createdAt\":\"2026-03-11T03:58:32.115378Z\",\"endDate\":\"2024-12-31\",\"id\":2,\"isActive\":false,\"semesterCode\":\"FALL2024\",\"semesterName\":\"Fall Semester 2024\",\"startDate\":\"2024-09-01\",\"updatedAt\":\"2026-03-11T03:58:32.115378Z\"},{\"createdAt\":\"2026-03-12T04:53:32.225527Z\",\"endDate\":\"2000-01-01\",\"id\":24,\"isActive\":false,\"semesterCode\":\"0\",\"semesterName\":\"0\",\"startDate\":\"2000-01-01\",\"updatedAt\":\"2026-03-12T04:53:32.225529Z\"}],\"path\":\"/api/semesters\",\"status\":200,\"success\":true,\"timestamp\":\"2026-03-12T04:53:32.669128809Z\"} is not of type \"array\"\n\n    Schema:\n\n        {\n            \"type\": \"array\",\n            \"items\": {\n                \"$ref\": \"#/components/schemas/userGroup_SemesterResponse\"\n            },\n            \"components\": {\n                \"schemas\": {\n                    \"userGroup_SemesterResponse\": {\n                        \"type\": \"object\",\n                        \"properties\": {\n                            \"id\": {\n                                \"type\": \"integer\",\n                                \"format\": \"int64\"\n                            },\n                            \"semesterCode\": {\n                                \"type\": \"string\"\n                            },\n                            \"semesterName\": {\n                                \"type\": \"string\"\n            // Output truncated...\n        }\n\n    Value:\n\n        {\n            \"correlationId\": \"750e8f4f-2152-434c-bb64-812531791fd2\",\n            \"data\": [\n                {\n                    \"createdAt\": \"2026-03-12T02:12:59.615542Z\",\n                    \"endDate\": \"2026-08-31\",\n                    \"id\": 13,\n                    \"isActive\": false,\n                    \"semesterCode\": \"REG1773281579609\",\n                    \"semesterName\": \"Regression Semester 1773281579609\",\n                    \"startDate\": \"2026-06-01\",\n                    \"updatedAt\": \"2026-03-12T02:13:02.151037Z\"\n                },\n                {\n                    \"createdAt\": \"2026-03-12T02:13:02.130112Z\",\n                    \"endDate\": \"2026-08-31\",\n                    \"id\": 14,\n                    \"isActive\": false,\n                    \"semesterCode\": \"AUTO1773281582118\",\n            // Output truncated...\n        }\n\n[200] OK:\n\n    `{\"timestamp\":\"2026-03-12T04:53:32.669128809Z\",\"status\":200,\"success\":true,\"data\":[{\"id\":13,\"semesterCode\":\"REG1773281579609\",\"semesterName\":\"Regression Semester 1773281579609\",\"startDate\":\"2026-06-01\",\"endDate\":\"2026-08-31\",\"isActive\":false,\"createdAt\":\"2026-03-12T02:12:59.615542Z\",\"updatedAt\":\"2026-03-12T02:13:02.151037Z\"},{\"id\":14,\"semesterCode\":\"AUTO1773281582118\",\"semesterName\":\"Auto Semester 1773281582118\",\"startDate\":\"2026-06-01\",\"endDate\":\"2026-08-31\",\"isActive\":false,\"createdAt\":\"2026-03-12T02:13:02 // Output truncated...`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' http://api-gateway:8080/api/semesters",
+      "minimalSafeChange": "Patch OpenAPI overrides with learned response/status compatibility instead of changing backend code blindly."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/admin/audit/range",
+      "category": "missing required fields",
+      "rootCause": "1. Test Case ID: 819bnS\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/invalid-request\",\"title\":\"Invalid request\",\"status\":400,\"detail\":\"Missing required parameter 'endDate'\",\"instance\":\"/api/admin/audit/range\",\"timestamp\":\"2026-03-12T04:53:32.760201982Z\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' 'http://api-gateway:8080/api/admin/audit/range?startDate=2000-01-01T00%3A00%3A00Z&arg2=page&arg2=size&arg2=sort'",
+      "minimalSafeChange": "Patch test payload templates to include the missing field while preserving existing request shape."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/users",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: jv8dTr\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/invalid-request\",\"title\":\"Invalid request\",\"status\":400,\"detail\":\"Unknown query parameter 'x-schemathesis-unknown-property'\",\"instance\":\"/api/users\",\"timestamp\":\"2026-03-12T04:53:34.432194218Z\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' 'http://api-gateway:8080/api/users?status=&x-schemathesis-unknown-property=42'",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/auth/logout",
+      "category": "missing required fields",
+      "rootCause": "1. Test Case ID: w7lnrA\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/validation-error\",\"title\":\"Validation failed\",\"status\":400,\"detail\":\"Refresh token is required\",\"instance\":\"/api/auth/logout\",\"timestamp\":\"2026-03-12T04:53:37.588296506Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"refreshToken\": \"\"}' http://api-gateway:8080/api/auth/logout",
+      "minimalSafeChange": "Patch test payload templates to include the missing field while preserving existing request shape."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/project-configs/admin/{id}/restore",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: P1YiIz\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Configuration not found or permanently deleted\",\"instance\":\"/api/project-configs/admin/e3e70682-c209-4cac-629f-6fbed82c07cd/restore\",\"timestamp\":\"2026-03-12T04:53:38.255345695Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' http://api-gateway:8080/api/project-configs/admin/e3e70682-c209-4cac-629f-6fbed82c07cd/restore",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/admin/users",
+      "category": "authorization failure",
+      "rootCause": "1. Test Case ID: FAfb4y\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[401] Unauthorized:\n\n    `{\"type\":\"https://api.example.com/errors/unauthorized\",\"title\":\"Unauthorized\",\"status\":401,\"detail\":\"Unauthorized\",\"instance\":\"/api/admin/users\",\"timestamp\":\"2026-03-12T04:53:42.097949558Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Content-Type: application/json' -d '{\"email\": \"\", \"password\": \"aA0?00000000\", \"fullName\": \"A\\u0085-]]\", \"role\": \"STUDENT\"}' http://api-gateway:8080/api/admin/users",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "patch /api/semesters/{id}/activate",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: u219Rk\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Semester not found: 0\",\"instance\":\"/api/semesters/0/activate\",\"timestamp\":\"2026-03-12T04:53:46.426468466Z\"}`\n\nReproduce with:\n\n    curl -X PATCH -H 'Authorization: [Filtered]' http://api-gateway:8080/api/semesters/0/activate",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "patch /api/groups/{groupId}/lecturer",
+      "category": "test payload errors",
+      "rootCause": "1. Test Case ID: 7z5e8Z\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/validation-error\",\"title\":\"Validation failed\",\"status\":400,\"detail\":\"Lecturer ID must be greater than 0\",\"instance\":\"/api/groups/0/lecturer\",\"timestamp\":\"2026-03-12T04:53:46.822211200Z\"}`\n\nReproduce with:\n\n    curl -X PATCH -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"lecturerId\": 0}' http://api-gateway:8080/api/groups/0/lecturer",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/admin/audit/actor/{actorId}",
+      "category": "authorization failure",
+      "rootCause": "1. Test Case ID: 9Zzk3R\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[401] Unauthorized:\n\n    `{\"type\":\"https://api.example.com/errors/unauthorized\",\"title\":\"Unauthorized\",\"status\":401,\"detail\":\"Unauthorized\",\"instance\":\"/api/admin/audit/actor/0\",\"timestamp\":\"2026-03-12T04:53:48.521391299Z\"}`\n\nReproduce with:\n\n    curl -X GET 'http://api-gateway:8080/api/admin/audit/actor/0?arg1=page&arg1=size&arg1=sort'",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/groups/{groupId}/members",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: SjjcCv\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group with ID 1 not found\",\"instance\":\"/api/groups/1/members\",\"timestamp\":\"2026-03-12T04:53:48.996177599Z\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' 'http://api-gateway:8080/api/groups/1/members?size=20&x-schemathesis-unknown-property=42'",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/admin/audit/entity/{entityType}/{entityId}",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: A6jYxq\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/invalid-request\",\"title\":\"Invalid request\",\"status\":400,\"detail\":\"Invalid value for parameter 'entityId'\",\"instance\":\"/api/admin/audit/entity/0/null%2Cnull\",\"timestamp\":\"2026-03-12T04:53:49.827186122Z\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' 'http://api-gateway:8080/api/admin/audit/entity/0/null%2Cnull?arg2=page&arg2=size&arg2=sort'",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "put /api/admin/users/{userId}/external-accounts",
+      "category": "authorization failure",
+      "rootCause": "1. Test Case ID: yVDsbR\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[401] Unauthorized:\n\n    `{\"type\":\"https://api.example.com/errors/unauthorized\",\"title\":\"Unauthorized\",\"status\":401,\"detail\":\"Unauthorized\",\"instance\":\"/api/admin/users/1/external-accounts\",\"timestamp\":\"2026-03-12T04:53:51.301412518Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Content-Type: application/json' -d '{\"jiraAccountId\": \"00000000000000000000\", \"githubUsername\": \"0\"}' http://api-gateway:8080/api/admin/users/1/external-accounts",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/groups/{groupId}/members",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: VKJnMH\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group not found: 0\",\"instance\":\"/api/groups/0/members\",\"timestamp\":\"2026-03-12T04:53:53.834431673Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"userId\": 0}' http://api-gateway:8080/api/groups/0/members",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "put /api/project-configs/group/{groupId}",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: P1riKQ\n\n- Response time limit exceeded\n\n    Actual: 1.31ms\n    Limit: 800.00ms\n\n[405] Method Not Allowed:\n\n    `{\"type\":\"https://api.example.com/errors/method-not-allowed\",\"title\":\"Method not allowed\",\"status\":405,\"detail\":\"Method not allowed\",\"instance\":\"/api/project-configs/group/1\",\"timestamp\":\"2026-03-12T04:53:56.930493707Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' http://api-gateway:8080/api/project-configs/group/1",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "delete /api/project-configs/{id}",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: uOCtZr\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n- Response time limit exceeded\n\n    Actual: 1.31ms\n    Limit: 800.00ms\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Configuration not found: e3e70682-c209-4cac-629f-6fbed82c07cd\",\"instance\":\"/api/project-configs/e3e70682-c209-4cac-629f-6fbed82c07cd\",\"timestamp\":\"2026-03-12T04:53:56.948743707Z\"}`\n\nReproduce with:\n\n    curl -X DELETE -H 'Authorization: [Filtered]' http://api-gateway:8080/api/project-configs/e3e70682-c209-4cac-629f-6fbed82c07cd",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "put /api/project-configs/{id}/verify",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: iexLau\n\n- Response time limit exceeded\n\n    Actual: 0.85ms\n    Limit: 800.00ms\n\n[405] Method Not Allowed:\n\n    `{\"type\":\"https://api.example.com/errors/method-not-allowed\",\"title\":\"Method not allowed\",\"status\":405,\"detail\":\"Method not allowed\",\"instance\":\"/api/project-configs/e3e70682-c209-4cac-629f-6fbed82c07cd/verify\",\"timestamp\":\"2026-03-12T04:53:56.959093129Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' http://api-gateway:8080/api/project-configs/e3e70682-c209-4cac-629f-6fbed82c07cd/verify",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "delete /api/admin/users/{userId}",
+      "category": "authorization failure",
+      "rootCause": "1. Test Case ID: eJ4cxA\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[401] Unauthorized:\n\n    `{\"type\":\"https://api.example.com/errors/unauthorized\",\"title\":\"Unauthorized\",\"status\":401,\"detail\":\"Unauthorized\",\"instance\":\"/api/admin/users/1\",\"timestamp\":\"2026-03-12T04:53:58.264504582Z\"}`\n\nReproduce with:\n\n    curl -X DELETE http://api-gateway:8080/api/admin/users/1",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/admin/users/{userId}/unlock",
+      "category": "authorization failure",
+      "rootCause": "1. Test Case ID: h8tnND\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[401] Unauthorized:\n\n    `{\"type\":\"https://api.example.com/errors/unauthorized\",\"title\":\"Unauthorized\",\"status\":401,\"detail\":\"Unauthorized\",\"instance\":\"/api/admin/users/1/unlock\",\"timestamp\":\"2026-03-12T04:54:02.580382251Z\"}`\n\nReproduce with:\n\n    curl -X POST http://api-gateway:8080/api/admin/users/1/unlock",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "put /api/groups/{groupId}",
+      "category": "test payload errors",
+      "rootCause": "1. Test Case ID: jKpWPm\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/validation-error\",\"title\":\"Validation failed\",\"status\":400,\"detail\":\"Lecturer ID must be greater than 0\",\"instance\":\"/api/groups/0\",\"timestamp\":\"2026-03-12T04:54:03.161750908Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"groupName\": \"AA00-G0\", \"lecturerId\": 0}' http://api-gateway:8080/api/groups/0",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/groups/{groupId}",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: Vu1F6B\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group with ID 0 not found\",\"instance\":\"/api/groups/0\",\"timestamp\":\"2026-03-12T04:54:03.743274423Z\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' http://api-gateway:8080/api/groups/0",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/admin/users/{userId}/restore",
+      "category": "authorization failure",
+      "rootCause": "1. Test Case ID: 70UURe\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[401] Unauthorized:\n\n    `{\"type\":\"https://api.example.com/errors/unauthorized\",\"title\":\"Unauthorized\",\"status\":401,\"detail\":\"Unauthorized\",\"instance\":\"/api/admin/users/1/restore\",\"timestamp\":\"2026-03-12T04:54:05.625271565Z\"}`\n\nReproduce with:\n\n    curl -X POST http://api-gateway:8080/api/admin/users/1/restore",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "delete /api/groups/{groupId}",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: CyHl2w\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group with ID 0 not found\",\"instance\":\"/api/groups/0\",\"timestamp\":\"2026-03-12T04:54:05.811756796Z\"}`\n\nReproduce with:\n\n    curl -X DELETE -H 'Authorization: [Filtered]' http://api-gateway:8080/api/groups/0",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/semesters/{id}",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: B34G8f\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Semester not found: 0\",\"instance\":\"/api/semesters/0\",\"timestamp\":\"2026-03-12T04:54:07.631418377Z\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' http://api-gateway:8080/api/semesters/0",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/admin/users/{userId}/lock",
+      "category": "authorization failure",
+      "rootCause": "1. Test Case ID: XICgjQ\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[401] Unauthorized:\n\n    `{\"type\":\"https://api.example.com/errors/unauthorized\",\"title\":\"Unauthorized\",\"status\":401,\"detail\":\"Unauthorized\",\"instance\":\"/api/admin/users/1/lock\",\"timestamp\":\"2026-03-12T04:54:08.223167138Z\"}`\n\nReproduce with:\n\n    curl -X POST 'http://api-gateway:8080/api/admin/users/1/lock?reason='",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/users/{userId}",
+      "category": "contract drift",
+      "rootCause": "1. Test Case ID: zHlUpj\n\n- Response violates schema\n\n    200 is not of type \"string\"\n\n    Schema at /properties/status:\n\n        {\n            \"type\": \"string\"\n        }\n\n    Value:\n\n        200\n\n[200] OK:\n\n    `{\"timestamp\":\"2026-03-12T04:54:08.249127797Z\",\"status\":200,\"success\":true,\"data\":{\"id\":2,\"email\":\"admin@samt.local\",\"fullName\":\"System Admin\",\"status\":\"ACTIVE\",\"roles\":[\"ADMIN\"]},\"path\":\"/api/users/2\",\"correlationId\":\"3d16006e-c8ea-451e-82d2-bea187f0297f\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' http://api-gateway:8080/api/users/2",
+      "minimalSafeChange": "Patch OpenAPI overrides with learned response/status compatibility instead of changing backend code blindly."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "put /api/semesters/{id}",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: iz5YeG\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Semester not found: 0\",\"instance\":\"/api/semesters/0\",\"timestamp\":\"2026-03-12T04:54:10.695840980Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"semesterName\": \"0\", \"startDate\": \"2000-01-01\", \"endDate\": \"\"}' http://api-gateway:8080/api/semesters/0",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "put /api/groups/{groupId}/members/{userId}/demote",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: 7hrO1A\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group with ID 1 not found\",\"instance\":\"/api/groups/1/members/0/demote\",\"timestamp\":\"2026-03-12T04:54:11.122813450Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' http://api-gateway:8080/api/groups/1/members/0/demote",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "put /api/users/{userId}",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: eZhKDK\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/invalid-request\",\"title\":\"Invalid request\",\"status\":400,\"detail\":\"Invalid userId for updateUser: 0\",\"instance\":\"/api/users/0\",\"timestamp\":\"2026-03-12T04:54:11.865165780Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"fullName\": \"AA\"}' http://api-gateway:8080/api/users/0",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "put /api/groups/{groupId}/members/{userId}/promote",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: 9LulqL\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group not found: 1\",\"instance\":\"/api/groups/1/members/0/promote\",\"timestamp\":\"2026-03-12T04:54:12.555679467Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' http://api-gateway:8080/api/groups/1/members/0/promote",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "delete /api/groups/{groupId}/members/{userId}",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: VGJ7Qo\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group with ID 1 not found\",\"instance\":\"/api/groups/1/members/0\",\"timestamp\":\"2026-03-12T04:54:17.373074400Z\"}`\n\nReproduce with:\n\n    curl -X DELETE -H 'Authorization: [Filtered]' http://api-gateway:8080/api/groups/1/members/0",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/project-configs",
+      "category": "missing required fields",
+      "rootCause": "1. Test Case ID: HmSdl3\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group not found or deleted: 1\",\"instance\":\"/api/project-configs\",\"timestamp\":\"2026-03-12T04:54:23.359051620Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"groupId\": 1, \"jiraHostUrl\": \"http://0.atlassian.net\", \"jiraEmail\": \"0@A.COM\", \"jiraApiToken\": \"ATATT00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\", \"githubRepoUrl\": \"https://github.com/0/0\", \"githubToken\": \"ghp_000000000000000000000000000000000000\"}' http://api-gateway:8080/api/project-configs",
+      "minimalSafeChange": "Patch test payload templates to include the missing field while preserving existing request shape."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "put /api/project-configs/{id}",
+      "category": "missing required fields",
+      "rootCause": "1. Test Case ID: TDA1rW\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/validation-error\",\"title\":\"Validation failed\",\"status\":400,\"detail\":\"Invalid GitHub token format. Must start with 'ghp_' or 'github_pat_'\",\"instance\":\"/api/project-configs/e3e70682-c209-4cac-629f-6fbed82c07cd\",\"timestamp\":\"2026-03-12T04:54:23.621849354Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"jiraHostUrl\": \"http://0.atlassian.net\", \"jiraEmail\": \"0@A.COM\", \"jiraApiToken\": \"ATATT00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\", \"githubRepoUrl\": \"https://github.com/0/0\", \"githubToken\": \"0000000000000000000000000000000000000000\"}' http://api-gateway:8080/api/project-configs/e3e70682-c209-4cac-629f-6fbed82c07cd",
+      "minimalSafeChange": "Patch test payload templates to include the missing field while preserving existing request shape."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/admin/audit/entity/{entityType}/{entityId}",
+      "category": "schema mismatch",
+      "rootCause": "Network Error\n\nConnection failed\n\n    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/admin/users",
+      "category": "schema mismatch",
+      "rootCause": "Network Error\n\nConnection failed\n\n    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/admin/users/{userId}/restore",
+      "category": "schema mismatch",
+      "rootCause": "Network Error\n\nConnection failed\n\n    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/admin/users/{userId}/unlock",
+      "category": "schema mismatch",
+      "rootCause": "Network Error\n\nConnection failed\n\n    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/semesters",
+      "category": "schema mismatch",
+      "rootCause": "Network Error\n\nConnection failed\n\n    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable\n\nNeed more help?\n    Join our Discord server: https://discord.gg/R9ASRAmHnA\n=================================== FAILURES ===================================",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/groups",
+      "category": "missing required fields",
+      "rootCause": "1. Test Case ID: 2YsCXN\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/validation-error\",\"title\":\"Validation failed\",\"status\":400,\"detail\":\"Lecturer ID is required\",\"instance\":\"/api/groups\",\"timestamp\":\"2026-03-12T04:59:34.464456241Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"groupName\": \"AA00-G0\", \"semesterId\": 1}' http://api-gateway:8080/api/groups",
+      "minimalSafeChange": "Patch test payload templates to include the missing field while preserving existing request shape."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/semesters",
+      "category": "authorization failure",
+      "rootCause": "1. Test Case ID: CeeBD9\n\n- API accepted schema-violating request\n\n    Invalid data should have been rejected\n    Expected: 400, 401, 403, 404, 406, 422, 428, 5xx\n    Invalid component: in body - object with unexpected properties\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[409] Conflict:\n\n    `{\"type\":\"https://api.example.com/errors/resource-conflict\",\"title\":\"Conflict detected\",\"status\":409,\"detail\":\"Semester code already exists: 0\",\"instance\":\"/api/semesters\",\"timestamp\":\"2026-03-12T04:59:35.262795882Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"endDate\": \"2000-01-01\", \"semesterCode\": \"0\", \"semesterName\": \"0\", \"startDate\": \"2000-01-01\", \"x-schemathesis-unknown-property\": 42}' http://api-gateway:8080/api/semesters",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/groups",
+      "category": "authorization failure",
+      "rootCause": "1. Test Case ID: HDLyvM\n\n- API rejected schema-compliant request\n\n    Valid data should have been accepted\n    Expected: 2xx, 401, 403, 404, 409, 5xx\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/validation-error\",\"title\":\"Validation failed\",\"status\":400,\"detail\":\"Validation failed\",\"instance\":\"/api/groups\",\"timestamp\":\"2026-03-12T04:59:35.816222136Z\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' 'http://api-gateway:8080/api/groups?page=0&semesterId=0&lecturerId=0'",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/semesters",
+      "category": "contract drift",
+      "rootCause": "1. Test Case ID: 7mZUXl\n\n- Response violates schema\n\n    {\"correlationId\":\"1eab90bc-323a-4893-8536-f898e8043713\",\"data\":[{\"createdAt\":\"2026-03-12T02:12:59.615542Z\",\"endDate\":\"2026-08-31\",\"id\":13,\"isActive\":false,\"semesterCode\":\"REG1773281579609\",\"semesterName\":\"Regression Semester 1773281579609\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-12T02:13:02.151037Z\"},{\"createdAt\":\"2026-03-12T02:13:02.130112Z\",\"endDate\":\"2026-08-31\",\"id\":14,\"isActive\":false,\"semesterCode\":\"AUTO1773281582118\",\"semesterName\":\"Auto Semester 1773281582118\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-12T03:40:14.031915Z\"},{\"createdAt\":\"2026-03-11T04:37:45.032537Z\",\"endDate\":\"2026-08-31\",\"id\":3,\"isActive\":false,\"semesterCode\":\"AUTO1773203864\",\"semesterName\":\"Auto Semester 1773203864\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-11T04:38:12.376265Z\"},{\"createdAt\":\"2026-03-11T04:38:12.342341Z\",\"endDate\":\"2026-08-31\",\"id\":4,\"isActive\":false,\"semesterCode\":\"AUTO1773203892\",\"semesterName\":\"Auto Semester 1773203892\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-11T04:42:35.608046Z\"},{\"createdAt\":\"2026-03-11T04:42:35.317705Z\",\"endDate\":\"2026-08-31\",\"id\":5,\"isActive\":false,\"semesterCode\":\"AUTO1773204155\",\"semesterName\":\"Auto Semester 1773204155\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-11T04:42:53.863993Z\"},{\"createdAt\":\"2026-03-11T04:42:53.826368Z\",\"endDate\":\"2026-08-31\",\"id\":6,\"isActive\":false,\"semesterCode\":\"AUTO1773204173\",\"semesterName\":\"Auto Semester 1773204173\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-11T04:44:46.337821Z\"},{\"createdAt\":\"2026-03-11T04:44:46.309013Z\",\"endDate\":\"2026-08-31\",\"id\":7,\"isActive\":false,\"semesterCode\":\"AUTO1773204286\",\"semesterName\":\"Auto Semester 1773204286\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-11T04:45:43.069940Z\"},{\"createdAt\":\"2026-03-11T04:45:42.902807Z\",\"endDate\":\"2026-08-31\",\"id\":8,\"isActive\":false,\"semesterCode\":\"AUTO1773204342\",\"semesterName\":\"Auto Semester 1773204342\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-11T04:45:57.571780Z\"},{\"createdAt\":\"2026-03-11T04:45:57.544124Z\",\"endDate\":\"2026-08-31\",\"id\":9,\"isActive\":false,\"semesterCode\":\"AUTO1773204357\",\"semesterName\":\"Auto Semester 1773204357\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-11T07:15:31.161835Z\"},{\"createdAt\":\"2026-03-12T02:12:17.108628Z\",\"endDate\":\"2026-08-31\",\"id\":11,\"isActive\":false,\"semesterCode\":\"REG1773281537084\",\"semesterName\":\"Regression Semester 1773281537084\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-12T02:12:17.108628Z\"},{\"createdAt\":\"2026-03-12T02:12:25.241012Z\",\"endDate\":\"2026-08-31\",\"id\":12,\"isActive\":false,\"semesterCode\":\"AUTO1773281545225\",\"semesterName\":\"Auto Semester 1773281545225\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-12T02:12:25.241012Z\"},{\"createdAt\":\"2026-03-11T07:15:11.825177Z\",\"endDate\":\"2026-06-05\",\"id\":10,\"isActive\":true,\"semesterCode\":\"QA-2026-S1\",\"semesterName\":\"Updated Generated Semester\",\"startDate\":\"2026-01-20\",\"updatedAt\":\"2026-03-12T04:49:11.355545Z\"},{\"createdAt\":\"2026-03-12T04:47:15.260428Z\",\"endDate\":\"2026-05-30\",\"id\":23,\"isActive\":false,\"semesterCode\":\"QA5146-S1\",\"semesterName\":\"QA Load 1773290835146\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T04:49:11.355591Z\"},{\"createdAt\":\"2026-03-12T03:39:41.676674Z\",\"endDate\":\"2026-05-30\",\"id\":15,\"isActive\":false,\"semesterCode\":\"QA0109-S1\",\"semesterName\":\"QA Integration 2033940109\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T03:39:41.676676Z\"},{\"createdAt\":\"2026-03-12T03:40:13.947100Z\",\"endDate\":\"2026-05-30\",\"id\":16,\"isActive\":false,\"semesterCode\":\"QA3832-S1\",\"semesterName\":\"QA Integration 2034013832\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T03:46:45.507663Z\"},{\"createdAt\":\"2026-03-12T04:37:16.051915Z\",\"endDate\":\"2026-05-30\",\"id\":17,\"isActive\":false,\"semesterCode\":\"QA5751-S1\",\"semesterName\":\"QA Load 1773290235751\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T04:39:07.146902Z\"},{\"createdAt\":\"2026-03-12T04:39:07.118904Z\",\"endDate\":\"2026-05-30\",\"id\":18,\"isActive\":false,\"semesterCode\":\"QA6983-S1\",\"semesterName\":\"QA Load 1773290346983\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T04:40:32.070337Z\"},{\"createdAt\":\"2026-03-12T04:40:32.043317Z\",\"endDate\":\"2026-05-30\",\"id\":19,\"isActive\":false,\"semesterCode\":\"QA1912-S1\",\"semesterName\":\"QA Load 1773290431912\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T04:41:34.043783Z\"},{\"createdAt\":\"2026-03-12T04:41:34.019774Z\",\"endDate\":\"2026-05-30\",\"id\":20,\"isActive\":false,\"semesterCode\":\"QA3907-S1\",\"semesterName\":\"QA Load 1773290493907\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T04:42:36.058642Z\"},{\"createdAt\":\"2026-03-12T04:42:36.034765Z\",\"endDate\":\"2026-05-30\",\"id\":21,\"isActive\":false,\"semesterCode\":\"QA5914-S1\",\"semesterName\":\"QA Load 1773290555914\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T04:46:48.128699Z\"},{\"createdAt\":\"2026-03-12T04:46:48.097653Z\",\"endDate\":\"2026-05-30\",\"id\":22,\"isActive\":false,\"semesterCode\":\"QA7936-S1\",\"semesterName\":\"QA Load 1773290807936\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T04:47:15.283130Z\"},{\"createdAt\":\"2026-03-11T03:58:32.115378Z\",\"endDate\":\"2025-05-31\",\"id\":1,\"isActive\":false,\"semesterCode\":\"SPRING2025\",\"semesterName\":\"Spring Semester 2025\",\"startDate\":\"2025-01-01\",\"updatedAt\":\"2026-03-11T04:37:45.229636Z\"},{\"createdAt\":\"2026-03-11T03:58:32.115378Z\",\"endDate\":\"2024-12-31\",\"id\":2,\"isActive\":false,\"semesterCode\":\"FALL2024\",\"semesterName\":\"Fall Semester 2024\",\"startDate\":\"2024-09-01\",\"updatedAt\":\"2026-03-11T03:58:32.115378Z\"},{\"createdAt\":\"2026-03-12T04:53:32.225527Z\",\"endDate\":\"2000-01-01\",\"id\":24,\"isActive\":false,\"semesterCode\":\"0\",\"semesterName\":\"0\",\"startDate\":\"2000-01-01\",\"updatedAt\":\"2026-03-12T04:53:32.225529Z\"}],\"path\":\"/api/semesters\",\"status\":200,\"success\":true,\"timestamp\":\"2026-03-12T04:59:36.019263001Z\"} is not of type \"array\"\n\n    Schema:\n\n        {\n            \"type\": \"array\",\n            \"items\": {\n                \"$ref\": \"#/components/schemas/userGroup_SemesterResponse\"\n            },\n            \"components\": {\n                \"schemas\": {\n                    \"userGroup_SemesterResponse\": {\n                        \"type\": \"object\",\n                        \"properties\": {\n                            \"id\": {\n                                \"type\": \"integer\",\n                                \"format\": \"int64\"\n                            },\n                            \"semesterCode\": {\n                                \"type\": \"string\"\n                            },\n                            \"semesterName\": {\n                                \"type\": \"string\"\n            // Output truncated...\n        }\n\n    Value:\n\n        {\n            \"correlationId\": \"1eab90bc-323a-4893-8536-f898e8043713\",\n            \"data\": [\n                {\n                    \"createdAt\": \"2026-03-12T02:12:59.615542Z\",\n                    \"endDate\": \"2026-08-31\",\n                    \"id\": 13,\n                    \"isActive\": false,\n                    \"semesterCode\": \"REG1773281579609\",\n                    \"semesterName\": \"Regression Semester 1773281579609\",\n                    \"startDate\": \"2026-06-01\",\n                    \"updatedAt\": \"2026-03-12T02:13:02.151037Z\"\n                },\n                {\n                    \"createdAt\": \"2026-03-12T02:13:02.130112Z\",\n                    \"endDate\": \"2026-08-31\",\n                    \"id\": 14,\n                    \"isActive\": false,\n                    \"semesterCode\": \"AUTO1773281582118\",\n            // Output truncated...\n        }\n\n[200] OK:\n\n    `{\"timestamp\":\"2026-03-12T04:59:36.019263001Z\",\"status\":200,\"success\":true,\"data\":[{\"id\":13,\"semesterCode\":\"REG1773281579609\",\"semesterName\":\"Regression Semester 1773281579609\",\"startDate\":\"2026-06-01\",\"endDate\":\"2026-08-31\",\"isActive\":false,\"createdAt\":\"2026-03-12T02:12:59.615542Z\",\"updatedAt\":\"2026-03-12T02:13:02.151037Z\"},{\"id\":14,\"semesterCode\":\"AUTO1773281582118\",\"semesterName\":\"Auto Semester 1773281582118\",\"startDate\":\"2026-06-01\",\"endDate\":\"2026-08-31\",\"isActive\":false,\"createdAt\":\"2026-03-12T02:13:02 // Output truncated...`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' http://api-gateway:8080/api/semesters",
+      "minimalSafeChange": "Patch OpenAPI overrides with learned response/status compatibility instead of changing backend code blindly."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "put /api/semesters/active",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: MC2IFJ\n\n- Unsupported methods\n\n    Unsupported method PUT returned 400, expected 405 Method Not Allowed\n\n    Return 405 for methods not listed in the OpenAPI spec\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/invalid-request\",\"title\":\"Invalid request\",\"status\":400,\"detail\":\"Invalid value for parameter 'id'\",\"instance\":\"/api/semesters/active\",\"timestamp\":\"2026-03-12T04:59:36.109354600Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' http://api-gateway:8080/api/semesters/active",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/admin/audit/security-events",
+      "category": "authorization failure",
+      "rootCause": "1. Test Case ID: HBOF5d\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[401] Unauthorized:\n\n    `{\"type\":\"https://api.example.com/errors/unauthorized\",\"title\":\"Unauthorized\",\"status\":401,\"detail\":\"Unauthorized\",\"instance\":\"/api/admin/audit/security-events\",\"timestamp\":\"2026-03-12T04:59:37.167301034Z\"}`\n\nReproduce with:\n\n    curl -X GET 'http://api-gateway:8080/api/admin/audit/security-events?arg0=page&arg0=size&arg0=sort'",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/users",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: 7aqy4e\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/invalid-request\",\"title\":\"Invalid request\",\"status\":400,\"detail\":\"Unknown query parameter 'x-schemathesis-unknown-property'\",\"instance\":\"/api/users\",\"timestamp\":\"2026-03-12T04:59:37.250006911Z\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' 'http://api-gateway:8080/api/users?status=&x-schemathesis-unknown-property=42'",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/admin/audit/range",
+      "category": "missing required fields",
+      "rootCause": "1. Test Case ID: sneB0h\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/invalid-request\",\"title\":\"Invalid request\",\"status\":400,\"detail\":\"Missing required parameter 'endDate'\",\"instance\":\"/api/admin/audit/range\",\"timestamp\":\"2026-03-12T04:59:37.592223504Z\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' 'http://api-gateway:8080/api/admin/audit/range?startDate=2000-01-01T00%3A00%3A00Z&arg2=page&arg2=size&arg2=sort'",
+      "minimalSafeChange": "Patch test payload templates to include the missing field while preserving existing request shape."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/project-configs/admin/{id}/restore",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: oq8tej\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Configuration not found or permanently deleted\",\"instance\":\"/api/project-configs/admin/e3e70682-c209-4cac-629f-6fbed82c07cd/restore\",\"timestamp\":\"2026-03-12T04:59:39.512343717Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' http://api-gateway:8080/api/project-configs/admin/e3e70682-c209-4cac-629f-6fbed82c07cd/restore",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/auth/logout",
+      "category": "missing required fields",
+      "rootCause": "1. Test Case ID: EOW5QI\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/validation-error\",\"title\":\"Validation failed\",\"status\":400,\"detail\":\"Refresh token is required\",\"instance\":\"/api/auth/logout\",\"timestamp\":\"2026-03-12T04:59:39.824370433Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"refreshToken\": \"\"}' http://api-gateway:8080/api/auth/logout",
+      "minimalSafeChange": "Patch test payload templates to include the missing field while preserving existing request shape."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/admin/users",
+      "category": "invalid enum",
+      "rootCause": "1. Test Case ID: cyyT5c\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/validation-error\",\"title\":\"Validation failed\",\"status\":400,\"detail\":\"Role must be STUDENT, LECTURER, or ADMIN\",\"instance\":\"/api/admin/users\",\"timestamp\":\"2026-03-12T04:59:43.979559975Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"email\": \"\", \"password\": \"aA0?00000000\", \"fullName\": \"A\\u0085-]]\", \"role\": \"0\"}' http://api-gateway:8080/api/admin/users",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "patch /api/groups/{groupId}/lecturer",
+      "category": "test payload errors",
+      "rootCause": "1. Test Case ID: gHEdCj\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/validation-error\",\"title\":\"Validation failed\",\"status\":400,\"detail\":\"Lecturer ID must be greater than 0\",\"instance\":\"/api/groups/0/lecturer\",\"timestamp\":\"2026-03-12T04:59:45.683910152Z\"}`\n\nReproduce with:\n\n    curl -X PATCH -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"lecturerId\": 0}' http://api-gateway:8080/api/groups/0/lecturer",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/admin/audit/entity/{entityType}/{entityId}",
+      "category": "authorization failure",
+      "rootCause": "1. Test Case ID: LnE6xS\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[401] Unauthorized:\n\n    `{\"type\":\"https://api.example.com/errors/unauthorized\",\"title\":\"Unauthorized\",\"status\":401,\"detail\":\"Unauthorized\",\"instance\":\"/api/admin/audit/entity/0/0\",\"timestamp\":\"2026-03-12T04:59:47.057621910Z\"}`\n\nReproduce with:\n\n    curl -X GET 'http://api-gateway:8080/api/admin/audit/entity/0/0?arg2=page&arg2=size&arg2=sort'",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/admin/audit/actor/{actorId}",
+      "category": "authorization failure",
+      "rootCause": "1. Test Case ID: fMVCUU\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[401] Unauthorized:\n\n    `{\"type\":\"https://api.example.com/errors/unauthorized\",\"title\":\"Unauthorized\",\"status\":401,\"detail\":\"Unauthorized\",\"instance\":\"/api/admin/audit/actor/0\",\"timestamp\":\"2026-03-12T04:59:49.339245719Z\"}`\n\nReproduce with:\n\n    curl -X GET 'http://api-gateway:8080/api/admin/audit/actor/0?arg1=page&arg1=size&arg1=sort'",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "patch /api/semesters/{id}/activate",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: BYKli6\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Semester not found: 0\",\"instance\":\"/api/semesters/0/activate\",\"timestamp\":\"2026-03-12T04:59:49.923516486Z\"}`\n\nReproduce with:\n\n    curl -X PATCH -H 'Authorization: [Filtered]' http://api-gateway:8080/api/semesters/0/activate",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/project-configs/group/{groupId}",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: hxjyzM\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Configuration not found for group 0\",\"instance\":\"/api/project-configs/group/0\",\"timestamp\":\"2026-03-12T04:59:49.942565542Z\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' http://api-gateway:8080/api/project-configs/group/0",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "delete /api/admin/users/{userId}",
+      "category": "authorization failure",
+      "rootCause": "1. Test Case ID: uIfRmr\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[401] Unauthorized:\n\n    `{\"type\":\"https://api.example.com/errors/unauthorized\",\"title\":\"Unauthorized\",\"status\":401,\"detail\":\"Unauthorized\",\"instance\":\"/api/admin/users/1\",\"timestamp\":\"2026-03-12T04:59:50.003816450Z\"}`\n\nReproduce with:\n\n    curl -X DELETE http://api-gateway:8080/api/admin/users/1",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/groups/{groupId}/members",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: 3GNhPD\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group not found: 0\",\"instance\":\"/api/groups/0/members\",\"timestamp\":\"2026-03-12T04:59:50.483917814Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"userId\": 0}' http://api-gateway:8080/api/groups/0/members",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "put /api/admin/users/{userId}/external-accounts",
+      "category": "authorization failure",
+      "rootCause": "1. Test Case ID: 5Ip5Qk\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[401] Unauthorized:\n\n    `{\"type\":\"https://api.example.com/errors/unauthorized\",\"title\":\"Unauthorized\",\"status\":401,\"detail\":\"Unauthorized\",\"instance\":\"/api/admin/users/1/external-accounts\",\"timestamp\":\"2026-03-12T04:59:51.815951436Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Content-Type: application/json' -d '{\"jiraAccountId\": \"00000000000000000000\", \"githubUsername\": \"0\"}' http://api-gateway:8080/api/admin/users/1/external-accounts",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "delete /api/project-configs/{id}",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: lnW0QY\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Configuration not found: e3e70682-c209-4cac-629f-6fbed82c07cd\",\"instance\":\"/api/project-configs/e3e70682-c209-4cac-629f-6fbed82c07cd\",\"timestamp\":\"2026-03-12T04:59:52.384026870Z\"}`\n\nReproduce with:\n\n    curl -X DELETE -H 'Authorization: [Filtered]' http://api-gateway:8080/api/project-configs/e3e70682-c209-4cac-629f-6fbed82c07cd",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/groups/{groupId}/members",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: bCEkvD\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group with ID 1 not found\",\"instance\":\"/api/groups/1/members\",\"timestamp\":\"2026-03-12T04:59:52.425774833Z\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' 'http://api-gateway:8080/api/groups/1/members?size=20&x-schemathesis-unknown-property=42'",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "put /api/groups/{groupId}",
+      "category": "test payload errors",
+      "rootCause": "1. Test Case ID: dMlwaE\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/validation-error\",\"title\":\"Validation failed\",\"status\":400,\"detail\":\"Lecturer ID must be greater than 0\",\"instance\":\"/api/groups/0\",\"timestamp\":\"2026-03-12T04:59:55.474665420Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"groupName\": \"AA00-G0\", \"lecturerId\": 0}' http://api-gateway:8080/api/groups/0",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/admin/users/{userId}/unlock",
+      "category": "authorization failure",
+      "rootCause": "1. Test Case ID: BuO01a\n\n- API rejected schema-compliant request\n\n    Valid data should have been accepted\n    Expected: 2xx, 401, 403, 404, 409, 5xx\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/invalid-request\",\"title\":\"Invalid request\",\"status\":400,\"detail\":\"User is not locked\",\"instance\":\"/api/admin/users/2/unlock\",\"timestamp\":\"2026-03-12T04:59:58.035922048Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' http://api-gateway:8080/api/admin/users/2/unlock",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/admin/users/{userId}/restore",
+      "category": "authorization failure",
+      "rootCause": "1. Test Case ID: 60MpqN\n\n- API rejected schema-compliant request\n\n    Valid data should have been accepted\n    Expected: 2xx, 401, 403, 404, 409, 5xx\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/invalid-request\",\"title\":\"Invalid request\",\"status\":400,\"detail\":\"User is not deleted\",\"instance\":\"/api/admin/users/2/restore\",\"timestamp\":\"2026-03-12T05:00:00.423287711Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' http://api-gateway:8080/api/admin/users/2/restore",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/semesters/{id}",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: CwjB0Q\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Semester not found: 0\",\"instance\":\"/api/semesters/0\",\"timestamp\":\"2026-03-12T05:00:00.791407351Z\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' http://api-gateway:8080/api/semesters/0",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/groups/{groupId}",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: sYzlDK\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group with ID 0 not found\",\"instance\":\"/api/groups/0\",\"timestamp\":\"2026-03-12T05:00:00.896517986Z\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' http://api-gateway:8080/api/groups/0",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "delete /api/groups/{groupId}",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: GoDezg\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group with ID 0 not found\",\"instance\":\"/api/groups/0\",\"timestamp\":\"2026-03-12T05:00:01.755066918Z\"}`\n\nReproduce with:\n\n    curl -X DELETE -H 'Authorization: [Filtered]' http://api-gateway:8080/api/groups/0",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/admin/users/{userId}/lock",
+      "category": "authorization failure",
+      "rootCause": "1. Test Case ID: LPYKWl\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[401] Unauthorized:\n\n    `{\"type\":\"https://api.example.com/errors/unauthorized\",\"title\":\"Unauthorized\",\"status\":401,\"detail\":\"Unauthorized\",\"instance\":\"/api/admin/users/1/lock\",\"timestamp\":\"2026-03-12T05:00:02.258085495Z\"}`\n\nReproduce with:\n\n    curl -X POST 'http://api-gateway:8080/api/admin/users/1/lock?reason='",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "put /api/users/{userId}",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: IvWCbL\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/invalid-request\",\"title\":\"Invalid request\",\"status\":400,\"detail\":\"Invalid userId for updateUser: 0\",\"instance\":\"/api/users/0\",\"timestamp\":\"2026-03-12T05:00:03.244779439Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"fullName\": \"AA\"}' http://api-gateway:8080/api/users/0",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "put /api/semesters/{id}",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: t13RS8\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Semester not found: 0\",\"instance\":\"/api/semesters/0\",\"timestamp\":\"2026-03-12T05:00:03.640641933Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"semesterName\": \"0\", \"startDate\": \"2000-01-01\", \"endDate\": \"\"}' http://api-gateway:8080/api/semesters/0",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "put /api/groups/{groupId}/members/{userId}/promote",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: rkYjFA\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group not found: 1\",\"instance\":\"/api/groups/1/members/0/promote\",\"timestamp\":\"2026-03-12T05:00:03.850830870Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' http://api-gateway:8080/api/groups/1/members/0/promote",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "get /api/users/{userId}",
+      "category": "contract drift",
+      "rootCause": "1. Test Case ID: CvIWea\n\n- Response violates schema\n\n    200 is not of type \"string\"\n\n    Schema at /properties/status:\n\n        {\n            \"type\": \"string\"\n        }\n\n    Value:\n\n        200\n\n[200] OK:\n\n    `{\"timestamp\":\"2026-03-12T05:00:04.151603330Z\",\"status\":200,\"success\":true,\"data\":{\"id\":2,\"email\":\"admin@samt.local\",\"fullName\":\"System Admin\",\"status\":\"ACTIVE\",\"roles\":[\"ADMIN\"]},\"path\":\"/api/users/2\",\"correlationId\":\"a40ebb98-dc21-4897-9d17-4cf6e1d0e8ec\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' http://api-gateway:8080/api/users/2",
+      "minimalSafeChange": "Patch OpenAPI overrides with learned response/status compatibility instead of changing backend code blindly."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "put /api/groups/{groupId}/members/{userId}/demote",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: OnHKYi\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group with ID 1 not found\",\"instance\":\"/api/groups/1/members/0/demote\",\"timestamp\":\"2026-03-12T05:00:07.137214613Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' http://api-gateway:8080/api/groups/1/members/0/demote",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "delete /api/groups/{groupId}/members/{userId}",
+      "category": "schema mismatch",
+      "rootCause": "1. Test Case ID: MnNNNs\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group with ID 1 not found\",\"instance\":\"/api/groups/1/members/0\",\"timestamp\":\"2026-03-12T05:00:08.298492887Z\"}`\n\nReproduce with:\n\n    curl -X DELETE -H 'Authorization: [Filtered]' http://api-gateway:8080/api/groups/1/members/0",
+      "minimalSafeChange": "Patch only the failing test/schema surface and keep the backend implementation unchanged until evidence points to runtime defects."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "post /api/project-configs",
+      "category": "missing required fields",
+      "rootCause": "1. Test Case ID: OQHgmb\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group not found or deleted: 1\",\"instance\":\"/api/project-configs\",\"timestamp\":\"2026-03-12T05:00:14.619395251Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"groupId\": 1, \"jiraHostUrl\": \"http://0.atlassian.net\", \"jiraEmail\": \"0@A.COM\", \"jiraApiToken\": \"ATATT00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\", \"githubRepoUrl\": \"https://github.com/0/0\", \"githubToken\": \"ghp_000000000000000000000000000000000000\"}' http://api-gateway:8080/api/project-configs",
+      "minimalSafeChange": "Patch test payload templates to include the missing field while preserving existing request shape."
+    },
+    {
+      "source": "schemathesis",
+      "operationKey": "put /api/project-configs/{id}",
+      "category": "missing required fields",
+      "rootCause": "1. Test Case ID: vo6Ayy\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/validation-error\",\"title\":\"Validation failed\",\"status\":400,\"detail\":\"Invalid GitHub token format. Must start with 'ghp_' or 'github_pat_'\",\"instance\":\"/api/project-configs/e3e70682-c209-4cac-629f-6fbed82c07cd\",\"timestamp\":\"2026-03-12T05:00:15.353960475Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"jiraHostUrl\": \"http://0.atlassian.net\", \"jiraEmail\": \"0@A.COM\", \"jiraApiToken\": \"ATATT00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\", \"githubRepoUrl\": \"https://github.com/0/0\", \"githubToken\": \"0000000000000000000000000000000000000000\"}' http://api-gateway:8080/api/project-configs/e3e70682-c209-4cac-629f-6fbed82c07cd",
+      "minimalSafeChange": "Patch test payload templates to include the missing field while preserving existing request shape."
+    }
+  ],
+  "appliedChanges": [
+    "scripts/run-schemathesis-docker.mjs"
+  ],
+  "overrideRepairs": [],
+  "reviewNotes": [],
+  "changed": true
+}

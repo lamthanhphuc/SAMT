@@ -1,0 +1,36 @@
+{
+  "generatedAt": "2026-03-12T05:51:34.710Z",
+  "status": "passed",
+  "tests": [
+    {
+      "id": "jwt-signature-tampering",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "id": "jwt-expiration-manipulation",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "id": "role-escalation-attempt",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "id": "mass-assignment-attempt",
+      "status": 201,
+      "passed": true
+    },
+    {
+      "id": "large-payload-dos-attempt",
+      "status": 400,
+      "passed": true
+    },
+    {
+      "id": "invalid-content-type",
+      "status": 415,
+      "passed": true
+    }
+  ]
+}

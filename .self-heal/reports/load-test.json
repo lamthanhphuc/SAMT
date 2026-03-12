@@ -1,0 +1,22 @@
+{
+  "generatedAt": "2026-03-12T04:47:36.988Z",
+  "status": "passed",
+  "profile": "smoke",
+  "baseUrl": "http://api-gateway:8080",
+  "command": "docker run --rm --network samt_samt-network -v \"E:\\Bin\\SAMT:/work\" -e BASE_URL=http://api-gateway:8080 -e K6_PROFILE=smoke grafana/k6 run /work/load-test.js --summary-export /work/.self-heal/reports/load-test-summary.json",
+  "outputFile": ".self-heal/reports/load-test-summary.json",
+  "metrics": {
+    "httpReqs": 254,
+    "throughputPerSecond": 11.911742783406657,
+    "failureRate": 0,
+    "p50DurationMs": 19.6365585,
+    "p95DurationMs": 368.0775162,
+    "p99DurationMs": 928.797459
+  },
+  "baseline": null,
+  "regressionDetected": false,
+  "regression": null,
+  "error": null,
+  "exitCode": 0,
+  "baselineUpdated": true
+}

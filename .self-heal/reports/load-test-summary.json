@@ -1,0 +1,276 @@
+{
+    "metrics": {
+        "http_req_tls_handshaking": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "group_duration": {
+            "p(95)": 483.0686610499998,
+            "avg": 171.7999805,
+            "min": 38.833001,
+            "med": 49.7160155,
+            "max": 946.203465,
+            "p(90)": 439.38226979999996
+        },
+        "http_req_duration{flow:login}": {
+            "p(95)": 222.8079965999994,
+            "avg": 126.2562890810811,
+            "min": 84.007222,
+            "med": 109.966865,
+            "max": 342.567672,
+            "p(90)": 183.53626899999998,
+            "thresholds": {
+                "p(95)<900": false
+            }
+        },
+        "http_req_sending": {
+            "min": 0.005341,
+            "med": 0.0171105,
+            "max": 1.03256,
+            "p(90)": 0.06182040000000001,
+            "p(95)": 0.08433004999999998,
+            "avg": 0.03319810629921259
+        },
+        "vus_max": {
+            "min": 6,
+            "max": 6,
+            "value": 6
+        },
+        "http_req_duration{flow:profile}": {
+            "min": 8.639237,
+            "med": 16.900582,
+            "max": 101.842908,
+            "p(90)": 21.918791900000002,
+            "p(95)": 26.404136949999987,
+            "avg": 17.68682052631579,
+            "thresholds": {
+                "p(95)<900": false
+            }
+        },
+        "http_req_connecting": {
+            "avg": 0.008773425196850395,
+            "min": 0,
+            "med": 0,
+            "max": 0.49747,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "vus": {
+            "value": 1,
+            "min": 1,
+            "max": 6
+        },
+        "http_reqs": {
+            "count": 254,
+            "rate": 11.911742783406657
+        },
+        "iteration_duration": {
+            "p(95)": 1453.6873573999999,
+            "avg": 1159.757774180953,
+            "min": 1040.014469,
+            "med": 1108.919509,
+            "max": 1946.878953,
+            "p(90)": 1399.3991136
+        },
+        "checks": {
+            "passes": 213,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.95": false
+            },
+            "value": 1
+        },
+        "http_req_duration": {
+            "max": 928.797459,
+            "p(90)": 116.79859400000001,
+            "p(95)": 368.0775162,
+            "avg": 67.16782207480314,
+            "min": 8.639237,
+            "med": 19.6365585,
+            "thresholds": {
+                "p(95)<1500": false
+            }
+        },
+        "http_req_duration{expected_response:true}": {
+            "avg": 67.16782207480314,
+            "min": 8.639237,
+            "med": 19.6365585,
+            "max": 928.797459,
+            "p(90)": 116.79859400000001,
+            "p(95)": 368.0775162
+        },
+        "iterations": {
+            "count": 105,
+            "rate": 4.924145638809839
+        },
+        "http_req_duration{flow:group_creation}": {
+            "avg": 32.29597379411764,
+            "min": 18.624872,
+            "med": 32.211566499999996,
+            "max": 98.431817,
+            "p(90)": 42.22331,
+            "p(95)": 49.492138499999996,
+            "thresholds": {
+                "p(95)<1800": false
+            }
+        },
+        "http_req_waiting": {
+            "max": 928.184158,
+            "p(90)": 115.37851410000003,
+            "p(95)": 367.57157865,
+            "avg": 66.59796158661416,
+            "min": 8.301606,
+            "med": 19.229742
+        },
+        "http_req_duration{flow:project_verification}": {
+            "min": 14.625007,
+            "med": 193.64863100000002,
+            "max": 928.797459,
+            "p(90)": 458.63205700000003,
+            "p(95)": 711.3628280999995,
+            "avg": 246.04323914285715,
+            "thresholds": {
+                "p(95)<2500": false
+            }
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 254,
+            "thresholds": {
+                "rate<0.05": false
+            },
+            "value": 0
+        },
+        "http_req_blocked": {
+            "max": 6.588972,
+            "p(90)": 0.008367500000000003,
+            "p(95)": 0.010605249999999997,
+            "avg": 0.039279811023622026,
+            "min": 0.001625,
+            "med": 0.004909
+        },
+        "data_received": {
+            "count": 518969,
+            "rate": 24337.89464788098
+        },
+        "http_req_receiving": {
+            "min": 0.045662,
+            "med": 0.29774,
+            "max": 49.808706,
+            "p(90)": 0.6300138000000001,
+            "p(95)": 0.7282739999999999,
+            "avg": 0.5366623818897637
+        },
+        "data_sent": {
+            "count": 187544,
+            "rate": 8795.180663666213
+        }
+    },
+    "setup_data": {
+        "token": "eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiJiNmVjYjY2Ni0wMTg4LTQwNzctOTVjMS1jNmI3NmVlMzFmZGIiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjIiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzczMjkwODM1LCJleHAiOjE3NzMyOTE3MzV9.omzofA1A1HRTGe8KOXvc7I6vDXaBx8JB-3RJZE4fB2aHCMQXL4VYobKV-SQ6ZBitOpdOZT19JmftjuBdXqtBfiYxovihSmEH1jE8I0bP1QvYJrezQVdu4hKKY-u89M6zRNJXrdCVfdBkSRirF9qj4402arCMaSmhuIB9q0ieLSqS1HJNP-0aBwVyU2B7wBQPTXqDr2HOBfazaA5qvLIBF9N76PelPF8B5OjGHGf1BjEZCOK4DpbDtj9W5jIlJSvpzf1zSkEpUtbilDblFf0yuRvG3Tq3Z5slJdYD89esg6EjfdkuH9ue7_mlOpKUkSnVDJqobXMVd7wiVir9hhBmkw",
+        "groupId": 139,
+        "lecturerId": 232,
+        "projectConfigId": "870cee71-a33f-4cd1-a520-b37849f1b3b7",
+        "semesterId": 23
+    },
+    "root_group": {
+        "checks": {
+            "login remains healthy under load": {
+                "fails": 0,
+                "name": "login remains healthy under load",
+                "path": "::login remains healthy under load",
+                "id": "95ab88f3c7a9f2ff0ef462b4b6f2848d",
+                "passes": 36
+            },
+            "group creation is healthy": {
+                "passes": 17,
+                "fails": 0,
+                "name": "group creation is healthy",
+                "path": "::group creation is healthy",
+                "id": "3b5b5e7c6ce5020961c2dee7398cfab5"
+            },
+            "created group is readable": {
+                "passes": 17,
+                "fails": 0,
+                "name": "created group is readable",
+                "path": "::created group is readable",
+                "id": "918c15ccdcd2e5f4906c1a7d0391600b"
+            }
+        },
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {
+            "setup": {
+                "name": "setup",
+                "path": "::setup",
+                "id": "5c0f8025f7e0b6654089e5b00e950f1a",
+                "groups": {},
+                "checks": {
+                        "setup login succeeded": {
+                            "name": "setup login succeeded",
+                            "path": "::setup::setup login succeeded",
+                            "id": "b4a2b4eed360da13f2dd967da0640c51",
+                            "passes": 1,
+                            "fails": 0
+                        }
+                    }
+            },
+            "profile-retrieval": {
+                "groups": {},
+                "checks": {
+                        "profile retrieval is healthy": {
+                            "name": "profile retrieval is healthy",
+                            "path": "::profile-retrieval::profile retrieval is healthy",
+                            "id": "04e4dbc78c6ae6d1c3798b80e2610ffb",
+                            "passes": 38,
+                            "fails": 0
+                        },
+                        "groups retrieval is healthy": {
+                            "passes": 38,
+                            "fails": 0,
+                            "name": "groups retrieval is healthy",
+                            "path": "::profile-retrieval::groups retrieval is healthy",
+                            "id": "c3a4ce9dc7373460e7f880bbd4dd971e"
+                        },
+                        "semesters retrieval is healthy": {
+                            "path": "::profile-retrieval::semesters retrieval is healthy",
+                            "id": "35997a082fed415f06ce39b062c36902",
+                            "passes": 38,
+                            "fails": 0,
+                            "name": "semesters retrieval is healthy"
+                        }
+                    },
+                "name": "profile-retrieval",
+                "path": "::profile-retrieval",
+                "id": "0ff05c3035d758df7cf55ae9f79807b2"
+            },
+            "project-config-verification": {
+                "path": "::project-config-verification",
+                "id": "a7473cec1527354d4ac18b6923ff87fa",
+                "groups": {},
+                "checks": {
+                        "project config verification is healthy": {
+                            "name": "project config verification is healthy",
+                            "path": "::project-config-verification::project config verification is healthy",
+                            "id": "a888672eba5c7ff81dfd73a8e1b04d78",
+                            "passes": 14,
+                            "fails": 0
+                        },
+                        "project config remains readable": {
+                            "id": "bc4741f9480e92937ec4b6ef9832d5dc",
+                            "passes": 14,
+                            "fails": 0,
+                            "name": "project config remains readable",
+                            "path": "::project-config-verification::project config remains readable"
+                        }
+                    },
+                "name": "project-config-verification"
+            }
+        }
+    }
+}

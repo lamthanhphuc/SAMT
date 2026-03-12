@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>QA Dashboard</title>
+  <style>
+    :root { --bg:#f3efe7; --panel:#fffdfa; --text:#16202a; --muted:#596573; --good:#1c7c54; --warn:#c66b1c; --bad:#b42318; }
+    body { margin:0; font-family: Cambria, Georgia, serif; color:var(--text); background:linear-gradient(180deg,#f9f5ed,#f3efe7); }
+    main { max-width:1180px; margin:0 auto; padding:28px 20px 40px; }
+    .hero,.panel,.card { background:var(--panel); border:1px solid rgba(22,32,42,.08); border-radius:20px; box-shadow:0 12px 28px rgba(22,32,42,.08); }
+    .hero,.panel { padding:22px; margin-bottom:18px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px; }
+    .card { padding:18px; }
+    .status { text-transform:uppercase; letter-spacing:.08em; font-size:12px; color:var(--muted); }
+    .status-passed .status { color:var(--good); }
+    .status-failed .status { color:var(--bad); }
+    .status-skipped .status,.status-unknown .status { color:var(--warn); }
+    table { width:100%; border-collapse:collapse; }
+    th,td { padding:10px 8px; border-bottom:1px solid rgba(22,32,42,.08); text-align:left; }
+    th { color:var(--muted); font-size:12px; letter-spacing:.06em; text-transform:uppercase; }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <h1>Reliability Validation Dashboard</h1>
+      <p>Generated 2026-03-12T04:48:07.219Z. Health score: <strong>64/100</strong>.</p>
+      <p>Pipeline status: <strong>unknown</strong>.</p>
+    </section>
+    <section class="panel">
+      <div class="grid">
+      <article class="card status-passed">
+        <h2>API Coverage</h2>
+        <p class="status">passed</p>
+        <p>45 operations discovered</p>
+      </article>
+      <article class="card status-unknown">
+        <h2>Smoke/Regression/Contract</h2>
+        <p class="status">unknown</p>
+        <p>Pipeline completed</p>
+      </article>
+      <article class="card status-unknown">
+        <h2>Security Probes</h2>
+        <p class="status">unknown</p>
+        <p> boundary regressions</p>
+      </article>
+      <article class="card status-unknown">
+        <h2>Security Hardening</h2>
+        <p class="status">unknown</p>
+        <p>No hardening report</p>
+      </article>
+      <article class="card status-unknown">
+        <h2>Chaos</h2>
+        <p class="status">unknown</p>
+        <p>No chaos report</p>
+      </article>
+      <article class="card status-passed">
+        <h2>Performance</h2>
+        <p class="status">passed</p>
+        <p>p95 368.0775162 ms</p>
+      </article>
+      <article class="card status-passed">
+        <h2>Integrations</h2>
+        <p class="status">passed</p>
+        <p>Jira and GitHub verification executed</p>
+      </article>
+      <article class="card status-failed">
+        <h2>Architecture</h2>
+        <p class="status">failed</p>
+        <p>Architecture score 40/100</p>
+      </article>
+      <article class="card status-skipped">
+        <h2>Auto Fixer</h2>
+        <p class="status">skipped</p>
+        <p>0 files patched, 0 override repairs</p>
+      </article>
+      <article class="card status-unknown">
+        <h2>Communication</h2>
+        <p class="status">unknown</p>
+        <p>No communication report</p>
+      </article>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Pipeline Stages</h2>
+      <table>
+        <thead><tr><th>Stage</th><th>Status</th><th>Attempt</th></tr></thead>
+        <tbody>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

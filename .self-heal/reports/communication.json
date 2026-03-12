@@ -1,0 +1,118 @@
+{
+  "generatedAt": "2026-03-12T05:22:11.987Z",
+  "status": "failed",
+  "routingChecks": [
+    {
+      "name": "gateway-public-auth",
+      "status": 200,
+      "durationMs": 76,
+      "body": {
+        "timestamp": "2026-03-12T05:22:06.356019836Z",
+        "status": 200,
+        "success": true,
+        "data": {
+          "accessToken": "eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiJkZjA5YWNlYi1jMDg3LTRjYzAtODY3YS1kZDBlYzM1YTI5ODEiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjIiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzczMjkyOTI2LCJleHAiOjE3NzMyOTM4MjZ9.lm9Sk17oDOz3E_eAngEcU_slMDwcrO0ftSkl7mywwPSm57QcDJ5pbNkxhcvmkTSVG1wXduVL5hw5skNqwAwEYx9hG-r4m93XBxrIAoEpy2pjEL6Okw7HCRX3fk0fYXqtftqvv6h_ETKRySzBa6LwdGuNSWFXuly7FxNJ9XhxSenkRhrR4W67w_eCQ5i_h8C9wXNqcE0Rs89kR8lRODrZZnpFQ2vMxHxHkl2Bbmk02VSjtcpEXCl7futCuepYOrY94HcW_URHjh6T3XS8fWuFwyinIUnfZZNgBsv8jGFNxN_A6pTd12qGlN_j2LbZad4zV6_a_Q6NKIuoAG-MTcCB5A",
+          "refreshToken": "67e1bd60-e67d-4196-a499-97e7f9409562",
+          "tokenType": "Bearer",
+          "expiresIn": 900
+        },
+        "path": "/api/auth/login",
+        "correlationId": "29035d1f-53b8-4d7d-9e53-ae69dc4890b6"
+      },
+      "passed": true
+    },
+    {
+      "name": "identity-user-list",
+      "status": 200,
+      "durationMs": 22,
+      "body": {
+        "timestamp": "2026-03-12T05:22:06.378110403Z",
+        "status": 200,
+        "success": true,
+        "data": {
+          "content": [
+            {
+              "id": 3,
+              "email": "lecturer1@samt.local",
+              "fullName": "Lecturer One",
+              "status": "ACTIVE",
+              "roles": [
+                "LECTURER"
+              ]
+            }
+          ],
+          "page": 0,
+          "size": 1,
+          "totalElements": 186,
+          "totalPages": 186
+        },
+        "path": "/api/users",
+        "correlationId": "634a81e1-0a32-4ebe-b66a-8e9ac7912312"
+      },
+      "passed": true
+    },
+    {
+      "name": "user-group-list",
+      "status": 200,
+      "durationMs": 27,
+      "body": {
+        "timestamp": "2026-03-12T05:22:06.404333859Z",
+        "status": 200,
+        "success": true,
+        "data": {
+          "content": [
+            {
+              "id": 153,
+              "groupName": "SE0313-G3",
+              "semesterId": 23,
+              "semesterCode": "QA5146-S1",
+              "lecturerName": "QA Load Lecturer",
+              "memberCount": 0
+            }
+          ],
+          "page": 0,
+          "size": 1,
+          "totalElements": 25,
+          "totalPages": 25
+        },
+        "path": "/api/groups",
+        "correlationId": "398998a4-4cf7-4865-8269-f03a43d579db"
+      },
+      "passed": true
+    },
+    {
+      "name": "project-config-by-group",
+      "status": 404,
+      "durationMs": 342,
+      "body": {
+        "type": "https://api.example.com/errors/resource-not-found",
+        "title": "Resource not found",
+        "status": 404,
+        "detail": "Configuration not found for group 1",
+        "instance": "/api/project-configs/group/1",
+        "timestamp": "2026-03-12T05:22:06.727579907Z"
+      },
+      "passed": true
+    }
+  ],
+  "staticEvidence": {
+    "resilience4jConfigured": false,
+    "internalJwtConfigured": false
+  },
+  "failureExperiment": {
+    "target": "project-config-service",
+    "during": {
+      "status": 200,
+      "durationMs": 2009,
+      "body": ""
+    },
+    "recovered": {
+      "status": 200,
+      "durationMs": 8,
+      "body": ""
+    },
+    "timeoutHandled": true,
+    "gracefulError": false,
+    "recoveredCleanly": true
+  }
+}

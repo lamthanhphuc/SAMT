@@ -1,0 +1,88 @@
+{
+  "generatedAt": "2026-03-12T03:40:13.694Z",
+  "baseUrl": "http://localhost:9080",
+  "status": "passed",
+  "environment": {
+    "jiraHostUrl": "https://fpt-team-f2dn8ko2.atlassian.net",
+    "jiraEmail": "phucltse184678@fpt.edu.vn",
+    "jiraApiToken": "ATAT****************************************************************************************************************************************************************************************B151",
+    "githubRepoUrl": "https://github.com/lamthanhphuc/SAMT",
+    "githubToken": "gith*************************************************************************************ypEc"
+  },
+  "steps": [
+    {
+      "name": "admin-login",
+      "status": 200
+    },
+    {
+      "name": "create-lecturer",
+      "status": 201
+    },
+    {
+      "name": "create-semester",
+      "status": 201
+    },
+    {
+      "name": "activate-semester",
+      "status": 204
+    },
+    {
+      "name": "create-group",
+      "status": 201
+    },
+    {
+      "name": "create-project-config",
+      "status": 201
+    },
+    {
+      "name": "verify-project-config",
+      "status": 200
+    }
+  ],
+  "created": {
+    "lecturerId": 139,
+    "semesterId": 16,
+    "groupId": 133,
+    "projectConfigId": "b038a32f-3118-4fa0-acc4-177bc375ea48"
+  },
+  "cleanup": [
+    {
+      "method": "DELETE",
+      "path": "/api/project-configs/b038a32f-3118-4fa0-acc4-177bc375ea48",
+      "status": 200
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/groups/133",
+      "status": 204
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/users/139",
+      "status": 200
+    }
+  ],
+  "verificationResponse": {
+    "configId": "b038a32f-3118-4fa0-acc4-177bc375ea48",
+    "state": "VERIFIED",
+    "verificationResults": {
+      "jira": {
+        "status": "SUCCESS",
+        "message": "Connected successfully to Jira",
+        "error": null,
+        "testedAt": "2026-03-12T03:40:15Z",
+        "userEmail": "phucltse184678@fpt.edu.vn"
+      },
+      "github": {
+        "status": "SUCCESS",
+        "message": "Connected successfully to GitHub",
+        "error": null,
+        "testedAt": "2026-03-12T03:40:15Z",
+        "repoName": "lamthanhphuc/SAMT",
+        "hasWriteAccess": true
+      }
+    },
+    "lastVerifiedAt": "2026-03-12T03:40:16Z",
+    "invalidReason": null
+  }
+}

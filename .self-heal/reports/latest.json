@@ -1,11 +1,12 @@
 {
   "workspacePath": "E:/Bin/SAMT",
-  "generatedAt": "2026-03-08T06:09:24.301Z",
-  "validationConstraintFiles": 15,
+  "generatedAt": "2026-03-12T04:54:25.516Z",
+  "mode": "ci",
+  "validationConstraintFiles": 18,
   "iterations": [
     {
       "iteration": 1,
-      "status": "passed",
+      "status": "failed",
       "stages": [
         {
           "id": "openapi",
@@ -34,23 +35,385 @@
         {
           "id": "contract",
           "command": "npm run tests:contract",
-          "status": 0,
+          "status": 1,
           "outputFile": "E:/Bin/SAMT/.self-heal/reports/iteration-1-contract.log"
         }
       ],
-      "diagnostics": [],
+      "diagnostics": [
+        {
+          "source": "schemathesis",
+          "operationKey": "get /api/admin/audit/entity/{entityType}/{entityId}",
+          "method": "get",
+          "pathKey": "/api/admin/audit/entity/{entityType}/{entityId}",
+          "category": "schema_mismatch",
+          "evidence": "Network Error\n\nConnection failed\n\n    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "get /api/admin/audit/range",
+          "method": "get",
+          "pathKey": "/api/admin/audit/range",
+          "category": "schema_mismatch",
+          "evidence": "Network Error\n\nConnection failed\n\n    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "get /api/admin/audit/security-events",
+          "method": "get",
+          "pathKey": "/api/admin/audit/security-events",
+          "category": "schema_mismatch",
+          "evidence": "Network Error\n\nConnection failed\n\n    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "post /api/admin/users",
+          "method": "post",
+          "pathKey": "/api/admin/users",
+          "category": "schema_mismatch",
+          "evidence": "Network Error\n\nConnection failed\n\n    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "post /api/admin/users/{userId}/restore",
+          "method": "post",
+          "pathKey": "/api/admin/users/{userId}/restore",
+          "category": "schema_mismatch",
+          "evidence": "Network Error\n\nConnection failed\n\n    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "post /api/admin/users/{userId}/unlock",
+          "method": "post",
+          "pathKey": "/api/admin/users/{userId}/unlock",
+          "category": "schema_mismatch",
+          "evidence": "Network Error\n\nConnection failed\n\n    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "post /api/project-configs/admin/{id}/restore",
+          "method": "post",
+          "pathKey": "/api/project-configs/admin/{id}/restore",
+          "category": "schema_mismatch",
+          "evidence": "Network Error\n\nConnection failed\n\n    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "post /api/semesters",
+          "method": "post",
+          "pathKey": "/api/semesters",
+          "category": "schema_mismatch",
+          "evidence": "Network Error\n\nConnection failed\n\n    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "put /api/admin/users/{userId}/external-accounts",
+          "method": "put",
+          "pathKey": "/api/admin/users/{userId}/external-accounts",
+          "category": "schema_mismatch",
+          "evidence": "Network Error\n\nConnection failed\n\n    Failed to establish a new connection: [Errno 11] Resource temporarily unavailable\n\nNeed more help?\n    Join our Discord server: https://discord.gg/R9ASRAmHnA\n=================================== FAILURES ==================================="
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "post /api/groups",
+          "method": "post",
+          "pathKey": "/api/groups",
+          "category": "invalid_payload_generated",
+          "evidence": "1. Test Case ID: cbsDQI\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/validation-error\",\"title\":\"Validation failed\",\"status\":400,\"detail\":\"Lecturer ID is required\",\"instance\":\"/api/groups\",\"timestamp\":\"2026-03-12T04:58:32.649405089Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"groupName\": \"AA00-G0\", \"semesterId\": 1}' http://api-gateway:8080/api/groups"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "post /api/semesters",
+          "method": "post",
+          "pathKey": "/api/semesters",
+          "category": "authorization_failure",
+          "evidence": "1. Test Case ID: 1KeWoc\n\n- API accepted schema-violating request\n\n    Invalid data should have been rejected\n    Expected: 400, 401, 403, 404, 406, 422, 428, 5xx\n    Invalid component: in body - object with unexpected properties\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[409] Conflict:\n\n    `{\"type\":\"https://api.example.com/errors/resource-conflict\",\"title\":\"Conflict detected\",\"status\":409,\"detail\":\"Semester code already exists: 0\",\"instance\":\"/api/semesters\",\"timestamp\":\"2026-03-12T04:58:33.085699470Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"endDate\": \"2000-01-01\", \"semesterCode\": \"0\", \"semesterName\": \"0\", \"startDate\": \"2000-01-01\", \"x-schemathesis-unknown-property\": 42}' http://api-gateway:8080/api/semesters"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "get /api/groups",
+          "method": "get",
+          "pathKey": "/api/groups",
+          "category": "authorization_failure",
+          "evidence": "1. Test Case ID: Hk4Gmv\n\n- API rejected schema-compliant request\n\n    Valid data should have been accepted\n    Expected: 2xx, 401, 403, 404, 409, 5xx\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/validation-error\",\"title\":\"Validation failed\",\"status\":400,\"detail\":\"Validation failed\",\"instance\":\"/api/groups\",\"timestamp\":\"2026-03-12T04:58:33.324727850Z\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' 'http://api-gateway:8080/api/groups?page=0&semesterId=0&lecturerId=0'"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "get /api/semesters",
+          "method": "get",
+          "pathKey": "/api/semesters",
+          "category": "schema_mismatch",
+          "evidence": "1. Test Case ID: BzFEIl\n\n- Response violates schema\n\n    {\"correlationId\":\"f825142d-0278-4afd-bf6e-2456d8ccd17c\",\"data\":[{\"createdAt\":\"2026-03-12T02:12:59.615542Z\",\"endDate\":\"2026-08-31\",\"id\":13,\"isActive\":false,\"semesterCode\":\"REG1773281579609\",\"semesterName\":\"Regression Semester 1773281579609\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-12T02:13:02.151037Z\"},{\"createdAt\":\"2026-03-12T02:13:02.130112Z\",\"endDate\":\"2026-08-31\",\"id\":14,\"isActive\":false,\"semesterCode\":\"AUTO1773281582118\",\"semesterName\":\"Auto Semester 1773281582118\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-12T03:40:14.031915Z\"},{\"createdAt\":\"2026-03-11T04:37:45.032537Z\",\"endDate\":\"2026-08-31\",\"id\":3,\"isActive\":false,\"semesterCode\":\"AUTO1773203864\",\"semesterName\":\"Auto Semester 1773203864\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-11T04:38:12.376265Z\"},{\"createdAt\":\"2026-03-11T04:38:12.342341Z\",\"endDate\":\"2026-08-31\",\"id\":4,\"isActive\":false,\"semesterCode\":\"AUTO1773203892\",\"semesterName\":\"Auto Semester 1773203892\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-11T04:42:35.608046Z\"},{\"createdAt\":\"2026-03-11T04:42:35.317705Z\",\"endDate\":\"2026-08-31\",\"id\":5,\"isActive\":false,\"semesterCode\":\"AUTO1773204155\",\"semesterName\":\"Auto Semester 1773204155\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-11T04:42:53.863993Z\"},{\"createdAt\":\"2026-03-11T04:42:53.826368Z\",\"endDate\":\"2026-08-31\",\"id\":6,\"isActive\":false,\"semesterCode\":\"AUTO1773204173\",\"semesterName\":\"Auto Semester 1773204173\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-11T04:44:46.337821Z\"},{\"createdAt\":\"2026-03-11T04:44:46.309013Z\",\"endDate\":\"2026-08-31\",\"id\":7,\"isActive\":false,\"semesterCode\":\"AUTO1773204286\",\"semesterName\":\"Auto Semester 1773204286\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-11T04:45:43.069940Z\"},{\"createdAt\":\"2026-03-11T04:45:42.902807Z\",\"endDate\":\"2026-08-31\",\"id\":8,\"isActive\":false,\"semesterCode\":\"AUTO1773204342\",\"semesterName\":\"Auto Semester 1773204342\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-11T04:45:57.571780Z\"},{\"createdAt\":\"2026-03-11T04:45:57.544124Z\",\"endDate\":\"2026-08-31\",\"id\":9,\"isActive\":false,\"semesterCode\":\"AUTO1773204357\",\"semesterName\":\"Auto Semester 1773204357\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-11T07:15:31.161835Z\"},{\"createdAt\":\"2026-03-12T02:12:17.108628Z\",\"endDate\":\"2026-08-31\",\"id\":11,\"isActive\":false,\"semesterCode\":\"REG1773281537084\",\"semesterName\":\"Regression Semester 1773281537084\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-12T02:12:17.108628Z\"},{\"createdAt\":\"2026-03-12T02:12:25.241012Z\",\"endDate\":\"2026-08-31\",\"id\":12,\"isActive\":false,\"semesterCode\":\"AUTO1773281545225\",\"semesterName\":\"Auto Semester 1773281545225\",\"startDate\":\"2026-06-01\",\"updatedAt\":\"2026-03-12T02:12:25.241012Z\"},{\"createdAt\":\"2026-03-11T07:15:11.825177Z\",\"endDate\":\"2026-06-05\",\"id\":10,\"isActive\":true,\"semesterCode\":\"QA-2026-S1\",\"semesterName\":\"Updated Generated Semester\",\"startDate\":\"2026-01-20\",\"updatedAt\":\"2026-03-12T04:49:11.355545Z\"},{\"createdAt\":\"2026-03-12T04:47:15.260428Z\",\"endDate\":\"2026-05-30\",\"id\":23,\"isActive\":false,\"semesterCode\":\"QA5146-S1\",\"semesterName\":\"QA Load 1773290835146\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T04:49:11.355591Z\"},{\"createdAt\":\"2026-03-12T03:39:41.676674Z\",\"endDate\":\"2026-05-30\",\"id\":15,\"isActive\":false,\"semesterCode\":\"QA0109-S1\",\"semesterName\":\"QA Integration 2033940109\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T03:39:41.676676Z\"},{\"createdAt\":\"2026-03-12T03:40:13.947100Z\",\"endDate\":\"2026-05-30\",\"id\":16,\"isActive\":false,\"semesterCode\":\"QA3832-S1\",\"semesterName\":\"QA Integration 2034013832\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T03:46:45.507663Z\"},{\"createdAt\":\"2026-03-12T04:37:16.051915Z\",\"endDate\":\"2026-05-30\",\"id\":17,\"isActive\":false,\"semesterCode\":\"QA5751-S1\",\"semesterName\":\"QA Load 1773290235751\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T04:39:07.146902Z\"},{\"createdAt\":\"2026-03-12T04:39:07.118904Z\",\"endDate\":\"2026-05-30\",\"id\":18,\"isActive\":false,\"semesterCode\":\"QA6983-S1\",\"semesterName\":\"QA Load 1773290346983\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T04:40:32.070337Z\"},{\"createdAt\":\"2026-03-12T04:40:32.043317Z\",\"endDate\":\"2026-05-30\",\"id\":19,\"isActive\":false,\"semesterCode\":\"QA1912-S1\",\"semesterName\":\"QA Load 1773290431912\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T04:41:34.043783Z\"},{\"createdAt\":\"2026-03-12T04:41:34.019774Z\",\"endDate\":\"2026-05-30\",\"id\":20,\"isActive\":false,\"semesterCode\":\"QA3907-S1\",\"semesterName\":\"QA Load 1773290493907\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T04:42:36.058642Z\"},{\"createdAt\":\"2026-03-12T04:42:36.034765Z\",\"endDate\":\"2026-05-30\",\"id\":21,\"isActive\":false,\"semesterCode\":\"QA5914-S1\",\"semesterName\":\"QA Load 1773290555914\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T04:46:48.128699Z\"},{\"createdAt\":\"2026-03-12T04:46:48.097653Z\",\"endDate\":\"2026-05-30\",\"id\":22,\"isActive\":false,\"semesterCode\":\"QA7936-S1\",\"semesterName\":\"QA Load 1773290807936\",\"startDate\":\"2026-01-15\",\"updatedAt\":\"2026-03-12T04:47:15.283130Z\"},{\"createdAt\":\"2026-03-11T03:58:32.115378Z\",\"endDate\":\"2025-05-31\",\"id\":1,\"isActive\":false,\"semesterCode\":\"SPRING2025\",\"semesterName\":\"Spring Semester 2025\",\"startDate\":\"2025-01-01\",\"updatedAt\":\"2026-03-11T04:37:45.229636Z\"},{\"createdAt\":\"2026-03-11T03:58:32.115378Z\",\"endDate\":\"2024-12-31\",\"id\":2,\"isActive\":false,\"semesterCode\":\"FALL2024\",\"semesterName\":\"Fall Semester 2024\",\"startDate\":\"2024-09-01\",\"updatedAt\":\"2026-03-11T03:58:32.115378Z\"},{\"createdAt\":\"2026-03-12T04:53:32.225527Z\",\"endDate\":\"2000-01-01\",\"id\":24,\"isActive\":false,\"semesterCode\":\"0\",\"semesterName\":\"0\",\"startDate\":\"2000-01-01\",\"updatedAt\":\"2026-03-12T04:53:32.225529Z\"}],\"path\":\"/api/semesters\",\"status\":200,\"success\":true,\"timestamp\":\"2026-03-12T04:58:33.636070710Z\"} is not of type \"array\"\n\n    Schema:\n\n        {\n            \"type\": \"array\",\n            \"items\": {\n                \"$ref\": \"#/components/schemas/userGroup_SemesterResponse\"\n            },\n            \"components\": {\n                \"schemas\": {\n                    \"userGroup_SemesterResponse\": {\n                        \"type\": \"object\",\n                        \"properties\": {\n                            \"id\": {\n                                \"type\": \"integer\",\n                                \"format\": \"int64\"\n                            },\n                            \"semesterCode\": {\n                                \"type\": \"string\"\n                            },\n                            \"semesterName\": {\n                                \"type\": \"string\"\n            // Output truncated...\n        }\n\n    Value:\n\n        {\n            \"correlationId\": \"f825142d-0278-4afd-bf6e-2456d8ccd17c\",\n            \"data\": [\n                {\n                    \"createdAt\": \"2026-03-12T02:12:59.615542Z\",\n                    \"endDate\": \"2026-08-31\",\n                    \"id\": 13,\n                    \"isActive\": false,\n                    \"semesterCode\": \"REG1773281579609\",\n                    \"semesterName\": \"Regression Semester 1773281579609\",\n                    \"startDate\": \"2026-06-01\",\n                    \"updatedAt\": \"2026-03-12T02:13:02.151037Z\"\n                },\n                {\n                    \"createdAt\": \"2026-03-12T02:13:02.130112Z\",\n                    \"endDate\": \"2026-08-31\",\n                    \"id\": 14,\n                    \"isActive\": false,\n                    \"semesterCode\": \"AUTO1773281582118\",\n            // Output truncated...\n        }\n\n[200] OK:\n\n    `{\"timestamp\":\"2026-03-12T04:58:33.636070710Z\",\"status\":200,\"success\":true,\"data\":[{\"id\":13,\"semesterCode\":\"REG1773281579609\",\"semesterName\":\"Regression Semester 1773281579609\",\"startDate\":\"2026-06-01\",\"endDate\":\"2026-08-31\",\"isActive\":false,\"createdAt\":\"2026-03-12T02:12:59.615542Z\",\"updatedAt\":\"2026-03-12T02:13:02.151037Z\"},{\"id\":14,\"semesterCode\":\"AUTO1773281582118\",\"semesterName\":\"Auto Semester 1773281582118\",\"startDate\":\"2026-06-01\",\"endDate\":\"2026-08-31\",\"isActive\":false,\"createdAt\":\"2026-03-12T02:13:02 // Output truncated...`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' http://api-gateway:8080/api/semesters"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "put /api/semesters/active",
+          "method": "put",
+          "pathKey": "/api/semesters/active",
+          "category": "schema_mismatch",
+          "evidence": "1. Test Case ID: OHV5Gv\n\n- Unsupported methods\n\n    Unsupported method PUT returned 400, expected 405 Method Not Allowed\n\n    Return 405 for methods not listed in the OpenAPI spec\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/invalid-request\",\"title\":\"Invalid request\",\"status\":400,\"detail\":\"Invalid value for parameter 'id'\",\"instance\":\"/api/semesters/active\",\"timestamp\":\"2026-03-12T04:58:33.762265554Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' http://api-gateway:8080/api/semesters/active"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "get /api/admin/audit/security-events",
+          "method": "get",
+          "pathKey": "/api/admin/audit/security-events",
+          "category": "authorization_failure",
+          "evidence": "1. Test Case ID: gFVLM7\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[401] Unauthorized:\n\n    `{\"type\":\"https://api.example.com/errors/unauthorized\",\"title\":\"Unauthorized\",\"status\":401,\"detail\":\"Unauthorized\",\"instance\":\"/api/admin/audit/security-events\",\"timestamp\":\"2026-03-12T04:58:34.092793794Z\"}`\n\nReproduce with:\n\n    curl -X GET 'http://api-gateway:8080/api/admin/audit/security-events?arg0=page&arg0=size&arg0=sort'"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "get /api/admin/audit/range",
+          "method": "get",
+          "pathKey": "/api/admin/audit/range",
+          "category": "schema_mismatch",
+          "evidence": "1. Test Case ID: AjkeEk\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/invalid-request\",\"title\":\"Invalid request\",\"status\":400,\"detail\":\"Missing required parameter 'endDate'\",\"instance\":\"/api/admin/audit/range\",\"timestamp\":\"2026-03-12T04:58:34.711736624Z\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' 'http://api-gateway:8080/api/admin/audit/range?startDate=2000-01-01T00%3A00%3A00Z&arg2=page&arg2=size&arg2=sort'"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "get /api/users",
+          "method": "get",
+          "pathKey": "/api/users",
+          "category": "schema_mismatch",
+          "evidence": "1. Test Case ID: rvHJry\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/invalid-request\",\"title\":\"Invalid request\",\"status\":400,\"detail\":\"Unknown query parameter 'x-schemathesis-unknown-property'\",\"instance\":\"/api/users\",\"timestamp\":\"2026-03-12T04:58:34.865445733Z\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' 'http://api-gateway:8080/api/users?status=&x-schemathesis-unknown-property=42'"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "post /api/project-configs/admin/{id}/restore",
+          "method": "post",
+          "pathKey": "/api/project-configs/admin/{id}/restore",
+          "category": "schema_mismatch",
+          "evidence": "1. Test Case ID: gPPg8D\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Configuration not found or permanently deleted\",\"instance\":\"/api/project-configs/admin/e3e70682-c209-4cac-629f-6fbed82c07cd/restore\",\"timestamp\":\"2026-03-12T04:58:35.928622084Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' http://api-gateway:8080/api/project-configs/admin/e3e70682-c209-4cac-629f-6fbed82c07cd/restore"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "post /api/auth/logout",
+          "method": "post",
+          "pathKey": "/api/auth/logout",
+          "category": "invalid_payload_generated",
+          "evidence": "1. Test Case ID: Pn6rQS\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/validation-error\",\"title\":\"Validation failed\",\"status\":400,\"detail\":\"Refresh token is required\",\"instance\":\"/api/auth/logout\",\"timestamp\":\"2026-03-12T04:58:37.074574088Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"refreshToken\": \"\"}' http://api-gateway:8080/api/auth/logout"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "post /api/admin/users",
+          "method": "post",
+          "pathKey": "/api/admin/users",
+          "category": "invalid_payload_generated",
+          "evidence": "1. Test Case ID: BT8yuE\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/validation-error\",\"title\":\"Validation failed\",\"status\":400,\"detail\":\"Email is required\",\"instance\":\"/api/admin/users\",\"timestamp\":\"2026-03-12T04:58:40.465418435Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"email\": \"\", \"password\": \"aA0?00000000\", \"fullName\": \"A\\u0085-]]\", \"role\": \"0\"}' http://api-gateway:8080/api/admin/users"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "patch /api/semesters/{id}/activate",
+          "method": "patch",
+          "pathKey": "/api/semesters/{id}/activate",
+          "category": "schema_mismatch",
+          "evidence": "1. Test Case ID: gZZ1dF\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Semester not found: 0\",\"instance\":\"/api/semesters/0/activate\",\"timestamp\":\"2026-03-12T04:58:42.722833012Z\"}`\n\nReproduce with:\n\n    curl -X PATCH -H 'Authorization: [Filtered]' http://api-gateway:8080/api/semesters/0/activate"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "get /api/admin/audit/entity/{entityType}/{entityId}",
+          "method": "get",
+          "pathKey": "/api/admin/audit/entity/{entityType}/{entityId}",
+          "category": "authorization_failure",
+          "evidence": "1. Test Case ID: Jyweqt\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[401] Unauthorized:\n\n    `{\"type\":\"https://api.example.com/errors/unauthorized\",\"title\":\"Unauthorized\",\"status\":401,\"detail\":\"Unauthorized\",\"instance\":\"/api/admin/audit/entity/0/0\",\"timestamp\":\"2026-03-12T04:58:43.220507579Z\"}`\n\nReproduce with:\n\n    curl -X GET 'http://api-gateway:8080/api/admin/audit/entity/0/0?arg2=page&arg2=size&arg2=sort'"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "delete /api/admin/users/{userId}",
+          "method": "delete",
+          "pathKey": "/api/admin/users/{userId}",
+          "category": "authorization_failure",
+          "evidence": "1. Test Case ID: IulmoA\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[401] Unauthorized:\n\n    `{\"type\":\"https://api.example.com/errors/unauthorized\",\"title\":\"Unauthorized\",\"status\":401,\"detail\":\"Unauthorized\",\"instance\":\"/api/admin/users/1\",\"timestamp\":\"2026-03-12T04:58:44.822768310Z\"}`\n\nReproduce with:\n\n    curl -X DELETE http://api-gateway:8080/api/admin/users/1"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "get /api/admin/audit/actor/{actorId}",
+          "method": "get",
+          "pathKey": "/api/admin/audit/actor/{actorId}",
+          "category": "authorization_failure",
+          "evidence": "1. Test Case ID: qMl47C\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[401] Unauthorized:\n\n    `{\"type\":\"https://api.example.com/errors/unauthorized\",\"title\":\"Unauthorized\",\"status\":401,\"detail\":\"Unauthorized\",\"instance\":\"/api/admin/audit/actor/0\",\"timestamp\":\"2026-03-12T04:58:45.282111350Z\"}`\n\nReproduce with:\n\n    curl -X GET 'http://api-gateway:8080/api/admin/audit/actor/0?arg1=page&arg1=size&arg1=sort'"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "patch /api/groups/{groupId}/lecturer",
+          "method": "patch",
+          "pathKey": "/api/groups/{groupId}/lecturer",
+          "category": "invalid_payload_generated",
+          "evidence": "1. Test Case ID: hWhWVz\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/validation-error\",\"title\":\"Validation failed\",\"status\":400,\"detail\":\"Lecturer ID must be greater than 0\",\"instance\":\"/api/groups/0/lecturer\",\"timestamp\":\"2026-03-12T04:58:46.115136014Z\"}`\n\nReproduce with:\n\n    curl -X PATCH -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"lecturerId\": 0}' http://api-gateway:8080/api/groups/0/lecturer"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "post /api/groups/{groupId}/members",
+          "method": "post",
+          "pathKey": "/api/groups/{groupId}/members",
+          "category": "schema_mismatch",
+          "evidence": "1. Test Case ID: dWcve7\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group not found: 0\",\"instance\":\"/api/groups/0/members\",\"timestamp\":\"2026-03-12T04:58:47.477402908Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"userId\": 0}' http://api-gateway:8080/api/groups/0/members"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "get /api/project-configs/group/{groupId}",
+          "method": "get",
+          "pathKey": "/api/project-configs/group/{groupId}",
+          "category": "schema_mismatch",
+          "evidence": "1. Test Case ID: JN7v8Z\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Configuration not found for group 0\",\"instance\":\"/api/project-configs/group/0\",\"timestamp\":\"2026-03-12T04:58:47.559347212Z\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' http://api-gateway:8080/api/project-configs/group/0"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "delete /api/project-configs/{id}",
+          "method": "delete",
+          "pathKey": "/api/project-configs/{id}",
+          "category": "schema_mismatch",
+          "evidence": "1. Test Case ID: BW2l2H\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Configuration not found: e3e70682-c209-4cac-629f-6fbed82c07cd\",\"instance\":\"/api/project-configs/e3e70682-c209-4cac-629f-6fbed82c07cd\",\"timestamp\":\"2026-03-12T04:58:49.698453546Z\"}`\n\nReproduce with:\n\n    curl -X DELETE -H 'Authorization: [Filtered]' http://api-gateway:8080/api/project-configs/e3e70682-c209-4cac-629f-6fbed82c07cd"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "get /api/groups/{groupId}/members",
+          "method": "get",
+          "pathKey": "/api/groups/{groupId}/members",
+          "category": "schema_mismatch",
+          "evidence": "1. Test Case ID: w7dRPw\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group with ID 1 not found\",\"instance\":\"/api/groups/1/members\",\"timestamp\":\"2026-03-12T04:58:50.106091892Z\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' 'http://api-gateway:8080/api/groups/1/members?size=20&x-schemathesis-unknown-property=42'"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "put /api/admin/users/{userId}/external-accounts",
+          "method": "put",
+          "pathKey": "/api/admin/users/{userId}/external-accounts",
+          "category": "authorization_failure",
+          "evidence": "1. Test Case ID: iQSmOZ\n\n- API accepted schema-violating request\n\n    Invalid data should have been rejected\n    Expected: 400, 401, 403, 404, 406, 422, 428, 5xx\n    Invalid component: in body - object with invalid 'githubUsername' value: Incorrect type\n\n[409] Conflict:\n\n    `{\"type\":\"https://api.example.com/errors/resource-conflict\",\"title\":\"Conflict detected\",\"status\":409,\"detail\":\"Jira account ID already mapped to another user\",\"instance\":\"/api/admin/users/1/external-accounts\",\"timestamp\":\"2026-03-12T04:58:50.164822368Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"jiraAccountId\": \"00000000000000000000\", \"githubUsername\": null}' http://api-gateway:8080/api/admin/users/1/external-accounts"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "put /api/groups/{groupId}",
+          "method": "put",
+          "pathKey": "/api/groups/{groupId}",
+          "category": "invalid_payload_generated",
+          "evidence": "1. Test Case ID: YaHG9M\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/validation-error\",\"title\":\"Validation failed\",\"status\":400,\"detail\":\"Lecturer ID must be greater than 0\",\"instance\":\"/api/groups/0\",\"timestamp\":\"2026-03-12T04:58:51.126405352Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"groupName\": \"AA00-G0\", \"lecturerId\": 0}' http://api-gateway:8080/api/groups/0"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "get /api/groups/{groupId}",
+          "method": "get",
+          "pathKey": "/api/groups/{groupId}",
+          "category": "schema_mismatch",
+          "evidence": "1. Test Case ID: mBquzY\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group with ID 0 not found\",\"instance\":\"/api/groups/0\",\"timestamp\":\"2026-03-12T04:58:53.100427893Z\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' http://api-gateway:8080/api/groups/0"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "post /api/admin/users/{userId}/unlock",
+          "method": "post",
+          "pathKey": "/api/admin/users/{userId}/unlock",
+          "category": "authorization_failure",
+          "evidence": "1. Test Case ID: EoP6iM\n\n- API rejected schema-compliant request\n\n    Valid data should have been accepted\n    Expected: 2xx, 401, 403, 404, 409, 5xx\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/invalid-request\",\"title\":\"Invalid request\",\"status\":400,\"detail\":\"User is not locked\",\"instance\":\"/api/admin/users/2/unlock\",\"timestamp\":\"2026-03-12T04:58:54.550634315Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' http://api-gateway:8080/api/admin/users/2/unlock"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "delete /api/groups/{groupId}",
+          "method": "delete",
+          "pathKey": "/api/groups/{groupId}",
+          "category": "schema_mismatch",
+          "evidence": "1. Test Case ID: hVQJKL\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group with ID 0 not found\",\"instance\":\"/api/groups/0\",\"timestamp\":\"2026-03-12T04:58:56.041072546Z\"}`\n\nReproduce with:\n\n    curl -X DELETE -H 'Authorization: [Filtered]' http://api-gateway:8080/api/groups/0"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "post /api/admin/users/{userId}/restore",
+          "method": "post",
+          "pathKey": "/api/admin/users/{userId}/restore",
+          "category": "authorization_failure",
+          "evidence": "1. Test Case ID: MMFWOJ\n\n- API rejected schema-compliant request\n\n    Valid data should have been accepted\n    Expected: 2xx, 401, 403, 404, 409, 5xx\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/invalid-request\",\"title\":\"Invalid request\",\"status\":400,\"detail\":\"User is not deleted\",\"instance\":\"/api/admin/users/2/restore\",\"timestamp\":\"2026-03-12T04:58:56.377588361Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' http://api-gateway:8080/api/admin/users/2/restore"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "put /api/users/{userId}",
+          "method": "put",
+          "pathKey": "/api/users/{userId}",
+          "category": "schema_mismatch",
+          "evidence": "1. Test Case ID: 8HrmBs\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/invalid-request\",\"title\":\"Invalid request\",\"status\":400,\"detail\":\"Invalid userId for updateUser: 0\",\"instance\":\"/api/users/0\",\"timestamp\":\"2026-03-12T04:58:57.899607835Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"fullName\": \"AA\"}' http://api-gateway:8080/api/users/0"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "post /api/admin/users/{userId}/lock",
+          "method": "post",
+          "pathKey": "/api/admin/users/{userId}/lock",
+          "category": "authorization_failure",
+          "evidence": "1. Test Case ID: RHqibx\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[401] Unauthorized:\n\n    `{\"type\":\"https://api.example.com/errors/unauthorized\",\"title\":\"Unauthorized\",\"status\":401,\"detail\":\"Unauthorized\",\"instance\":\"/api/admin/users/1/lock\",\"timestamp\":\"2026-03-12T04:58:58.295964512Z\"}`\n\nReproduce with:\n\n    curl -X POST 'http://api-gateway:8080/api/admin/users/1/lock?reason='"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "put /api/semesters/{id}",
+          "method": "put",
+          "pathKey": "/api/semesters/{id}",
+          "category": "schema_mismatch",
+          "evidence": "1. Test Case ID: 90sChL\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Semester not found: 0\",\"instance\":\"/api/semesters/0\",\"timestamp\":\"2026-03-12T04:58:59.215861724Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"semesterName\": \"0\", \"startDate\": \"2000-01-01\", \"endDate\": \"\"}' http://api-gateway:8080/api/semesters/0"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "get /api/users/{userId}",
+          "method": "get",
+          "pathKey": "/api/users/{userId}",
+          "category": "schema_mismatch",
+          "evidence": "1. Test Case ID: tQlqsw\n\n- Response violates schema\n\n    200 is not of type \"string\"\n\n    Schema at /properties/status:\n\n        {\n            \"type\": \"string\"\n        }\n\n    Value:\n\n        200\n\n[200] OK:\n\n    `{\"timestamp\":\"2026-03-12T04:58:59.487351693Z\",\"status\":200,\"success\":true,\"data\":{\"id\":2,\"email\":\"admin@samt.local\",\"fullName\":\"System Admin\",\"status\":\"ACTIVE\",\"roles\":[\"ADMIN\"]},\"path\":\"/api/users/2\",\"correlationId\":\"d0daf86e-7227-4d68-a93f-4cdbd831baab\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' http://api-gateway:8080/api/users/2"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "get /api/semesters/{id}",
+          "method": "get",
+          "pathKey": "/api/semesters/{id}",
+          "category": "schema_mismatch",
+          "evidence": "1. Test Case ID: uZIUXv\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Semester not found: 0\",\"instance\":\"/api/semesters/0\",\"timestamp\":\"2026-03-12T04:59:02.445994419Z\"}`\n\nReproduce with:\n\n    curl -X GET -H 'Authorization: [Filtered]' http://api-gateway:8080/api/semesters/0"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "put /api/groups/{groupId}/members/{userId}/demote",
+          "method": "put",
+          "pathKey": "/api/groups/{groupId}/members/{userId}/demote",
+          "category": "schema_mismatch",
+          "evidence": "1. Test Case ID: zdmzNU\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group with ID 1 not found\",\"instance\":\"/api/groups/1/members/0/demote\",\"timestamp\":\"2026-03-12T04:59:03.280114831Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' http://api-gateway:8080/api/groups/1/members/0/demote"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "put /api/groups/{groupId}/members/{userId}/promote",
+          "method": "put",
+          "pathKey": "/api/groups/{groupId}/members/{userId}/promote",
+          "category": "schema_mismatch",
+          "evidence": "1. Test Case ID: 2emCVo\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group not found: 1\",\"instance\":\"/api/groups/1/members/0/promote\",\"timestamp\":\"2026-03-12T04:59:05.247840891Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' http://api-gateway:8080/api/groups/1/members/0/promote"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "delete /api/groups/{groupId}/members/{userId}",
+          "method": "delete",
+          "pathKey": "/api/groups/{groupId}/members/{userId}",
+          "category": "schema_mismatch",
+          "evidence": "1. Test Case ID: iUS3wG\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group with ID 1 not found\",\"instance\":\"/api/groups/1/members/0\",\"timestamp\":\"2026-03-12T04:59:05.321024146Z\"}`\n\nReproduce with:\n\n    curl -X DELETE -H 'Authorization: [Filtered]' http://api-gateway:8080/api/groups/1/members/0"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "post /api/project-configs",
+          "method": "post",
+          "pathKey": "/api/project-configs",
+          "category": "schema_mismatch",
+          "evidence": "1. Test Case ID: UB0Y7N\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[404] Not Found:\n\n    `{\"type\":\"https://api.example.com/errors/resource-not-found\",\"title\":\"Resource not found\",\"status\":404,\"detail\":\"Group not found or deleted: 1\",\"instance\":\"/api/project-configs\",\"timestamp\":\"2026-03-12T04:59:12.707018132Z\"}`\n\nReproduce with:\n\n    curl -X POST -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"groupId\": 1, \"jiraHostUrl\": \"http://0.atlassian.net\", \"jiraEmail\": \"0@A.COM\", \"jiraApiToken\": \"ATATT00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\", \"githubRepoUrl\": \"https://github.com/0/0\", \"githubToken\": \"ghp_000000000000000000000000000000000000\"}' http://api-gateway:8080/api/project-configs"
+        },
+        {
+          "source": "schemathesis",
+          "operationKey": "put /api/project-configs/{id}",
+          "method": "put",
+          "pathKey": "/api/project-configs/{id}",
+          "category": "invalid_payload_generated",
+          "evidence": "1. Test Case ID: IOTtuA\n\n- Undocumented Content-Type\n\n    Received: application/problem+json\n    Documented: application/json\n\n[400] Bad Request:\n\n    `{\"type\":\"https://api.example.com/errors/validation-error\",\"title\":\"Validation failed\",\"status\":400,\"detail\":\"Invalid GitHub token format. Must start with 'ghp_' or 'github_pat_'\",\"instance\":\"/api/project-configs/e3e70682-c209-4cac-629f-6fbed82c07cd\",\"timestamp\":\"2026-03-12T04:59:14.016276018Z\"}`\n\nReproduce with:\n\n    curl -X PUT -H 'Authorization: [Filtered]' -H 'Content-Type: application/json' -d '{\"jiraHostUrl\": \"http://0.atlassian.net\", \"jiraEmail\": \"0@A.COM\", \"jiraApiToken\": \"ATATT00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\", \"githubRepoUrl\": \"https://github.com/0/0\", \"githubToken\": \"0000000000000000000000000000000000000000\"}' http://api-gateway:8080/api/project-configs/e3e70682-c209-4cac-629f-6fbed82c07cd"
+        }
+      ],
       "repairs": []
     }
   ],
-  "coverageStats": {
-    "generated": 1103,
-    "passed": 1103,
-    "skipped": 265
-  },
-  "finalStatus": "passed",
+  "coverageStats": null,
+  "finalStatus": "failed",
   "unexpected500": false,
   "diagnosticSummary": {
-    "total": 0,
-    "byCategory": {}
-  }
+    "total": 45,
+    "byCategory": {
+      "schema_mismatch": 29,
+      "invalid_payload_generated": 6,
+      "authorization_failure": 10
+    }
+  },
+  "repairHistory": []
 }

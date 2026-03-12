@@ -1,0 +1,225 @@
+{
+  "generatedAt": "2026-03-12T04:39:01.514Z",
+  "score": 40,
+  "totals": {
+    "javaFiles": 352,
+    "findings": 40,
+    "bySeverity": {
+      "high": 5,
+      "medium": 35
+    }
+  },
+  "findings": [
+    {
+      "type": "DTO exposing entity models",
+      "severity": "high",
+      "file": "user-group-service/src/main/java/com/example/user_groupservice/dto/response/GroupListResponse.java"
+    },
+    {
+      "type": "DTO exposing entity models",
+      "severity": "high",
+      "file": "user-group-service/src/main/java/com/example/user_groupservice/dto/response/MemberResponse.java"
+    },
+    {
+      "type": "missing validation",
+      "severity": "medium",
+      "file": "user-group-service/src/main/java/com/example/user_groupservice/controller/GroupController.java"
+    },
+    {
+      "type": "missing validation",
+      "severity": "medium",
+      "file": "user-group-service/src/main/java/com/example/user_groupservice/controller/GroupMemberController.java"
+    },
+    {
+      "type": "missing validation",
+      "severity": "medium",
+      "file": "user-group-service/src/main/java/com/example/user_groupservice/controller/SemesterController.java"
+    },
+    {
+      "type": "controllers with business logic",
+      "severity": "medium",
+      "file": "user-group-service/src/main/java/com/example/user_groupservice/controller/UserController.java"
+    },
+    {
+      "type": "missing validation",
+      "severity": "medium",
+      "file": "user-group-service/src/main/java/com/example/user_groupservice/controller/UserController.java"
+    },
+    {
+      "type": "missing service layer",
+      "severity": "medium",
+      "file": "sync-service/src/main/java/com/example/syncservice/controller/SyncController.java"
+    },
+    {
+      "type": "controllers with business logic",
+      "severity": "medium",
+      "file": "sync-service/src/main/java/com/example/syncservice/controller/SyncController.java"
+    },
+    {
+      "type": "missing validation",
+      "severity": "medium",
+      "file": "sync-service/src/main/java/com/example/syncservice/controller/SyncController.java"
+    },
+    {
+      "type": "missing transactions",
+      "severity": "medium",
+      "file": "report-service/src/main/java/com/example/reportservice/service/ReportingService.java"
+    },
+    {
+      "type": "missing validation",
+      "severity": "medium",
+      "file": "report-service/src/main/java/com/example/reportservice/controller/ReportController.java"
+    },
+    {
+      "type": "inconsistent response formats",
+      "severity": "medium",
+      "file": "report-service/src/main/java/com/example/reportservice/controller/ReportController.java"
+    },
+    {
+      "type": "controllers with business logic",
+      "severity": "medium",
+      "file": "project-config-service/src/main/java/com/samt/projectconfig/controller/ProjectConfigController.java"
+    },
+    {
+      "type": "missing validation",
+      "severity": "medium",
+      "file": "project-config-service/src/main/java/com/samt/projectconfig/controller/ProjectConfigController.java"
+    },
+    {
+      "type": "DTO exposing entity models",
+      "severity": "high",
+      "file": "identity-service/src/main/java/com/example/identityservice/dto/UserAuditDto.java"
+    },
+    {
+      "type": "DTO exposing entity models",
+      "severity": "high",
+      "file": "identity-service/src/main/java/com/example/identityservice/dto/UserDto.java"
+    },
+    {
+      "type": "direct repository usage in controllers",
+      "severity": "high",
+      "file": "identity-service/src/main/java/com/example/identityservice/controller/AdminController.java"
+    },
+    {
+      "type": "controllers with business logic",
+      "severity": "medium",
+      "file": "identity-service/src/main/java/com/example/identityservice/controller/AdminController.java"
+    },
+    {
+      "type": "missing validation",
+      "severity": "medium",
+      "file": "identity-service/src/main/java/com/example/identityservice/controller/AdminController.java"
+    },
+    {
+      "type": "controllers with business logic",
+      "severity": "medium",
+      "file": "identity-service/src/main/java/com/example/identityservice/controller/AuthController.java"
+    },
+    {
+      "type": "missing validation",
+      "severity": "medium",
+      "file": "identity-service/src/main/java/com/example/identityservice/controller/AuthController.java"
+    },
+    {
+      "type": "missing service layer",
+      "severity": "medium",
+      "file": "identity-service/src/main/java/com/example/identityservice/controller/JwksController.java"
+    },
+    {
+      "type": "controllers with business logic",
+      "severity": "medium",
+      "file": "identity-service/src/main/java/com/example/identityservice/controller/JwksController.java"
+    },
+    {
+      "type": "inconsistent response formats",
+      "severity": "medium",
+      "file": "identity-service/src/main/java/com/example/identityservice/controller/JwksController.java"
+    },
+    {
+      "type": "controllers with business logic",
+      "severity": "medium",
+      "file": "identity-service/src/main/java/com/example/identityservice/controller/ProfileController.java"
+    },
+    {
+      "type": "missing validation",
+      "severity": "medium",
+      "file": "identity-service/src/main/java/com/example/identityservice/controller/ProfileController.java"
+    },
+    {
+      "type": "missing validation",
+      "severity": "medium",
+      "file": "analysis-service/src/main/java/com/example/analysisservice/controller/AiAnalysisController.java"
+    },
+    {
+      "type": "inconsistent response formats",
+      "severity": "medium",
+      "file": "analysis-service/src/main/java/com/example/analysisservice/controller/AiAnalysisController.java"
+    },
+    {
+      "type": "duplicated logic across services",
+      "severity": "medium",
+      "file": "user-group-service/src/main/java/com/example/user_groupservice/web/ApiResponseBodyAdvice.java, identity-service/src/main/java/com/example/identityservice/web/ApiResponseBodyAdvice.java",
+      "sample": "String correlationId = request.getServletRequest().getHeader(CorrelationIdFilter.HEADER_NAME); if (correlationId == null || correlationId.is"
+    },
+    {
+      "type": "duplicated logic across services",
+      "severity": "medium",
+      "file": "user-group-service/src/main/java/com/example/user_groupservice/service/impl/GroupServiceImpl.java, user-group-service/src/main/java/com/example/user_groupservice/service/impl/UserServiceImpl.java",
+      "sample": "Semester semester = semesterRepository.findById(semesterId) .orElseThrow(() -> ResourceNotFoundException.semesterNotFound(semesterId)); retu"
+    },
+    {
+      "type": "duplicated logic across services",
+      "severity": "medium",
+      "file": "user-group-service/src/main/java/com/example/user_groupservice/security/JwtAccessDeniedHandler.java, user-group-service/src/main/java/com/example/user_groupservice/security/JwtAuthenticationEntryPoint.java, sync-service/src/main/java/com/example/syncservice/security/RestAccessDeniedHandler.java, sync-service/src/main/java/com/example/syncservice/security/RestAuthenticationEntryPoint.java, project-config-service/src/main/java/com/samt/projectconfig/security/RestAccessDeniedHandler.java, project-config-service/src/main/java/com/samt/projectconfig/security/RestAuthenticationEntryPoint.java, project-config-service/src/main/java/com/samt/projectconfig/controller/ProjectConfigController.java, identity-service/src/main/java/com/example/identityservice/security/RestAccessDeniedHandler.java, identity-service/src/main/java/com/example/identityservice/security/RestAuthenticationEntryPoint.java, identity-service/src/main/java/com/example/identityservice/controller/AdminController.java, identity-service/src/main/java/com/example/identityservice/controller/AuthController.java, identity-service/src/main/java/com/example/identityservice/controller/ProfileController.java",
+      "sample": "String correlationId = request.getHeader(CorrelationIdFilter.HEADER_NAME); if (correlationId == null || correlationId.isBlank()) { correlati"
+    },
+    {
+      "type": "duplicated logic across services",
+      "severity": "medium",
+      "file": "user-group-service/src/main/java/com/example/user_groupservice/security/SecurityConfig.java, project-config-service/src/main/java/com/samt/projectconfig/security/SecurityConfig.java, identity-service/src/main/java/com/example/identityservice/config/SecurityConfig.java",
+      "sample": "StrictHttpFirewall firewall = new StrictHttpFirewall(); firewall.setAllowedHttpMethods(List.of(\"str\", \"str\", \"str\", \"str\", \"str\", \"str\", \"st"
+    },
+    {
+      "type": "duplicated logic across services",
+      "severity": "medium",
+      "file": "user-group-service/src/main/java/com/example/user_groupservice/exception/GlobalExceptionHandler.java, sync-service/src/main/java/com/example/syncservice/exception/GlobalExceptionHandler.java, project-config-service/src/main/java/com/samt/projectconfig/exception/GlobalExceptionHandler.java, identity-service/src/main/java/com/example/identityservice/exception/GlobalExceptionHandler.java",
+      "sample": "return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED) .header(HttpHeaders.ALLOW, resolveAllowHeader(ex)) .body(ApiProblemDetailsFactor"
+    },
+    {
+      "type": "duplicated logic across services",
+      "severity": "medium",
+      "file": "sync-service/src/main/java/com/example/syncservice/repository/GithubCommitRepositoryImpl.java, sync-service/src/main/java/com/example/syncservice/repository/JiraIssueRepositoryImpl.java, sync-service/src/main/java/com/example/syncservice/repository/UnifiedActivityRepositoryImpl.java",
+      "sample": "StringBuilder sql = new StringBuilder(\"str\"\"str\"\"str\"); for (int i = 0; i < batch.size(); i++) { sql.append(\"str\"); if (i < batch.size() - 0"
+    },
+    {
+      "type": "duplicated logic across services",
+      "severity": "medium",
+      "file": "sync-service/src/main/java/com/example/syncservice/exception/GlobalExceptionHandler.java, identity-service/src/main/java/com/example/identityservice/exception/GlobalExceptionHandler.java",
+      "sample": "String message = ex instanceof MethodArgumentNotValidException methodArgumentNotValidException ? methodArgumentNotValidException.getBindingR"
+    },
+    {
+      "type": "duplicated logic across services",
+      "severity": "medium",
+      "file": "sync-service/src/main/java/com/example/syncservice/exception/GlobalExceptionHandler.java, project-config-service/src/main/java/com/samt/projectconfig/exception/GlobalExceptionHandler.java, project-config-service/src/main/java/com/samt/projectconfig/client/grpc/UserGroupServiceGrpcClient.java",
+      "sample": "Throwable current = throwable; while ((current instanceof CompletionException || current instanceof ExecutionException) && current.getCause("
+    },
+    {
+      "type": "duplicated logic across services",
+      "severity": "medium",
+      "file": "report-service/src/main/java/com/example/reportservice/config/RestTemplateConfig.java, analysis-service/src/main/java/com/example/analysisservice/config/RestTemplateConfig.java",
+      "sample": "int timeout = properties.getTimeout() > 0 ? properties.getTimeout() : 0; SimpleClientHttpRequestFactory factory = new SimpleClientHttpReques"
+    },
+    {
+      "type": "duplicated logic across services",
+      "severity": "medium",
+      "file": "report-service/src/main/java/com/example/reportservice/config/SecurityConfig.java, analysis-service/src/main/java/com/example/analysisservice/config/SecurityConfig.java",
+      "sample": "JwtAuthenticationConverter converter = new JwtAuthenticationConverter(); converter.setJwtGrantedAuthoritiesConverter(jwt -> { List<String> r"
+    },
+    {
+      "type": "duplicated logic across services",
+      "severity": "medium",
+      "file": "api-gateway/src/main/java/com/example/gateway/error/GatewayErrorResponseWriter.java, api-gateway/src/main/java/com/example/gateway/error/GlobalErrorWebExceptionHandler.java",
+      "sample": "return switch (status) { case BAD_REQUEST -> \"str\"; case UNAUTHORIZED -> \"str\"; case FORBIDDEN -> \"str\"; case NOT_FOUND -> \"str\"; case METHO"
+    }
+  ]
+}
