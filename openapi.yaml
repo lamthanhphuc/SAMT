@@ -12,6 +12,10 @@ tags:
     description: Operations proxied from userGroup service
   - name: projectConfig
     description: Operations proxied from projectConfig service
+  - name: sync
+    description: Operations proxied from sync service
+  - name: report
+    description: Operations proxied from report service
 paths:
   /profile:
     get:
@@ -1897,6 +1901,727 @@ paths:
           $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
+  /api/sync/jira/issues:
+    post:
+      tags:
+        - sync
+      summary: Trigger Jira issue sync for a single project config
+      operationId: syncJiraIssues
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/sync_SyncRequestDto'
+        required: true
+      responses:
+        '200':
+          description: Jira sync completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sync_ApiResponseSyncResultDto'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - bearerAuth: []
+  /api/sync/github/commits:
+    post:
+      tags:
+        - sync
+      summary: Trigger GitHub commit sync for a single project config
+      operationId: syncGithubCommits
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/sync_SyncRequestDto'
+        required: true
+      responses:
+        '200':
+          description: GitHub sync completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sync_ApiResponseSyncResultDto'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - bearerAuth: []
+  /api/sync/all:
+    post:
+      tags:
+        - sync
+      summary: Trigger Jira and GitHub sync in parallel for a single project config
+      operationId: syncAll
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/sync_SyncRequestDto'
+        required: true
+      responses:
+        '200':
+          description: All sync jobs completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sync_ApiResponseSyncAllResultDto'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - bearerAuth: []
+  /api/sync/jobs/{syncJobId}:
+    get:
+      tags:
+        - sync
+      summary: Get sync job by id
+      operationId: getSyncJob
+      parameters:
+        - name: syncJobId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '200':
+          description: Sync job retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sync_ApiResponseSyncJobResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - bearerAuth: []
+  /api/sync/jobs:
+    get:
+      tags:
+        - sync
+      summary: List sync jobs
+      operationId: listSyncJobs
+      parameters:
+        - name: projectConfigId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: jobType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - JIRA_ISSUES
+              - JIRA_SPRINTS
+              - GITHUB_COMMITS
+              - GITHUB_PRS
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - RUNNING
+              - COMPLETED
+              - PARTIAL_FAILURE
+              - FAILED
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Sync jobs retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sync_ApiResponsePageResponseSyncJobResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - bearerAuth: []
+  /api/reports/srs:
+    post:
+      tags:
+        - report
+      summary: Generate SRS report
+      operationId: generateSrs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/report_ReportRequest'
+        required: true
+      responses:
+        '201':
+          description: Report generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/report_ApiEnvelope_generateSrs'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - bearerAuth: []
+  /api/reports/{reportId}:
+    get:
+      tags:
+        - report
+      summary: Get report metadata
+      operationId: getReport
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Report metadata retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/report_ApiEnvelope_getReport'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - bearerAuth: []
+  /api/reports/{reportId}/download:
+    get:
+      tags:
+        - report
+      summary: Download generated report file
+      operationId: downloadReport
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Report file streamed
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - bearerAuth: []
+  /api/reports:
+    get:
+      tags:
+        - report
+      summary: List generated reports
+      operationId: listReports
+      parameters:
+        - name: projectConfigId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - SRS
+        - name: createdBy
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Report history retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/report_ApiEnvelope_listReports'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - bearerAuth: []
+  /api/reports/lecturer/overview:
+    get:
+      tags:
+        - report
+      summary: Get lecturer dashboard overview
+      operationId: getLecturerOverview
+      parameters:
+        - name: semesterId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '200':
+          description: Overview retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/report_ApiEnvelope_getLecturerOverview'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - bearerAuth: []
+  /api/reports/lecturer/groups/{groupId}/progress:
+    get:
+      tags:
+        - report
+      summary: Get task progress for a group
+      operationId: getGroupProgress
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Progress retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/report_ApiEnvelope_getGroupProgress'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - bearerAuth: []
+  /api/reports/lecturer/groups/{groupId}/recent-activities:
+    get:
+      tags:
+        - report
+      summary: Get recent normalized activities for a group
+      operationId: getRecentActivities
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: source
+          in: query
+          required: false
+          schema:
+            type: string
+            default: ALL
+      responses:
+        '200':
+          description: Activities retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/report_ApiEnvelope_getRecentActivities'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - bearerAuth: []
+  /api/reports/students/me/tasks:
+    get:
+      tags:
+        - report
+      summary: Get current student tasks
+      operationId: getStudentTasks
+      parameters:
+        - name: semesterId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: source
+          in: query
+          required: false
+          schema:
+            type: string
+            default: ALL
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Tasks retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/report_ApiEnvelope_getStudentTasks'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - bearerAuth: []
+  /api/reports/students/me/github-stats:
+    get:
+      tags:
+        - report
+      summary: Get current student GitHub stats
+      operationId: getStudentGithubStats
+      parameters:
+        - name: groupId
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: GitHub stats retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/report_ApiEnvelope_getStudentGithubStats'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - bearerAuth: []
+  /api/reports/students/me/contribution-summary:
+    get:
+      tags:
+        - report
+      summary: Get current student contribution summary
+      operationId: getContributionSummary
+      parameters:
+        - name: groupId
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Contribution summary retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/report_ApiEnvelope_getContributionSummary'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - bearerAuth: []
 components:
   schemas:
     identity_UpdateProfileRequest:
@@ -3426,6 +4151,677 @@ components:
           type: boolean
         data:
           $ref: '#/components/schemas/userGroup_SemesterResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    sync_SyncRequestDto:
+      type: object
+      required:
+        - projectConfigId
+      properties:
+        projectConfigId:
+          type: string
+          format: uuid
+    sync_SyncResultDto:
+      type: object
+      properties:
+        syncJobId:
+          type: integer
+          format: int64
+        projectConfigId:
+          type: string
+          format: uuid
+        jobType:
+          type: string
+        success:
+          type: boolean
+        degraded:
+          type: boolean
+        recordsFetched:
+          type: integer
+          format: int32
+        recordsSaved:
+          type: integer
+          format: int32
+        durationMs:
+          type: integer
+          format: int64
+        errorMessage:
+          type: string
+        correlationId:
+          type: string
+    sync_SyncAllResultDto:
+      type: object
+      properties:
+        projectConfigId:
+          type: string
+          format: uuid
+        success:
+          type: boolean
+        degraded:
+          type: boolean
+        durationMs:
+          type: integer
+          format: int64
+        correlationId:
+          type: string
+        jira:
+          $ref: '#/components/schemas/sync_SyncResultDto'
+        github:
+          $ref: '#/components/schemas/sync_SyncResultDto'
+    sync_SyncJobResponse:
+      type: object
+      properties:
+        syncJobId:
+          type: integer
+          format: int64
+        projectConfigId:
+          type: string
+          format: uuid
+        jobType:
+          type: string
+        status:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        recordsFetched:
+          type: integer
+          format: int32
+        recordsSaved:
+          type: integer
+          format: int32
+        degraded:
+          type: boolean
+        errorMessage:
+          type: string
+        correlationId:
+          type: string
+    sync_PageResponseSyncJobResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/sync_SyncJobResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    sync_ApiResponseSyncResultDto:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/sync_SyncResultDto'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    sync_ApiResponseSyncAllResultDto:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/sync_SyncAllResultDto'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    sync_ApiResponseSyncJobResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/sync_SyncJobResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    sync_ApiResponsePageResponseSyncJobResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/sync_PageResponseSyncJobResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    report_ReportRequest:
+      type: object
+      required:
+        - projectConfigId
+        - exportType
+      properties:
+        projectConfigId:
+          type: integer
+          format: int64
+          minimum: 1
+        useAi:
+          type: boolean
+          default: true
+        exportType:
+          type: string
+          enum:
+            - PDF
+            - DOCX
+    report_ReportResponse:
+      type: object
+      properties:
+        reportId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        downloadUrl:
+          type: string
+    report_ReportMetadataResponse:
+      type: object
+      properties:
+        reportId:
+          type: string
+          format: uuid
+        projectConfigId:
+          type: integer
+          format: int64
+        type:
+          type: string
+        createdBy:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+        fileName:
+          type: string
+        downloadUrl:
+          type: string
+    report_PageResponseReportMetadataResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/report_ReportMetadataResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    report_LecturerOverviewResponse:
+      type: object
+      properties:
+        lecturerId:
+          type: integer
+          format: int64
+        semesterId:
+          type: integer
+          format: int64
+        groupCount:
+          type: integer
+          format: int64
+        studentCount:
+          type: integer
+          format: int64
+        taskCount:
+          type: integer
+          format: int64
+        completedTaskCount:
+          type: integer
+          format: int64
+        githubCommitCount:
+          type: integer
+          format: int64
+        githubPrCount:
+          type: integer
+          format: int64
+        lastSyncAt:
+          type: string
+          format: date-time
+    report_GroupProgressResponse:
+      type: object
+      properties:
+        groupId:
+          type: integer
+          format: int64
+        groupName:
+          type: string
+        completionRate:
+          type: number
+          format: double
+        todoCount:
+          type: integer
+          format: int64
+        inProgressCount:
+          type: integer
+          format: int64
+        doneCount:
+          type: integer
+          format: int64
+        taskByType:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+        taskByStatus:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+    report_RecentActivityResponse:
+      type: object
+      properties:
+        activityId:
+          type: string
+        source:
+          type: string
+        activityType:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+        author:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+        url:
+          type: string
+    report_PageResponseRecentActivityResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/report_RecentActivityResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    report_StudentTaskResponse:
+      type: object
+      properties:
+        taskId:
+          type: string
+        source:
+          type: string
+        key:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+        priority:
+          type: string
+        groupId:
+          type: integer
+          format: int64
+        groupName:
+          type: string
+        assignee:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+        url:
+          type: string
+    report_PageResponseStudentTaskResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/report_StudentTaskResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    report_GithubStatsResponse:
+      type: object
+      properties:
+        commitCount:
+          type: integer
+          format: int64
+        prCount:
+          type: integer
+          format: int64
+        mergedPrCount:
+          type: integer
+          format: int64
+        reviewCount:
+          type: integer
+          format: int64
+        activeDays:
+          type: integer
+          format: int64
+        lastCommitAt:
+          type: string
+          format: date-time
+    report_ContributionSummaryResponse:
+      type: object
+      properties:
+        studentId:
+          type: integer
+          format: int64
+        groupId:
+          type: integer
+          format: int64
+        taskCount:
+          type: integer
+          format: int64
+        completedTaskCount:
+          type: integer
+          format: int64
+        githubCommitCount:
+          type: integer
+          format: int64
+        githubPrCount:
+          type: integer
+          format: int64
+        contributionScore:
+          type: integer
+          format: int64
+        recentHighlights:
+          type: array
+          items:
+            type: string
+    report_ApiEnvelope_generateSrs:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/report_ReportResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    report_ApiEnvelope_getReport:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/report_ReportMetadataResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    report_ApiEnvelope_listReports:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/report_PageResponseReportMetadataResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    report_ApiEnvelope_getLecturerOverview:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/report_LecturerOverviewResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    report_ApiEnvelope_getGroupProgress:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/report_GroupProgressResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    report_ApiEnvelope_getRecentActivities:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/report_PageResponseRecentActivityResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    report_ApiEnvelope_getStudentTasks:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/report_PageResponseStudentTaskResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    report_ApiEnvelope_getStudentGithubStats:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/report_GithubStatsResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    report_ApiEnvelope_getContributionSummary:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/report_ContributionSummaryResponse'
         error:
           type: string
         message:

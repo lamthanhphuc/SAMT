@@ -10,11 +10,15 @@ const baseUrl = process.env.BASE_URL || 'http://localhost:9080';
 const identityDocsUrl = process.env.IDENTITY_DOCS_URL || `${baseUrl}/identity/v3/api-docs`;
 const userGroupDocsUrl = process.env.USER_GROUP_DOCS_URL || `${baseUrl}/user-group/v3/api-docs`;
 const projectConfigDocsUrl = process.env.PROJECT_CONFIG_DOCS_URL || `${baseUrl}/project-config/v3/api-docs`;
+const syncDocsUrl = process.env.SYNC_DOCS_URL || `${baseUrl}/sync/v3/api-docs`;
+const reportDocsUrl = process.env.REPORT_DOCS_URL || `${baseUrl}/report/v3/api-docs`;
 
 const sources = [
   { key: 'identity', url: identityDocsUrl },
   { key: 'userGroup', url: userGroupDocsUrl },
-  { key: 'projectConfig', url: projectConfigDocsUrl }
+  { key: 'projectConfig', url: projectConfigDocsUrl },
+  { key: 'sync', url: syncDocsUrl },
+  { key: 'report', url: reportDocsUrl }
 ];
 
 const componentBuckets = [
@@ -108,13 +112,13 @@ function extractComponentSchemaName(ref) {
   return match ? match[1] : null;
 }
 
-function resolveWrappedUserGroupDataSchema(doc, schema) {
+function resolveWrappedDataSchema(doc, schema, wrapperPrefix) {
   if (!schema?.$ref) {
     return schema;
   }
 
   const schemaName = extractComponentSchemaName(schema.$ref);
-  if (!schemaName?.startsWith('userGroup_ApiEnvelope_')) {
+  if (!schemaName?.startsWith(wrapperPrefix)) {
     return schema.$ref;
   }
 
@@ -147,9 +151,9 @@ function allowEmptyStringForIntegerQueryParameter(schema, fallback) {
   };
 }
 
-function wrapUserGroupSuccessResponses(doc) {
+function wrapSuccessResponses(doc, pathPattern, wrapperPrefix, operationNamePrefix, shouldSkip) {
   for (const [pathKey, pathItem] of Object.entries(doc.paths || {})) {
-    if (!/^\/api\/(groups|users|semesters)(\/|$)/.test(pathKey)) {
+    if (!pathPattern.test(pathKey)) {
       continue;
     }
 
@@ -163,16 +167,16 @@ function wrapUserGroupSuccessResponses(doc) {
         const mediaType = response?.content?.['application/json'] || response?.content?.['*/*'];
         const schema = mediaType?.schema;
 
-        if (!schema) {
+        if (!schema || shouldSkip?.(pathKey, method, operation, response)) {
           continue;
         }
 
-        if (schema.$ref && schema.$ref.includes('_ApiResponse')) {
+        if (schema.$ref && (schema.$ref.includes('_ApiResponse') || schema.$ref.includes(wrapperPrefix))) {
           continue;
         }
 
-        const wrapperName = `userGroup_ApiEnvelope_${String(operation.operationId || `${method}_${pathKey}`).replace(/[^a-zA-Z0-9]+/g, '_')}`;
-        ensureEnvelopeSchema(doc, wrapperName, resolveWrappedUserGroupDataSchema(doc, schema));
+        const wrapperName = `${operationNamePrefix}_${String(operation.operationId || `${method}_${pathKey}`).replace(/[^a-zA-Z0-9]+/g, '_')}`;
+        ensureEnvelopeSchema(doc, wrapperName, resolveWrappedDataSchema(doc, schema, wrapperPrefix));
 
         operation.responses[statusCode] = {
           description: response.description || 'OK',
@@ -185,6 +189,20 @@ function wrapUserGroupSuccessResponses(doc) {
       }
     }
   }
+}
+
+function wrapUserGroupSuccessResponses(doc) {
+  wrapSuccessResponses(doc, /^\/api\/(groups|users|semesters)(\/|$)/, 'userGroup_ApiEnvelope_', 'userGroup_ApiEnvelope');
+}
+
+function wrapReportSuccessResponses(doc) {
+  wrapSuccessResponses(
+    doc,
+    /^\/api\/reports(\/|$)/,
+    'report_ApiEnvelope_',
+    'report_ApiEnvelope',
+    (pathKey, method, operation, response) => pathKey.endsWith('/download') || !response?.content?.['application/json']
+  );
 }
 
 function ensurePathParameters(doc) {
@@ -429,6 +447,12 @@ function applyOperationOverrides(doc) {
         if (parameter.name === 'id' && pathKey.includes('/project-configs/')) {
           parameter.schema = { type: 'string', format: 'uuid' };
         }
+        if (parameter.name === 'reportId' && pathKey.includes('/api/reports/')) {
+          parameter.schema = { type: 'string', format: 'uuid' };
+        }
+        if (parameter.name === 'syncJobId' && pathKey.includes('/api/sync/jobs/')) {
+          parameter.schema = { type: 'integer', format: 'int64', minimum: 1 };
+        }
         if (['groupId', 'semesterId', 'userId'].includes(parameter.name)) {
           parameter.schema = { type: 'integer', format: 'int64', minimum: 1 };
         }
@@ -455,6 +479,9 @@ function applyOperationOverrides(doc) {
         }
         if (parameter.in === 'query' && ['semesterId', 'lecturerId', 'userId', 'actorId'].includes(parameter.name)) {
           parameter.schema = { ...(parameter.schema || {}), type: 'integer', format: 'int64', minimum: 1 };
+        }
+        if (parameter.in === 'query' && parameter.name === 'projectConfigId' && pathKey.startsWith('/api/sync/jobs')) {
+          parameter.schema = { ...(parameter.schema || {}), type: 'string', format: 'uuid' };
         }
       }
     }
@@ -583,11 +610,12 @@ async function main() {
   const selfHealOverrides = await loadOpenapiOverrides();
   applyOpenapiOverrides(unified, selfHealOverrides);
   wrapUserGroupSuccessResponses(unified);
+  wrapReportSuccessResponses(unified);
   normalizeErrorResponses(unified);
 
   if (Object.keys(unified.paths).length === 0) {
     throw new Error(
-      `No OpenAPI sources were reachable from ${baseUrl}. Ensure backend is running and gateway exposes /identity, /user-group, /project-config docs.`
+      `No OpenAPI sources were reachable from ${baseUrl}. Ensure backend is running and gateway exposes /identity, /user-group, /project-config, /sync and /report docs.`
     );
   }
 
