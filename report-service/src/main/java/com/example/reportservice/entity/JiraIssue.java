@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.OffsetDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(
@@ -27,7 +28,7 @@ public class JiraIssue {
     private Long id;
 
     @Column(name = "project_config_id", nullable = false)
-    private Long projectConfigId;
+        private UUID projectConfigId;
 
     @Column(name = "issue_key", nullable = false, length = 50)
     private String issueKey;

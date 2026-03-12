@@ -121,6 +121,11 @@ ai:
     url: ${AI_SERVICE_URL:http://localhost:8083}
     timeout: ${AI_SERVICE_TIMEOUT_MS:5000}
 
+report:
+  integrations:
+    user-group-base-url: ${USER_GROUP_SERVICE_BASE_URL:http://user-group-service:8082}
+    project-config-base-url: ${PROJECT_CONFIG_SERVICE_BASE_URL:http://project-config-service:8084}
+
 resilience4j:
   retry:
     instances:
