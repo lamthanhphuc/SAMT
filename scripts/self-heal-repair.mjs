@@ -123,9 +123,10 @@ function applySchemathesisRepair(openapiOverrides, diagnostic, repairs) {
     operationOverride.responses = operationOverride.responses || {};
     operationOverride.responses['400'] = {
       description: 'Bad Request',
-      noContent: true
+      contentType: 'application/problem+json',
+      contentSchemaRef: '#/components/schemas/StandardError'
     };
-    repairs.push(`Relaxed 400 response content contract for malformed path input on ${diagnostic.operationKey}`);
+    repairs.push(`Documented problem-detail 400 response for malformed path input on ${diagnostic.operationKey}`);
     changed = true;
   }
 

@@ -31,6 +31,7 @@ The repository entry point is [../README.md](../README.md). The documentation in
 - [guides/local-development.md](guides/local-development.md)
 - [guides/frontend-integration.md](guides/frontend-integration.md)
 - [guides/testing.md](guides/testing.md)
+- [guides/automated-qa.md](guides/automated-qa.md)
 - [guides/implementation-status.md](guides/implementation-status.md)
 - [guides/security-migration.md](guides/security-migration.md)
 

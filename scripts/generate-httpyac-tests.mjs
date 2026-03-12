@@ -391,6 +391,7 @@ function extractBody(operation, openapi, pathKey, method) {
       {
         groupId: '{{fixtureGroupId}}',
         jiraHostUrl: 'https://example.atlassian.net',
+        jiraEmail: 'qa.integration@samt.local',
         jiraApiToken: 'ATATTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
         githubRepoUrl: 'https://github.com/example-org/example-repo',
         githubToken: 'ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
@@ -432,6 +433,7 @@ function extractBody(operation, openapi, pathKey, method) {
     return JSON.stringify(
       {
         jiraHostUrl: 'https://example.atlassian.net',
+        jiraEmail: 'qa.integration@samt.local',
         jiraApiToken: 'ATATTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
         githubRepoUrl: 'https://github.com/example-org/example-repo',
         githubToken: 'ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
@@ -481,6 +483,7 @@ function extractInvalidBody(operation, openapi, pathKey, method) {
     return JSON.stringify(
       {
         jiraHostUrl: 'invalid-url',
+        jiraEmail: 'qa.integration@samt.local',
         jiraApiToken: 'bad-token',
         githubRepoUrl: 'invalid-repo',
         githubToken: 'short'

@@ -56,35 +56,134 @@ function ensureErrorContract(doc) {
   doc.components.schemas.StandardError = {
     type: 'object',
     properties: {
-      statusCode: { type: 'integer', example: 400 },
-      error: {
-        oneOf: [
-          { type: 'string', example: 'Bad Request' },
-          {
-            type: 'object',
-            properties: {
-              code: { type: 'integer', example: 401 },
-              message: { type: 'string', example: 'Unauthorized' }
-            }
-          }
-        ]
-      },
-      message: { type: 'string', example: 'Invalid UUID' },
+      type: { type: 'string', example: 'https://api.example.com/errors/validation-error' },
+      title: { type: 'string', example: 'Validation failed' },
+      status: { type: 'integer', format: 'int32', example: 400 },
+      detail: { type: 'string', example: 'Invalid UUID' },
+      instance: { type: 'string', example: '/api/users/not-a-number' },
       timestamp: { type: 'string', format: 'date-time' }
     }
   };
 
-  const statuses = [400, 401, 403, 404, 409, 500];
+  const statuses = [400, 401, 403, 404, 405, 409, 415, 500];
   for (const status of statuses) {
     const name = `Error${status}`;
     doc.components.responses[name] = {
       description: `${status} error`,
       content: {
-        'application/json': {
+        'application/problem+json': {
           schema: { $ref: '#/components/schemas/StandardError' }
         }
       }
     };
+  }
+}
+
+function ensureEnvelopeSchema(doc, schemaName, dataSchema) {
+  doc.components = doc.components || {};
+  doc.components.schemas = doc.components.schemas || {};
+
+  doc.components.schemas[schemaName] = {
+    type: 'object',
+    properties: {
+      timestamp: { type: 'string', format: 'date-time' },
+      status: { type: 'integer', format: 'int32' },
+      success: { type: 'boolean' },
+      data: typeof dataSchema === 'string' ? { $ref: dataSchema } : structuredClone(dataSchema),
+      error: { type: 'string' },
+      message: { type: 'string' },
+      path: { type: 'string' },
+      correlationId: { type: 'string' },
+      degraded: { type: 'boolean' }
+    }
+  };
+}
+
+function extractComponentSchemaName(ref) {
+  if (typeof ref !== 'string') {
+    return null;
+  }
+
+  const match = ref.match(/^#\/components\/schemas\/(.+)$/);
+  return match ? match[1] : null;
+}
+
+function resolveWrappedUserGroupDataSchema(doc, schema) {
+  if (!schema?.$ref) {
+    return schema;
+  }
+
+  const schemaName = extractComponentSchemaName(schema.$ref);
+  if (!schemaName?.startsWith('userGroup_ApiEnvelope_')) {
+    return schema.$ref;
+  }
+
+  const dataSchema = doc.components?.schemas?.[schemaName]?.properties?.data;
+  if (!dataSchema || dataSchema.$ref === `#/components/schemas/${schemaName}`) {
+    return schema.$ref;
+  }
+
+  return structuredClone(dataSchema);
+}
+
+function allowEmptyStringForIntegerQueryParameter(schema, fallback) {
+  const numericSchema = {
+    ...(schema || {}),
+    ...fallback,
+    type: 'integer'
+  };
+
+  delete numericSchema.nullable;
+
+  return {
+    anyOf: [
+      numericSchema,
+      {
+        type: 'string',
+        enum: ['']
+      }
+    ],
+    default: numericSchema.default
+  };
+}
+
+function wrapUserGroupSuccessResponses(doc) {
+  for (const [pathKey, pathItem] of Object.entries(doc.paths || {})) {
+    if (!/^\/api\/(groups|users|semesters)(\/|$)/.test(pathKey)) {
+      continue;
+    }
+
+    for (const [method, operation] of Object.entries(pathItem || {})) {
+      if (!operation || typeof operation !== 'object') {
+        continue;
+      }
+
+      for (const statusCode of ['200', '201']) {
+        const response = operation.responses?.[statusCode];
+        const mediaType = response?.content?.['application/json'] || response?.content?.['*/*'];
+        const schema = mediaType?.schema;
+
+        if (!schema) {
+          continue;
+        }
+
+        if (schema.$ref && schema.$ref.includes('_ApiResponse')) {
+          continue;
+        }
+
+        const wrapperName = `userGroup_ApiEnvelope_${String(operation.operationId || `${method}_${pathKey}`).replace(/[^a-zA-Z0-9]+/g, '_')}`;
+        ensureEnvelopeSchema(doc, wrapperName, resolveWrappedUserGroupDataSchema(doc, schema));
+
+        operation.responses[statusCode] = {
+          description: response.description || 'OK',
+          content: {
+            'application/json': {
+              schema: { $ref: `#/components/schemas/${wrapperName}` }
+            }
+          }
+        };
+      }
+    }
   }
 }
 
@@ -139,9 +238,38 @@ function applySchemaOverrides(doc) {
     patchProperty(register, 'fullName', {
       minLength: 2,
       maxLength: 100,
-      pattern: '^[\\p{L}\\s\\-]{2,100}$'
+      pattern: '^[\\p{L}]+(?:[ -][\\p{L}]+)*$'
     });
     patchProperty(register, 'role', { type: 'string', enum: ['STUDENT'] });
+  }
+
+  const adminCreate = schemas.identity_AdminCreateUserRequest;
+  if (adminCreate) {
+    adminCreate.required = ['email', 'password', 'fullName', 'role'];
+    patchProperty(adminCreate, 'email', { type: 'string', format: 'email', maxLength: 255 });
+    patchProperty(adminCreate, 'password', {
+      minLength: 8,
+      maxLength: 128,
+      pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,128}$'
+    });
+    patchProperty(adminCreate, 'fullName', {
+      minLength: 2,
+      maxLength: 100,
+      pattern: '^[\\p{L}]+(?:[ -][\\p{L}]+)*$'
+    });
+    patchProperty(adminCreate, 'role', { type: 'string', enum: ['STUDENT', 'LECTURER', 'ADMIN'] });
+  }
+
+  const externalAccounts = schemas.identity_ExternalAccountsRequest;
+  if (externalAccounts) {
+    patchProperty(externalAccounts, 'jiraAccountId', { nullable: true, maxLength: 30 });
+    patchProperty(externalAccounts, 'githubUsername', { nullable: true, maxLength: 39 });
+  }
+
+  const logout = schemas.identity_LogoutRequest;
+  if (logout) {
+    logout.required = ['refreshToken'];
+    patchProperty(logout, 'refreshToken', { type: 'string', minLength: 1 });
   }
 
   const createGroup = schemas.userGroup_CreateGroupRequest;
@@ -159,11 +287,12 @@ function applySchemaOverrides(doc) {
   const createSemester = schemas.userGroup_CreateSemesterRequest;
   if (createSemester) {
     createSemester.required = ['semesterCode', 'semesterName', 'startDate', 'endDate'];
-    createSemester.additionalProperties = false;
     patchProperty(createSemester, 'semesterCode', { minLength: 1 });
     patchProperty(createSemester, 'semesterName', { minLength: 1 });
     patchProperty(createSemester, 'startDate', { type: 'string', format: 'date' });
     patchProperty(createSemester, 'endDate', { type: 'string', format: 'date' });
+    delete createSemester.properties?.semesterCode?.pattern;
+    delete createSemester.properties?.semesterName?.pattern;
   }
 
   const createConfig = schemas.projectConfig_CreateConfigRequest;
@@ -221,6 +350,32 @@ function applySchemaOverrides(doc) {
       pattern: '^(ghp_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]+)$'
     });
   }
+
+  const updateGroup = schemas.userGroup_UpdateGroupRequest;
+  if (updateGroup) {
+    updateGroup.required = ['groupName', 'lecturerId'];
+    patchProperty(updateGroup, 'lecturerId', { type: 'integer', format: 'int64', minimum: 1 });
+  }
+
+  const updateUser = schemas.userGroup_UpdateUserRequest;
+  if (updateUser) {
+    updateUser.required = ['fullName'];
+    patchProperty(updateUser, 'fullName', {
+      minLength: 2,
+      maxLength: 100,
+      pattern: '^[a-zA-ZÀ-ỹ]+(?: [a-zA-ZÀ-ỹ]+)*$'
+    });
+  }
+
+  const updateLecturer = schemas.userGroup_UpdateLecturerRequest;
+  if (updateLecturer) {
+    patchProperty(updateLecturer, 'lecturerId', { type: 'integer', format: 'int64', minimum: 1 });
+  }
+
+  const addMember = schemas.userGroup_AddMemberRequest;
+  if (addMember) {
+    patchProperty(addMember, 'userId', { type: 'integer', format: 'int64', minimum: 1 });
+  }
 }
 
 function applyOperationOverrides(doc) {
@@ -261,6 +416,11 @@ function applyOperationOverrides(doc) {
     }
   }
 
+  const activeSemester = doc.paths?.['/api/semesters/active'];
+  if (activeSemester?.put) {
+    delete activeSemester.put;
+  }
+
   for (const [pathKey, pathItem] of Object.entries(doc.paths || {})) {
     for (const [method, operation] of Object.entries(pathItem || {})) {
       if (!operation?.parameters) continue;
@@ -279,11 +439,56 @@ function applyOperationOverrides(doc) {
 
       for (const parameter of operation.parameters) {
         if (parameter.in === 'query' && parameter.name === 'page') {
-          parameter.schema = { ...(parameter.schema || {}), type: 'integer', minimum: 0, default: 0 };
+          parameter.allowEmptyValue = true;
+          parameter.schema = allowEmptyStringForIntegerQueryParameter(parameter.schema, {
+            minimum: 0,
+            default: 0
+          });
         }
         if (parameter.in === 'query' && parameter.name === 'size') {
-          parameter.schema = { ...(parameter.schema || {}), type: 'integer', minimum: 1, default: 20 };
+          parameter.allowEmptyValue = true;
+          parameter.schema = allowEmptyStringForIntegerQueryParameter(parameter.schema, {
+            minimum: 1,
+            maximum: 100,
+            default: 20
+          });
         }
+        if (parameter.in === 'query' && ['semesterId', 'lecturerId', 'userId', 'actorId'].includes(parameter.name)) {
+          parameter.schema = { ...(parameter.schema || {}), type: 'integer', format: 'int64', minimum: 1 };
+        }
+      }
+    }
+  }
+
+}
+
+function normalizeErrorResponses(doc) {
+  const sharedErrorStatuses = ['400', '401', '403', '404', '405', '409', '415', '500'];
+
+  for (const pathItem of Object.values(doc.paths || {})) {
+    for (const operation of Object.values(pathItem || {})) {
+      if (!operation || typeof operation !== 'object') {
+        continue;
+      }
+
+      operation.responses = operation.responses || {};
+      for (const statusCode of sharedErrorStatuses) {
+        const response = operation.responses[statusCode];
+        if (!response) {
+          operation.responses[statusCode] = { $ref: `#/components/responses/Error${statusCode}` };
+          continue;
+        }
+
+        if (response.$ref === `#/components/responses/Error${statusCode}`) {
+          continue;
+        }
+
+        const mediaTypes = Object.keys(response.content || {});
+        if (mediaTypes.includes('application/problem+json')) {
+          continue;
+        }
+
+        operation.responses[statusCode] = { $ref: `#/components/responses/Error${statusCode}` };
       }
     }
   }
@@ -357,7 +562,7 @@ async function main() {
           }
           if (!op.responses) op.responses = {};
           for (const status of ['400', '401', '403', '404', '409', '500']) {
-            op.responses[status] = op.responses[status] || { $ref: `#/components/responses/Error${status}` };
+            op.responses[status] = { $ref: `#/components/responses/Error${status}` };
           }
           unified.paths[p][method] = op;
         }
@@ -377,6 +582,8 @@ async function main() {
   applyOperationOverrides(unified);
   const selfHealOverrides = await loadOpenapiOverrides();
   applyOpenapiOverrides(unified, selfHealOverrides);
+  wrapUserGroupSuccessResponses(unified);
+  normalizeErrorResponses(unified);
 
   if (Object.keys(unified.paths).length === 0) {
     throw new Error(

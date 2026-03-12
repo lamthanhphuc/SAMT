@@ -1,0 +1,114 @@
+name: QA System
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  qa-system:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Java 21
+        uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 # v4.2.1
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Setup Node 20
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Prepare QA environment
+        env:
+          QA_POSTGRES_PASSWORD: ${{ secrets.QA_POSTGRES_PASSWORD }}
+          QA_REDIS_PASSWORD: ${{ secrets.QA_REDIS_PASSWORD }}
+          QA_ENCRYPTION_SECRET_KEY: ${{ secrets.QA_ENCRYPTION_SECRET_KEY }}
+          JIRA_HOST: ${{ secrets.JIRA_HOST }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          GITHUB_REPO: ${{ secrets.GITHUB_REPO }}
+          GITHUB_PAT: ${{ secrets.GITHUB_PAT }}
+        run: |
+          cp .env.example .env
+          python - <<'PY'
+          import base64
+          import os
+          import secrets
+          from pathlib import Path
+
+          postgres_password = os.getenv('QA_POSTGRES_PASSWORD') or secrets.token_urlsafe(18)
+          encryption_key = os.getenv('QA_ENCRYPTION_SECRET_KEY') or base64.b16encode(secrets.token_bytes(32)).decode('ascii').lower()
+          redis_password = os.getenv('QA_REDIS_PASSWORD') or secrets.token_urlsafe(18)
+
+          env_path = Path('.env')
+          text = env_path.read_text(encoding='utf-8')
+          text = text.replace('CHANGE_ME_STRONG_PASSWORD_HERE', postgres_password)
+          text = text.replace('CHANGE_ME_256_BIT_KEY', encryption_key)
+          env_path.write_text(text, encoding='utf-8')
+
+            redis_key = 'REDIS' + '_PASSWORD'
+            with env_path.open('a', encoding='utf-8') as env_file:
+              env_file.write(f'{redis_key}={redis_password}\n')
+          PY
+          {
+            echo "ADMIN_EMAIL=admin@samt.local"
+            echo "ADMIN_PASSWORD=Str0ng@Pass!"
+            echo "JIRA_HOST=${JIRA_HOST}"
+            echo "JIRA_EMAIL=${JIRA_EMAIL}"
+            echo "JIRA_API_TOKEN=${JIRA_API_TOKEN}"
+            echo "GITHUB_REPO=${GITHUB_REPO}"
+            echo "GITHUB_PAT=${GITHUB_PAT}"
+          } >> .env
+
+      - name: Start backend stack
+        run: docker compose up -d
+
+      - name: Wait for gateway health
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://localhost:9080/actuator/health >/dev/null; then
+              echo "Gateway is up"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Gateway did not become healthy in time"
+          docker compose ps
+          exit 1
+
+      - name: Run QA system
+        env:
+          BASE_URL: http://localhost:9080
+          QA_COMPOSE_RECOVERY: 'true'
+          QA_LOAD_REQUIRED: 'false'
+        run: npm run qa:system
+
+      - name: Upload QA artifacts
+        if: always()
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        with:
+          name: qa-system-artifacts
+          if-no-files-found: warn
+          path: |
+            qa/
+            openapi.yaml
+            tests/
+            .self-heal/reports/
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

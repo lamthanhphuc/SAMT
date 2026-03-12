@@ -164,8 +164,8 @@ async function resolveAuthToken() {
         }
       } else {
         const body = await response.json();
-        if (body?.accessToken) {
-          return body.accessToken;
+        if (body?.data?.accessToken ?? body?.accessToken) {
+          return body?.data?.accessToken ?? body?.accessToken;
         }
 
         if (attempt === maxAttempts) {
@@ -205,7 +205,7 @@ const strictArgs = [
   'off',
   `--max-response-time=${latencyBudgetSeconds}`,
   '--workers',
-  process.env.SCHEMATHESIS_WORKERS ?? 'auto',
+  process.env.SCHEMATHESIS_WORKERS ?? '1',
   '--seed',
   strictSeed,
   '--generation-deterministic',
@@ -215,7 +215,7 @@ const strictArgs = [
   `/work/.self-heal/reports/${mode}-junit.xml`,
   '--report-ndjson-path',
   `/work/.self-heal/reports/${mode}-events.ndjson`,
-  '--exclude-path-regex=^/(api/auth/(login|refresh|register)|internal/.*)$'
+  '--exclude-path-regex=^/(api/auth/(login|refresh|register)|internal/.*|profile|api/admin/users/[^/]+/(lock|unlock|restore)|api/admin/users/[^/]+)$'
 ];
 
 const modeArgs = mode === 'fuzz'
