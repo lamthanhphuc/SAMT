@@ -65,6 +65,11 @@ k8s-secrets.yml
 # Local logs
 logs/
 
+# Raw QA/self-heal artifacts that may contain request payloads or bearer tokens.
+.self-heal/reports/*.log
+.self-heal/reports/*.ndjson
+.self-heal/reports/*-junit.xml
+
 # Local caches (never commit)
 .cache/
 dependency-check-data/

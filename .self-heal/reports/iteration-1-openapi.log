@@ -1,8 +1,0 @@
-
-> samt-api-qa@1.0.0 openapi:generate
-> node scripts/generate-openapi.mjs
-
-Loaded OpenAPI source: http://localhost:9080/identity/v3/api-docs
-Loaded OpenAPI source: http://localhost:9080/user-group/v3/api-docs
-Loaded OpenAPI source: http://localhost:9080/project-config/v3/api-docs
-openapi.yaml generated with 36 paths.
