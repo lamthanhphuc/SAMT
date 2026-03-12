@@ -13,6 +13,73 @@ tags:
   - name: projectConfig
     description: Operations proxied from projectConfig service
 paths:
+  /profile:
+    get:
+      tags:
+        - profile-controller
+      summary: Get current user profile
+      operationId: getCurrentProfile
+      responses:
+        '200':
+          description: Profile retrieved
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/identity_ApiResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - bearerAuth: []
+    put:
+      tags:
+        - profile-controller
+      summary: Update current user profile
+      operationId: updateCurrentProfile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/identity_UpdateProfileRequest'
+        required: true
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/identity_ApiResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+      security:
+        - bearerAuth: []
   /api/admin/users/{userId}/external-accounts:
     put:
       tags:
@@ -43,27 +110,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/identity_ApiResponseExternalAccountsResponse'
         '400':
-          description: User is deleted
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/identity_ApiResponseExternalAccountsResponse'
+          $ref: '#/components/responses/Error400'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
           $ref: '#/components/responses/Error403'
         '404':
-          description: User not found
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/identity_ApiResponseExternalAccountsResponse'
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
-          description: External account already mapped to another user
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/identity_ApiResponseExternalAccountsResponse'
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
       security:
@@ -95,8 +154,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
   /api/auth/refresh:
@@ -126,8 +189,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
   /api/auth/logout:
@@ -157,8 +224,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
       security:
@@ -190,8 +261,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
   /api/admin/users:
@@ -219,19 +294,15 @@ paths:
         '401':
           $ref: '#/components/responses/Error401'
         '403':
-          description: Not authorized
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/identity_ApiResponseAdminCreateUserResponse'
+          $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
-          description: Email already exists
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/identity_ApiResponseAdminCreateUserResponse'
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
       security:
@@ -260,19 +331,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/identity_ApiResponseAdminActionResponse'
         '400':
-          description: Bad Request
+          $ref: '#/components/responses/Error400'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
           $ref: '#/components/responses/Error403'
         '404':
-          description: User not found
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/identity_ApiResponseAdminActionResponse'
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
       security:
@@ -301,23 +372,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/identity_ApiResponseAdminActionResponse'
         '400':
-          description: User is not deleted
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/identity_ApiResponseAdminActionResponse'
+          $ref: '#/components/responses/Error400'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
           $ref: '#/components/responses/Error403'
         '404':
-          description: User not found
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/identity_ApiResponseAdminActionResponse'
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
       security:
@@ -352,19 +419,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/identity_ApiResponseAdminActionResponse'
         '400':
-          description: Bad Request
+          $ref: '#/components/responses/Error400'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
           $ref: '#/components/responses/Error403'
         '404':
-          description: User not found
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/identity_ApiResponseAdminActionResponse'
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
       security:
@@ -397,8 +464,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
       security:
@@ -445,8 +516,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
       security:
@@ -492,8 +567,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
       security:
@@ -533,8 +612,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
       security:
@@ -559,8 +642,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
   /api/admin/users/{userId}:
@@ -587,23 +674,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/identity_ApiResponseAdminActionResponse'
         '400':
-          description: Bad Request
+          $ref: '#/components/responses/Error400'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
-          description: Not authorized
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/identity_ApiResponseAdminActionResponse'
+          $ref: '#/components/responses/Error403'
         '404':
-          description: User not found
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/identity_ApiResponseAdminActionResponse'
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
       security:
@@ -625,19 +708,23 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
-                $ref: '#/components/schemas/userGroup_UserResponse'
+                $ref: '#/components/schemas/userGroup_ApiEnvelope_getUserById'
         '400':
-          description: Bad Request
+          $ref: '#/components/responses/Error400'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
     put:
@@ -662,9 +749,9 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
-                $ref: '#/components/schemas/userGroup_UserResponse'
+                $ref: '#/components/schemas/userGroup_ApiEnvelope_updateUser'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -673,8 +760,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
   /api/semesters/{id}:
@@ -693,19 +784,23 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
-                $ref: '#/components/schemas/userGroup_SemesterResponse'
+                $ref: '#/components/schemas/userGroup_ApiEnvelope_getSemesterById'
         '400':
-          description: Bad Request
+          $ref: '#/components/responses/Error400'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
     put:
@@ -729,19 +824,51 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
-                $ref: '#/components/schemas/userGroup_SemesterResponse'
+                $ref: '#/components/schemas/userGroup_ApiEnvelope_updateSemester'
         '400':
-          description: Bad Request
+          $ref: '#/components/responses/Error400'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+  /api/semesters/active:
+    get:
+      tags:
+        - semester-controller
+      operationId: getActiveSemester
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/userGroup_ApiEnvelope_getActiveSemester'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
   /api/groups/{groupId}:
@@ -761,19 +888,23 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
-                $ref: '#/components/schemas/userGroup_GroupDetailResponse'
+                $ref: '#/components/schemas/userGroup_ApiEnvelope_getGroupById'
         '400':
-          description: Bad Request
+          $ref: '#/components/responses/Error400'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
     put:
@@ -798,9 +929,9 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
-                $ref: '#/components/schemas/userGroup_GroupResponse'
+                $ref: '#/components/schemas/userGroup_ApiEnvelope_updateGroup'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -809,8 +940,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
     delete:
@@ -831,15 +966,19 @@ paths:
         '204':
           description: No Content
         '400':
-          description: Bad Request
+          $ref: '#/components/responses/Error400'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
   /api/groups/{groupId}/members/{userId}/promote:
@@ -866,19 +1005,23 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
-                $ref: '#/components/schemas/userGroup_MemberResponse'
+                $ref: '#/components/schemas/userGroup_ApiEnvelope_promoteToLeader'
         '400':
-          description: Bad Request
+          $ref: '#/components/responses/Error400'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
   /api/groups/{groupId}/members/{userId}/demote:
@@ -905,19 +1048,23 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
-                $ref: '#/components/schemas/userGroup_MemberResponse'
+                $ref: '#/components/schemas/userGroup_ApiEnvelope_demoteToMember'
         '400':
-          description: Bad Request
+          $ref: '#/components/responses/Error400'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
   /api/semesters:
@@ -929,11 +1076,9 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/userGroup_SemesterResponse'
+                $ref: '#/components/schemas/userGroup_ApiEnvelope_listAllSemesters'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -942,8 +1087,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
     post:
@@ -960,9 +1109,9 @@ paths:
         '201':
           description: Created
           content:
-            '*/*':
+            application/json:
               schema:
-                $ref: '#/components/schemas/userGroup_SemesterResponse'
+                $ref: '#/components/schemas/userGroup_ApiEnvelope_createSemester'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -971,8 +1120,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
   /api/groups:
@@ -985,38 +1138,52 @@ paths:
           in: query
           required: false
           schema:
-            type: integer
-            format: int32
+            anyOf:
+              - type: integer
+                format: int32
+                default: 0
+                minimum: 0
+              - type: string
+                enum:
+                  - ''
             default: 0
-            minimum: 0
+          allowEmptyValue: true
         - name: size
           in: query
           required: false
           schema:
-            type: integer
-            format: int32
+            anyOf:
+              - type: integer
+                format: int32
+                default: 20
+                maximum: 100
+                minimum: 1
+              - type: string
+                enum:
+                  - ''
             default: 20
-            maximum: 100
-            minimum: 1
+          allowEmptyValue: true
         - name: semesterId
           in: query
           required: false
           schema:
             type: integer
             format: int64
+            minimum: 1
         - name: lecturerId
           in: query
           required: false
           schema:
             type: integer
             format: int64
+            minimum: 1
       responses:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
-                $ref: '#/components/schemas/userGroup_PageResponseGroupListResponse'
+                $ref: '#/components/schemas/userGroup_ApiEnvelope_listGroups'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -1025,8 +1192,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
     post:
@@ -1043,9 +1214,9 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
-                $ref: '#/components/schemas/userGroup_GroupResponse'
+                $ref: '#/components/schemas/userGroup_ApiEnvelope_createGroup'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -1054,8 +1225,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
   /api/groups/{groupId}/members:
@@ -1075,36 +1250,52 @@ paths:
           in: query
           required: false
           schema:
-            type: integer
-            format: int32
+            anyOf:
+              - type: integer
+                format: int32
+                default: 0
+                minimum: 0
+              - type: string
+                enum:
+                  - ''
             default: 0
-            minimum: 0
+          allowEmptyValue: true
         - name: size
           in: query
           required: false
           schema:
-            type: integer
-            format: int32
+            anyOf:
+              - type: integer
+                format: int32
+                default: 20
+                maximum: 100
+                minimum: 1
+              - type: string
+                enum:
+                  - ''
             default: 20
-            maximum: 100
-            minimum: 1
+          allowEmptyValue: true
       responses:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
-                $ref: '#/components/schemas/userGroup_PageResponseMemberResponse'
+                $ref: '#/components/schemas/userGroup_ApiEnvelope_getGroupMembers'
         '400':
-          description: Bad Request
+          $ref: '#/components/responses/Error400'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
     post:
@@ -1129,19 +1320,23 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
-                $ref: '#/components/schemas/userGroup_MemberResponse'
+                $ref: '#/components/schemas/userGroup_ApiEnvelope_addMember'
         '400':
-          description: Bad Request
+          $ref: '#/components/responses/Error400'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
   /api/semesters/{id}/activate:
@@ -1162,15 +1357,19 @@ paths:
         '204':
           description: No Content
         '400':
-          description: Bad Request
+          $ref: '#/components/responses/Error400'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
   /api/groups/{groupId}/lecturer:
@@ -1196,9 +1395,9 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
-                $ref: '#/components/schemas/userGroup_GroupResponse'
+                $ref: '#/components/schemas/userGroup_ApiEnvelope_updateGroupLecturer'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -1207,8 +1406,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
   /api/users:
@@ -1221,19 +1424,31 @@ paths:
           in: query
           required: false
           schema:
-            type: integer
-            format: int32
+            anyOf:
+              - type: integer
+                format: int32
+                default: 0
+                minimum: 0
+              - type: string
+                enum:
+                  - ''
             default: 0
-            minimum: 0
+          allowEmptyValue: true
         - name: size
           in: query
           required: false
           schema:
-            type: integer
-            format: int32
+            anyOf:
+              - type: integer
+                format: int32
+                default: 20
+                maximum: 100
+                minimum: 1
+              - type: string
+                enum:
+                  - ''
             default: 20
-            maximum: 100
-            minimum: 1
+          allowEmptyValue: true
         - name: status
           in: query
           required: false
@@ -1248,9 +1463,9 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
-                $ref: '#/components/schemas/userGroup_PageResponseUserResponse'
+                $ref: '#/components/schemas/userGroup_ApiEnvelope_listUsers'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -1259,8 +1474,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
   /api/users/{userId}/groups:
@@ -1285,19 +1504,23 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
-                $ref: '#/components/schemas/userGroup_UserGroupsResponse'
+                $ref: '#/components/schemas/userGroup_ApiEnvelope_getUserGroups'
         '400':
-          description: Bad Request
+          $ref: '#/components/responses/Error400'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
   /api/semesters/code/{code}:
@@ -1315,9 +1538,9 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
-                $ref: '#/components/schemas/userGroup_SemesterResponse'
+                $ref: '#/components/schemas/userGroup_ApiEnvelope_getSemesterByCode'
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -1326,32 +1549,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
-        '500':
-          $ref: '#/components/responses/Error500'
-  /api/semesters/active:
-    get:
-      tags:
-        - semester-controller
-      operationId: getActiveSemester
-      responses:
-        '200':
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/userGroup_SemesterResponse'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '409':
-          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
   /api/groups/{groupId}/members/{userId}:
@@ -1380,15 +1583,19 @@ paths:
         '204':
           description: No Content
         '400':
-          description: Bad Request
+          $ref: '#/components/responses/Error400'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
   /api/project-configs/{id}:
@@ -1418,13 +1625,13 @@ paths:
         '403':
           $ref: '#/components/responses/Error403'
         '404':
-          description: Configuration not found
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/projectConfig_ApiResponse'
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
     put:
@@ -1459,8 +1666,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
     delete:
@@ -1489,8 +1700,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
   /api/project-configs:
@@ -1513,27 +1728,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/projectConfig_ConfigEnvelope'
         '400':
-          description: Bad request
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/projectConfig_ApiResponse'
+          $ref: '#/components/responses/Error400'
         '401':
           $ref: '#/components/responses/Error401'
         '403':
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
-          description: Conflict
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/projectConfig_ApiResponse'
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
         '503':
-          $ref: '#/components/responses/Error503'
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
   /api/project-configs/{id}/verify:
     post:
       tags:
@@ -1561,17 +1776,21 @@ paths:
         '403':
           $ref: '#/components/responses/Error403'
         '404':
-          description: Configuration not found
+          $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '503':
+          description: Verification service unavailable
           content:
             '*/*':
               schema:
                 $ref: '#/components/schemas/projectConfig_ApiResponse'
-        '409':
-          $ref: '#/components/responses/Error409'
-        '500':
-          $ref: '#/components/responses/Error500'
-        '503':
-          $ref: '#/components/responses/Error503'
   /api/project-configs/admin/{id}/restore:
     post:
       tags:
@@ -1599,8 +1818,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
   /internal/project-configs/{id}/tokens:
@@ -1630,8 +1853,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
   /api/project-configs/group/{groupId}:
@@ -1662,21 +1889,83 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '405':
+          $ref: '#/components/responses/Error405'
         '409':
           $ref: '#/components/responses/Error409'
+        '415':
+          $ref: '#/components/responses/Error415'
         '500':
           $ref: '#/components/responses/Error500'
 components:
   schemas:
+    identity_UpdateProfileRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          maxLength: 255
+          minLength: 0
+        fullName:
+          type: string
+          maxLength: 100
+          minLength: 2
+          pattern: ^[\p{L}\s\-]{2,100}$
+    identity_ApiResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          type: object
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    identity_ProblemDetail:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+        properties:
+          type: object
+          additionalProperties:
+            type: object
     identity_ExternalAccountsRequest:
       type: object
       properties:
         jiraAccountId:
           type: string
           pattern: ^[a-zA-Z0-9]{20,30}$
+          nullable: true
+          maxLength: 30
         githubUsername:
           type: string
           pattern: ^[a-zA-Z0-9-]{1,39}$
+          nullable: true
+          maxLength: 39
     identity_ApiResponseExternalAccountsResponse:
       type: object
       properties:
@@ -1749,7 +2038,7 @@ components:
           type: string
           maxLength: 100
           minLength: 2
-          pattern: ^[\p{L}\s\-]{2,100}$
+          pattern: ^[\p{L}]+(?:[ -][\p{L}]+)*$
         role:
           type: string
           minLength: 1
@@ -1762,28 +2051,6 @@ components:
         - confirmPassword
         - fullName
         - role
-    identity_ApiResponse:
-      type: object
-      properties:
-        timestamp:
-          type: string
-        status:
-          type: integer
-          format: int32
-        success:
-          type: boolean
-        data:
-          type: object
-        error:
-          type: string
-        message:
-          type: string
-        path:
-          type: string
-        correlationId:
-          type: string
-        degraded:
-          type: boolean
     identity_RefreshTokenRequest:
       type: object
       properties:
@@ -1796,6 +2063,8 @@ components:
         refreshToken:
           type: string
           minLength: 1
+      required:
+        - refreshToken
     identity_LoginRequest:
       type: object
       properties:
@@ -1812,19 +2081,30 @@ components:
           type: string
           maxLength: 255
           minLength: 0
+          format: email
         password:
           type: string
-          minLength: 1
+          minLength: 8
           pattern: ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,128}$
+          maxLength: 128
         fullName:
           type: string
           maxLength: 100
           minLength: 2
-          pattern: ^[\p{L}\s\-]{2,100}$
+          pattern: ^[\p{L}]+(?:[ -][\p{L}]+)*$
         role:
           type: string
           minLength: 1
           pattern: ^(STUDENT|LECTURER|ADMIN)$
+          enum:
+            - STUDENT
+            - LECTURER
+            - ADMIN
+      required:
+        - email
+        - password
+        - fullName
+        - role
     identity_AdminCreateUserResponse:
       type: object
       properties:
@@ -2046,7 +2326,9 @@ components:
           type: string
           maxLength: 100
           minLength: 2
-          pattern: ^[a-zA-ZÀ-ỹ\s]+$
+          pattern: '^[a-zA-ZÀ-ỹ]+(?: [a-zA-ZÀ-ỹ]+)*$'
+      required:
+        - fullName
     userGroup_UserResponse:
       type: object
       properties:
@@ -2099,6 +2381,26 @@ components:
         updatedAt:
           type: string
           format: date-time
+    userGroup_ProblemDetail:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+        properties:
+          type: object
+          additionalProperties:
+            type: object
     userGroup_UpdateGroupRequest:
       type: object
       properties:
@@ -2110,7 +2412,9 @@ components:
         lecturerId:
           type: integer
           format: int64
+          minimum: 1
       required:
+        - groupName
         - lecturerId
     userGroup_GroupResponse:
       type: object
@@ -2159,11 +2463,9 @@ components:
         semesterCode:
           type: string
           minLength: 1
-          pattern: .*\S.*
         semesterName:
           type: string
           minLength: 1
-          pattern: .*\S.*
         startDate:
           type: string
           format: date
@@ -2175,7 +2477,6 @@ components:
         - semesterName
         - startDate
         - endDate
-      additionalProperties: false
     userGroup_CreateGroupRequest:
       type: object
       properties:
@@ -2202,6 +2503,7 @@ components:
         userId:
           type: integer
           format: int64
+          minimum: 1
       required:
         - userId
     userGroup_UpdateLecturerRequest:
@@ -2210,6 +2512,7 @@ components:
         lecturerId:
           type: integer
           format: int64
+          minimum: 1
       required:
         - lecturerId
     userGroup_PageResponseUserResponse:
@@ -2594,16 +2897,15 @@ components:
         retentionDays:
           type: integer
           format: int32
-    ProblemDetails:
+    StandardError:
       type: object
       properties:
         type:
           type: string
-          format: uri
-          example: https://api.example.com/errors/invalid-request
+          example: https://api.example.com/errors/validation-error
         title:
           type: string
-          example: Invalid request
+          example: Validation failed
         status:
           type: integer
           format: int32
@@ -2613,14 +2915,10 @@ components:
           example: Invalid UUID
         instance:
           type: string
-          example: /api/project-configs/invalid-id
+          example: /api/users/not-a-number
         timestamp:
           type: string
           format: date-time
-      additionalProperties: true
-    StandardError:
-      allOf:
-        - $ref: '#/components/schemas/ProblemDetails'
     identity_JwksKey:
       type: object
       properties:
@@ -2699,49 +2997,494 @@ components:
         timestamp:
           type: string
           format: date-time
+    userGroup_ApiEnvelope_getUserById:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/userGroup_UserResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    userGroup_ApiEnvelope_updateUser:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/userGroup_UserResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    userGroup_ApiEnvelope_getSemesterById:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/userGroup_SemesterResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    userGroup_ApiEnvelope_updateSemester:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/userGroup_SemesterResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    userGroup_ApiEnvelope_getActiveSemester:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/userGroup_SemesterResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    userGroup_ApiEnvelope_getGroupById:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/userGroup_GroupDetailResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    userGroup_ApiEnvelope_updateGroup:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/userGroup_GroupResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    userGroup_ApiEnvelope_promoteToLeader:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/userGroup_MemberResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    userGroup_ApiEnvelope_demoteToMember:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/userGroup_MemberResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    userGroup_ApiEnvelope_listAllSemesters:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/userGroup_SemesterResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    userGroup_ApiEnvelope_createSemester:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/userGroup_SemesterResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    userGroup_ApiEnvelope_listGroups:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/userGroup_PageResponseGroupListResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    userGroup_ApiEnvelope_createGroup:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/userGroup_GroupResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    userGroup_ApiEnvelope_getGroupMembers:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/userGroup_PageResponseMemberResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    userGroup_ApiEnvelope_addMember:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/userGroup_MemberResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    userGroup_ApiEnvelope_updateGroupLecturer:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/userGroup_GroupResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    userGroup_ApiEnvelope_listUsers:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/userGroup_PageResponseUserResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    userGroup_ApiEnvelope_getUserGroups:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/userGroup_UserGroupsResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
+    userGroup_ApiEnvelope_getSemesterByCode:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/userGroup_SemesterResponse'
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        correlationId:
+          type: string
+        degraded:
+          type: boolean
   responses:
     Error400:
       description: 400 error
       content:
-        application/json:
+        application/problem+json:
           schema:
-            $ref: '#/components/schemas/ProblemDetails'
+            $ref: '#/components/schemas/StandardError'
     Error401:
       description: 401 error
       content:
-        application/json:
+        application/problem+json:
           schema:
-            $ref: '#/components/schemas/ProblemDetails'
+            $ref: '#/components/schemas/StandardError'
     Error403:
       description: 403 error
       content:
-        application/json:
+        application/problem+json:
           schema:
-            $ref: '#/components/schemas/ProblemDetails'
+            $ref: '#/components/schemas/StandardError'
     Error404:
       description: 404 error
       content:
-        application/json:
+        application/problem+json:
           schema:
-            $ref: '#/components/schemas/ProblemDetails'
+            $ref: '#/components/schemas/StandardError'
+    Error405:
+      description: 405 error
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/StandardError'
     Error409:
       description: 409 error
       content:
-        application/json:
+        application/problem+json:
           schema:
-            $ref: '#/components/schemas/ProblemDetails'
+            $ref: '#/components/schemas/StandardError'
+    Error415:
+      description: 415 error
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/StandardError'
     Error500:
       description: 500 error
       content:
-        application/json:
+        application/problem+json:
           schema:
-            $ref: '#/components/schemas/ProblemDetails'
-    Error503:
-      description: 503 error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ProblemDetails'
+            $ref: '#/components/schemas/StandardError'
   parameters: {}
   examples: {}
   requestBodies: {}

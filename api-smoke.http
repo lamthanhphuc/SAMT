@@ -13,6 +13,7 @@
 @lecturerPassword = Str0ng@Pass!
 @studentEmail = student1@samt.local
 @studentPassword = Str0ng@Pass!
+@jiraEmail = qa.integration@samt.local
 @unknownUserId = 99999999
 @adminAccessToken = UNSET
 @adminRefreshToken = UNSET
@@ -22,6 +23,7 @@
 @semesterId = 0
 @groupId = 0
 @projectConfigId = 00000000-0000-0000-0000-000000000000
+@lecturerAccessToken = UNSET
 
 # Tokens for sample payloads (format-valid placeholders)
 @jiraHostUrl = https://example.atlassian.net
@@ -75,7 +77,10 @@ Content-Type: application/json
 > {%
 client.test("Pre-seed admin login OK", function () {
   client.assert(response.status === 200);
-  client.assert(response.body.accessToken);
+  const authData = response.body && response.body.data ? response.body.data : response.body;
+  client.assert(authData && authData.accessToken);
+  client.global.set("adminAccessToken", authData.accessToken);
+  client.global.set("adminRefreshToken", authData.refreshToken || "");
 });
 %}
 
@@ -83,15 +88,15 @@ client.test("Pre-seed admin login OK", function () {
 
 # 2.3) Pre-seed lecturer (public register, idempotent)
 # @name preseedLecturer
-POST {{identityBaseUrl}}/api/auth/register
+POST {{baseUrl}}/api/admin/users
+Authorization: Bearer {{adminAccessToken}}
 Content-Type: application/json
 
 {
   "email": "{{lecturerEmail}}",
   "password": "{{lecturerPassword}}",
-  "confirmPassword": "{{lecturerPassword}}",
   "fullName": "Lecturer One",
-  "role": "STUDENT"
+  "role": "LECTURER"
 }
 
 > {%
@@ -115,9 +120,10 @@ Content-Type: application/json
 > {%
 client.test("Admin login OK", function() {
   client.assert(response.status === 200);
-  client.assert(response.body.accessToken);
-  client.global.set("adminAccessToken", response.body.accessToken);
-  client.global.set("adminRefreshToken", response.body.refreshToken);
+  const authData = response.body && response.body.data ? response.body.data : response.body;
+  client.assert(authData && authData.accessToken);
+  client.global.set("adminAccessToken", authData.accessToken);
+  client.global.set("adminRefreshToken", authData.refreshToken || "");
 });
 %}
 
@@ -136,7 +142,9 @@ Content-Type: application/json
 > {%
 client.test("Lecturer login OK", function() {
   client.assert(response.status === 200);
-  client.assert(response.body.accessToken);
+  const authData = response.body && response.body.data ? response.body.data : response.body;
+  client.assert(authData && authData.accessToken);
+  client.global.set("lecturerAccessToken", authData.accessToken);
 });
 %}
 
@@ -155,8 +163,9 @@ Content-Type: application/json
 > {%
 client.test("Student login OK", function() {
   client.assert(response.status === 200);
-  client.assert(response.body.accessToken);
-  client.global.set("studentAccessToken", response.body.accessToken);
+  const authData = response.body && response.body.data ? response.body.data : response.body;
+  client.assert(authData && authData.accessToken);
+  client.global.set("studentAccessToken", authData.accessToken);
 });
 %}
 
@@ -174,9 +183,10 @@ Content-Type: application/json
 > {%
 client.test("Refresh token OK", function() {
   client.assert(response.status === 200);
-  client.assert(response.body.accessToken);
-  client.global.set("adminAccessToken", response.body.accessToken);
-  client.global.set("adminRefreshToken", response.body.refreshToken);
+  const authData = response.body && response.body.data ? response.body.data : response.body;
+  client.assert(authData && authData.accessToken);
+  client.global.set("adminAccessToken", authData.accessToken);
+  client.global.set("adminRefreshToken", authData.refreshToken || "");
 });
 %}
 
@@ -190,8 +200,9 @@ Authorization: Bearer {{adminAccessToken}}
 > {%
 client.test("List users (lecturer) OK", function() {
   client.assert(response.status === 200);
-  if (response.body && response.body.content && response.body.content[0]) {
-    client.global.set("lecturerId", response.body.content[0].id);
+  const payload = response.body && response.body.data ? response.body.data : response.body;
+  if (payload && payload.content && payload.content[0]) {
+    client.global.set("lecturerId", payload.content[0].id);
   }
 });
 %}
@@ -206,8 +217,9 @@ Authorization: Bearer {{adminAccessToken}}
 > {%
 client.test("List users (student) OK", function() {
   client.assert(response.status === 200);
-  if (response.body && response.body.content && response.body.content[0]) {
-    client.global.set("studentId", response.body.content[0].id);
+  const payload = response.body && response.body.data ? response.body.data : response.body;
+  if (payload && payload.content && payload.content[0]) {
+    client.global.set("studentId", payload.content[0].id);
   }
 });
 %}
@@ -230,8 +242,9 @@ Content-Type: application/json
 > {%
 client.test("Create semester OK", function() {
   client.assert(response.status === 201);
-  client.assert(response.body.id);
-  client.global.set("semesterId", response.body.id);
+  const payload = response.body && response.body.data ? response.body.data : response.body;
+  client.assert(payload && payload.id);
+  client.global.set("semesterId", payload.id);
 });
 %}
 
@@ -244,7 +257,7 @@ Authorization: Bearer {{adminAccessToken}}
 
 > {%
 client.test("Activate semester OK", function() {
-  client.assert(response.status === 204);
+  client.assert(response.status === 200 || response.status === 204);
 });
 %}
 
@@ -265,8 +278,9 @@ Content-Type: application/json
 > {%
 client.test("Create group OK", function() {
   client.assert(response.status === 201);
-  client.assert(response.body.id);
-  client.global.set("groupId", response.body.id);
+  const payload = response.body && response.body.data ? response.body.data : response.body;
+  client.assert(payload && payload.id);
+  client.global.set("groupId", payload.id);
 });
 %}
 
@@ -312,6 +326,7 @@ Content-Type: application/json
 {
   "groupId": {{groupId}},
   "jiraHostUrl": "{{jiraHostUrl}}",
+  "jiraEmail": "{{jiraEmail}}",
   "jiraApiToken": "{{jiraApiToken}}",
   "githubRepoUrl": "{{githubRepoUrl}}",
   "githubToken": "{{githubToken}}"
@@ -320,9 +335,10 @@ Content-Type: application/json
 > {%
 client.test("Create project config OK", function() {
   client.assert(response.status === 201 || response.status === 409);
+  const payload = response.body && response.body.data ? response.body.data : response.body;
   if (response.status === 201) {
-    client.assert(response.body.data && response.body.data.id);
-    client.global.set("projectConfigId", response.body.id || (response.body.data && response.body.data.id));
+    client.assert(payload && payload.id);
+    client.global.set("projectConfigId", payload.id);
   }
 });
 %}

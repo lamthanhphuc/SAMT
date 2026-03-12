@@ -1,5 +1,6 @@
 package com.example.user_groupservice.controller;
 
+import com.example.common.api.ApiProblemDetailsFactory;
 import com.example.user_groupservice.dto.request.CreateSemesterRequest;
 import com.example.user_groupservice.dto.request.UpdateSemesterRequest;
 import com.example.user_groupservice.dto.response.SemesterResponse;
@@ -7,7 +8,9 @@ import com.example.user_groupservice.service.SemesterService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -49,6 +52,20 @@ public class SemesterController {
     public ResponseEntity<SemesterResponse> getActiveSemester() {
         SemesterResponse response = semesterService.getActiveSemester();
         return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/active")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ProblemDetail> putActiveSemesterNotAllowed() {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+            .header(HttpHeaders.ALLOW, "GET")
+            .body(ApiProblemDetailsFactory.problemDetail(
+                HttpStatus.METHOD_NOT_ALLOWED,
+                "method-not-allowed",
+                "Method not allowed",
+                "Method not allowed",
+                "/api/semesters/active"
+            ));
     }
     
     @GetMapping

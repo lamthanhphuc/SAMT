@@ -99,6 +99,7 @@ Content-Type: application/json
 
 {
   "jiraHostUrl": "https://example.atlassian.net",
+  "jiraEmail": "qa.integration@samt.local",
   "jiraApiToken": "ATATTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
   "githubRepoUrl": "https://github.com/example-org/example-repo",
   "githubToken": "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
@@ -125,6 +126,7 @@ Content-Type: application/json
 
 {
   "jiraHostUrl": "https://example.atlassian.net",
+  "jiraEmail": "qa.integration@samt.local",
   "jiraApiToken": "ATATTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
   "githubRepoUrl": "https://github.com/example-org/example-repo",
   "githubToken": "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
@@ -151,6 +153,7 @@ Content-Type: application/json
 
 {
   "jiraHostUrl": "invalid-url",
+  "jiraEmail": "qa.integration@samt.local",
   "jiraApiToken": "bad-token",
   "githubRepoUrl": "invalid-repo",
   "githubToken": "short"
@@ -177,6 +180,7 @@ Content-Type: application/json
 
 {
   "jiraHostUrl": "https://example.atlassian.net",
+  "jiraEmail": "qa.integration@samt.local",
   "jiraApiToken": "ATATTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
   "githubRepoUrl": "https://github.com/example-org/example-repo",
   "githubToken": "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
@@ -203,6 +207,7 @@ Content-Type: application/json
 
 {
   "jiraHostUrl": "https://example.atlassian.net",
+  "jiraEmail": "qa.integration@samt.local",
   "jiraApiToken": "ATATTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
   "githubRepoUrl": "https://github.com/example-org/example-repo",
   "githubToken": "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
@@ -550,6 +555,7 @@ Content-Type: application/json
 {
   "groupId": "{{fixtureGroupId}}",
   "jiraHostUrl": "https://example.atlassian.net",
+  "jiraEmail": "qa.integration@samt.local",
   "jiraApiToken": "ATATTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
   "githubRepoUrl": "https://github.com/example-org/example-repo",
   "githubToken": "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
@@ -577,6 +583,7 @@ Content-Type: application/json
 {
   "groupId": "{{fixtureGroupId}}",
   "jiraHostUrl": "https://example.atlassian.net",
+  "jiraEmail": "qa.integration@samt.local",
   "jiraApiToken": "ATATTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
   "githubRepoUrl": "https://github.com/example-org/example-repo",
   "githubToken": "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
