@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 
 @RestController
-@RequestMapping("/lecturer")
+@RequestMapping("/api/reports/lecturer")
 @RequiredArgsConstructor
 @Validated
 @Tag(name = "report-lecturer-dashboard", description = "Lecturer dashboard reporting APIs")
@@ -42,7 +42,7 @@ public class LecturerDashboardController {
     @PreAuthorize("hasAnyRole('LECTURER','ADMIN')")
     @Operation(summary = "Get lecturer dashboard overview")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Overview retrieved", content = @Content(schema = @Schema(implementation = LecturerOverviewResponse.class), examples = @ExampleObject(value = "{\"success\":true,\"status\":200,\"path\":\"/lecturer/overview\",\"data\":{\"lecturerId\":12,\"semesterId\":2,\"groupCount\":3,\"studentCount\":15,\"taskCount\":42,\"completedTaskCount\":30,\"githubCommitCount\":128,\"githubPrCount\":9,\"lastSyncAt\":\"2026-03-12T08:30:00\"},\"timestamp\":\"2026-03-12T08:30:01Z\"}"))),
+        @ApiResponse(responseCode = "200", description = "Overview retrieved", content = @Content(schema = @Schema(implementation = LecturerOverviewResponse.class), examples = @ExampleObject(value = "{\"success\":true,\"status\":200,\"path\":\"/api/reports/lecturer/overview\",\"data\":{\"lecturerId\":12,\"semesterId\":2,\"groupCount\":3,\"studentCount\":15,\"taskCount\":42,\"completedTaskCount\":30,\"githubCommitCount\":128,\"githubPrCount\":9,\"lastSyncAt\":\"2026-03-12T08:30:00\"},\"timestamp\":\"2026-03-12T08:30:01Z\"}"))),
         @ApiResponse(responseCode = "403", description = "Forbidden"),
         @ApiResponse(responseCode = "503", description = "Dependency unavailable")
     })

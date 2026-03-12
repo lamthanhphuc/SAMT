@@ -41,7 +41,7 @@ class ReportControllerSecurityTest {
         request.setUseAi(false);
         request.setExportType("PDF");
 
-        mockMvc.perform(post("/reports/srs")
+        mockMvc.perform(post("/api/reports/srs")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized());
@@ -55,9 +55,9 @@ class ReportControllerSecurityTest {
         request.setExportType("PDF");
 
         Mockito.when(reportingService.generate(Mockito.anyLong(), Mockito.any(), Mockito.anyBoolean(), Mockito.anyString()))
-                .thenReturn(new ReportResponse(UUID.randomUUID(), "reports/test.pdf", "ok"));
+                .thenReturn(new ReportResponse(UUID.randomUUID(), "COMPLETED", java.time.LocalDateTime.now(), "/api/reports/test/download"));
 
-        mockMvc.perform(post("/reports/srs")
+        mockMvc.perform(post("/api/reports/srs")
                         .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt
                                 .subject(UUID.randomUUID().toString())
                                 .claim("service", "api-gateway")
@@ -67,6 +67,6 @@ class ReportControllerSecurityTest {
                                 .authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk());
+                .andExpect(status().isCreated());
     }
 }

@@ -156,7 +156,6 @@ public class GatewayRoutesConfig {
                         .path("/api/reports/**")
                         .filters(f -> f
                                 .filter(rateLimitGatewayFilter.globalRateLimit("report-service"))
-                                .stripPrefix(2)
                                 .addRequestHeader("X-Forwarded-Host", "gateway")
                                 .circuitBreaker(c -> c
                                         .setName("reportServiceCircuitBreaker")

@@ -5,6 +5,7 @@ import com.example.common.api.ApiResponseFactory;
 import com.example.reportservice.config.CorrelationIdFilter;
 import org.slf4j.MDC;
 import org.springframework.core.MethodParameter;
+import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -38,7 +39,13 @@ public class ApiResponseBodyAdvice implements ResponseBodyAdvice<Object> {
         }
 
         String path = servletRequest.getServletRequest().getRequestURI();
-        if (body == null || body instanceof ApiResponse<?> || body instanceof ProblemDetail || shouldSkip(path)) {
+        if (body == null
+            || body instanceof ApiResponse<?>
+            || body instanceof ProblemDetail
+            || body instanceof Resource
+            || selectedContentType == null
+            || !MediaType.APPLICATION_JSON.includes(selectedContentType)
+            || shouldSkip(path)) {
             return body;
         }
 
