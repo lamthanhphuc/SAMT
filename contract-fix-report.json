@@ -1,0 +1,36 @@
+{
+  "summary": {
+    "contractCommand": "npm run tests:contract",
+    "status": "pass",
+    "issuesFound": 0,
+    "operations": {
+      "selected": 52,
+      "tested": 52,
+      "total": 62
+    },
+    "cases": {
+      "generated": 2014,
+      "passed": 2014,
+      "skipped": 378
+    }
+  },
+  "integration": {
+    "requestedCommand": "npm run debug:integration",
+    "requestedCommandAvailable": false,
+    "executedCommand": "npm run qa:integration"
+  },
+  "servicesRedeployed": [
+    "api-gateway",
+    "report-service"
+  ],
+  "stabilizationFixes": [
+    "Gateway malformed path validation filter and problem+json error responses",
+    "Gateway raw-path instance fix to prevent malformed-path 500",
+    "Sync job path parameter validation aligned to integer",
+    "Report service user-group list size reduced from 200 to 100",
+    "User-group Jackson accept-float-as-int disabled",
+    "SyncGrpcClient INVALID_ARGUMENT mapped to EntityNotFound",
+    "SyncGrpcClient retry/circuit-breaker wrappers removed",
+    "Student tasks status rejection removed and upstream fallback to empty page"
+  ]
+}

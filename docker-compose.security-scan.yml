@@ -1,0 +1,42 @@
+# ==============================================
+# SAMT - SECURITY SCAN OVERRIDE
+# ==============================================
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.security-scan.yml run --rm owasp-dependency-check
+#
+# Notes:
+# - This override does NOT modify runtime services.
+# - NVD_API_KEY is required only for OWASP Dependency-Check.
+
+services:
+  owasp-dependency-check:
+    image: owasp/dependency-check:latest
+    container_name: owasp-dependency-check
+    working_dir: /src
+    environment:
+      - NVD_API_KEY
+    volumes:
+      - ./:/src
+      - dc-cache:/usr/share/dependency-check/data
+      - dc-reports:/report
+    entrypoint:
+      - sh
+      - -ec
+      - |
+        if [ -z "$$NVD_API_KEY" ]; then
+          echo "NVD_API_KEY is required for security scan" >&2
+          exit 2
+        fi
+        /usr/share/dependency-check/bin/dependency-check.sh \
+          --scan /src \
+          --format ALL \
+          --project SAMT \
+          --out /report \
+          --nvdApiKey "$$NVD_API_KEY" \
+          --noupdate false
+
+volumes:
+  dc-cache:
+    driver: local
+  dc-reports:
+    driver: local

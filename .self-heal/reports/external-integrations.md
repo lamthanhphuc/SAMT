@@ -1,6 +1,6 @@
 # External Integration Verification
 
-- Generated at: 2026-03-12T03:40:13.694Z
+- Generated at: 2026-03-13T04:33:57.383Z
 - Status: passed
 - Base URL: http://localhost:9080
 
@@ -26,26 +26,26 @@
 
 ```json
 {
-  "configId": "b038a32f-3118-4fa0-acc4-177bc375ea48",
+  "configId": "192ac087-21ae-4edf-a0ee-3fb9cf6d999a",
   "state": "VERIFIED",
   "verificationResults": {
     "jira": {
       "status": "SUCCESS",
       "message": "Connected successfully to Jira",
       "error": null,
-      "testedAt": "2026-03-12T03:40:15Z",
+      "testedAt": "2026-03-13T04:33:57Z",
       "userEmail": "phucltse184678@fpt.edu.vn"
     },
     "github": {
       "status": "SUCCESS",
       "message": "Connected successfully to GitHub",
       "error": null,
-      "testedAt": "2026-03-12T03:40:15Z",
+      "testedAt": "2026-03-13T04:33:57Z",
       "repoName": "lamthanhphuc/SAMT",
       "hasWriteAccess": true
     }
   },
-  "lastVerifiedAt": "2026-03-12T03:40:16Z",
+  "lastVerifiedAt": "2026-03-13T04:33:59Z",
   "invalidReason": null
 }
 ```
