@@ -12,6 +12,9 @@ spring:
     name: usergroup-service
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
+  jackson:
+    deserialization:
+      accept-float-as-int: false
   mvc:
     dispatch-trace-request: true
 

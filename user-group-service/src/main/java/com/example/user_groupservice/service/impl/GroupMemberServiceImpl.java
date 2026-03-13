@@ -6,7 +6,6 @@ import com.example.user_groupservice.entity.Group;
 import com.example.user_groupservice.entity.GroupRole;
 import com.example.user_groupservice.entity.UserSemesterMembership;
 import com.example.user_groupservice.entity.UserSemesterMembershipId;
-import com.example.user_groupservice.exception.BadRequestException;
 import com.example.user_groupservice.exception.ConflictException;
 import com.example.user_groupservice.exception.ResourceNotFoundException;
 import com.example.user_groupservice.grpc.GetUserRoleResponse;
@@ -65,7 +64,7 @@ public class GroupMemberServiceImpl implements GroupMemberService {
                 () -> identityServiceClient.getUserRole(userId),
                 "getUserRole[addMember]");
         if (roleResponse.getRole() != UserRole.STUDENT) {
-            throw new BadRequestException(
+            throw new ConflictException(
                 "INVALID_ROLE",
                 "Only STUDENT users can be added to groups. User role: " + roleResponse.getRole()
             );
@@ -182,7 +181,7 @@ public class GroupMemberServiceImpl implements GroupMemberService {
         
         // Check if user is actually a LEADER
         if (membership.getGroupRole() != GroupRole.LEADER) {
-            throw new BadRequestException(
+            throw new ConflictException(
                 "NOT_A_LEADER",
                 "User " + userId + " is not a LEADER"
             );

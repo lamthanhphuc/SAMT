@@ -41,7 +41,7 @@ public class GroupServiceImpl implements GroupService {
     private final GroupRepository groupRepository;
     private final UserSemesterMembershipRepository membershipRepository;
     private final SemesterRepository semesterRepository;
-    private final IdentityServiceClient identityServiceClient;
+        private final ResilientIdentityServiceClient identityServiceClient;
     private final GrpcExceptionHandler grpcExceptionHandler;
     
     @Override
@@ -140,8 +140,8 @@ public class GroupServiceImpl implements GroupService {
                 .semesterCode(semesterCode)
                 .lecturer(GroupDetailResponse.LecturerInfo.builder()
                         .id(group.getLecturerId())
-                        .fullName(lecturerInfo.getDeleted() ? "<Deleted User>" : lecturerInfo.getFullName())
-                        .email(lecturerInfo.getDeleted() ? null : lecturerInfo.getEmail())
+                        .fullName(resolveLecturerName(lecturerInfo))
+                        .email(lecturerInfo != null && !lecturerInfo.getDeleted() ? lecturerInfo.getEmail() : null)
                         .build())
                 .members(members)
                 .memberCount(members.size())
@@ -320,8 +320,10 @@ public class GroupServiceImpl implements GroupService {
                 "getUserRole[updateLecturer]");
         
         if (roleResponse.getRole() != UserRole.LECTURER) {
-            throw BadRequestException.invalidRole(
-                    roleResponse.getRole().name(), "LECTURER");
+            throw new ConflictException(
+                    "INVALID_ROLE",
+                    "Invalid role: " + roleResponse.getRole().name() + ". Expected: LECTURER"
+            );
         }
         
         // 3. Update lecturer (with audit log)
@@ -372,6 +374,9 @@ public class GroupServiceImpl implements GroupService {
                         return grpcExceptionHandler.handleGrpcCall(
                                         () -> identityServiceClient.getUser(lecturerId),
                                         operationName);
+                } catch (ResourceNotFoundException ex) {
+                        log.warn("Lecturer {} not found in identity for {}. Returning fallback lecturer info.", lecturerId, operationName);
+                        return null;
                 } catch (ServiceUnavailableException | GatewayTimeoutException ex) {
                         log.warn("Identity dependency unavailable while loading lecturer {}: {}", lecturerId, ex.getMessage());
                         return null;

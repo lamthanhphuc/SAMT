@@ -10,7 +10,7 @@ import com.example.user_groupservice.entity.UserSemesterMembership;
 import com.example.user_groupservice.exception.*;
 import com.example.user_groupservice.grpc.GetUserResponse;
 import com.example.user_groupservice.grpc.GetUsersResponse;
-import com.example.user_groupservice.grpc.IdentityServiceClient;
+import com.example.user_groupservice.grpc.ResilientIdentityServiceClient;
 import com.example.user_groupservice.grpc.ListUsersResponse;
 import com.example.user_groupservice.grpc.UpdateUserResponse;
 import com.example.user_groupservice.mapper.UserGrpcMapper;
@@ -45,7 +45,7 @@ public class UserServiceImpl implements UserService {
 
         private static final int MAX_GROUP_MEMBERSHIPS_FETCH = 200;
     
-    private final IdentityServiceClient identityServiceClient;
+        private final ResilientIdentityServiceClient identityServiceClient;
     private final UserSemesterMembershipRepository membershipRepository;
     private final GroupRepository groupRepository;
     private final SemesterRepository semesterRepository;

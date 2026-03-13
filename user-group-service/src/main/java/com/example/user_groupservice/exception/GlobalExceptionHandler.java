@@ -23,7 +23,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.Arrays;
 
@@ -44,7 +46,7 @@ public class GlobalExceptionHandler {
         };
     }
 
-    @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class, ValidationException.class})
+    @ExceptionHandler({MethodArgumentNotValidException.class, HandlerMethodValidationException.class, ConstraintViolationException.class, ValidationException.class})
     public ResponseEntity<ProblemDetail> handleValidationException(Exception ex, HttpServletRequest request) {
         String message = ex instanceof MethodArgumentNotValidException methodArgumentNotValidException
             ? methodArgumentNotValidException.getBindingResult().getFieldErrors().isEmpty()
@@ -120,6 +122,11 @@ public class GlobalExceptionHandler {
                 "Method not allowed",
                 request.getRequestURI()
             ));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ProblemDetail> handleNoResourceFound(NoResourceFoundException ex, HttpServletRequest request) {
+        return problem(HttpStatus.NOT_FOUND, "resource-not-found", "Resource not found", "Resource not found", request);
     }
 
     @ExceptionHandler(Exception.class)

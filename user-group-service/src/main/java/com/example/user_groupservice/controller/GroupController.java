@@ -56,7 +56,7 @@ public class GroupController {
      */
     @GetMapping("/{groupId}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<GroupDetailResponse> getGroupById(@PathVariable Long groupId) {
+    public ResponseEntity<GroupDetailResponse> getGroupById(@PathVariable @Positive(message = "groupId must be greater than 0") Long groupId) {
         
         GroupDetailResponse response = groupService.getGroupById(groupId);
         return ResponseEntity.ok(response);
@@ -84,7 +84,7 @@ public class GroupController {
     @PutMapping("/{groupId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<GroupResponse> updateGroup(
-            @PathVariable Long groupId,
+            @PathVariable @Positive(message = "groupId must be greater than 0") Long groupId,
             @Valid @RequestBody UpdateGroupRequest request) {
         
         GroupResponse response = groupService.updateGroup(groupId, request);
@@ -97,7 +97,7 @@ public class GroupController {
     @DeleteMapping("/{groupId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteGroup(
-            @PathVariable Long groupId,
+            @PathVariable @Positive(message = "groupId must be greater than 0") Long groupId,
             @AuthenticationPrincipal CurrentUser currentUser) {
         
         Long actorId = currentUser.getUserId();
@@ -111,7 +111,7 @@ public class GroupController {
     @PatchMapping("/{groupId}/lecturer")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<GroupResponse> updateGroupLecturer(
-            @PathVariable Long groupId,
+            @PathVariable @Positive(message = "groupId must be greater than 0") Long groupId,
             @Valid @RequestBody UpdateLecturerRequest request) {
         
         GroupResponse response = groupService.updateGroupLecturer(groupId, request);

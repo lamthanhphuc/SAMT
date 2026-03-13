@@ -101,6 +101,57 @@ public class ResilientIdentityServiceClient {
         );
     }
 
+    public UpdateUserResponse updateUser(Long userId, String fullName) {
+        log.debug("Updating user with resilience: {}", userId);
+
+        Supplier<UpdateUserResponse> supplier = () -> {
+            try {
+                return identityServiceClient.updateUser(userId, fullName);
+            } catch (StatusRuntimeException e) {
+                log.warn("Identity Service gRPC call failed: {}", e.getStatus());
+                throw e;
+            }
+        };
+
+        return circuitBreaker.executeSupplier(
+                Retry.decorateSupplier(retry, supplier)
+        );
+    }
+
+    public ListUsersResponse listUsers(int page, int size, String status, String role) {
+        log.debug("Listing users with resilience: page={}, size={}", page, size);
+
+        Supplier<ListUsersResponse> supplier = () -> {
+            try {
+                return identityServiceClient.listUsers(page, size, status, role);
+            } catch (StatusRuntimeException e) {
+                log.warn("Identity Service gRPC call failed: {}", e.getStatus());
+                throw e;
+            }
+        };
+
+        return circuitBreaker.executeSupplier(
+                Retry.decorateSupplier(retry, supplier)
+        );
+    }
+
+    public GetUsersResponse getUsers(java.util.List<Long> userIds) {
+        log.debug("Batch getting users with resilience: count={}", userIds != null ? userIds.size() : 0);
+
+        Supplier<GetUsersResponse> supplier = () -> {
+            try {
+                return identityServiceClient.getUsers(userIds);
+            } catch (StatusRuntimeException e) {
+                log.warn("Identity Service gRPC call failed: {}", e.getStatus());
+                throw e;
+            }
+        };
+
+        return circuitBreaker.executeSupplier(
+                Retry.decorateSupplier(retry, supplier)
+        );
+    }
+
     /**
      * Check if Circuit Breaker is OPEN (Identity Service unavailable)
      */

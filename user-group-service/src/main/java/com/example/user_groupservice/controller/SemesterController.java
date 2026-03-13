@@ -33,7 +33,7 @@ public class SemesterController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
     
-    @GetMapping("/{id}")
+    @GetMapping("/{id:\\d+}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<SemesterResponse> getSemesterById(@PathVariable Long id) {
         SemesterResponse response = semesterService.getSemesterById(id);
@@ -75,7 +75,7 @@ public class SemesterController {
         return ResponseEntity.ok(response);
     }
     
-    @PutMapping("/{id}")
+    @PutMapping("/{id:\\d+}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<SemesterResponse> updateSemester(
             @PathVariable Long id,
@@ -84,7 +84,7 @@ public class SemesterController {
         return ResponseEntity.ok(response);
     }
     
-    @PatchMapping("/{id}/activate")
+    @PatchMapping("/{id:\\d+}/activate")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> activateSemester(@PathVariable Long id) {
         semesterService.activateSemester(id);

@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.*;
  * - DELETE /api/groups/{groupId}/members/{userId}: ADMIN
  */
 @RestController
-@RequestMapping("/api/groups/{groupId}/members")
+@RequestMapping("/api/groups/{groupId:\\d+}/members")
 @RequiredArgsConstructor
 @Slf4j
 @Validated
@@ -43,12 +43,12 @@ public class GroupMemberController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('LECTURER')")
     public ResponseEntity<MemberResponse> addMember(
-            @PathVariable Long groupId,
+            @PathVariable @Min(value = 1, message = "groupId must be greater than 0") Long groupId,
             @Valid @RequestBody AddMemberRequest request) {
         
         log.info("Adding member {} to group {}", request.getUserId(), groupId);
         MemberResponse response = memberService.addMember(groupId, request.getUserId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
     
     /**
@@ -68,11 +68,11 @@ public class GroupMemberController {
     /**
      * UC25 - Promote Member to Leader
      */
-    @PutMapping("/{userId}/promote")
+        @PutMapping("/{userId:\\d+}/promote")
     @PreAuthorize("hasRole('ADMIN') or hasRole('LECTURER')")
     public ResponseEntity<MemberResponse> promoteToLeader(
-            @PathVariable Long groupId,
-            @PathVariable Long userId) {
+            @PathVariable @Min(value = 1, message = "groupId must be greater than 0") Long groupId,
+            @PathVariable @Min(value = 1, message = "userId must be greater than 0") Long userId) {
         
         log.info("Promoting user {} to LEADER in group {}", userId, groupId);
         MemberResponse response = memberService.promoteToLeader(groupId, userId);
@@ -82,11 +82,11 @@ public class GroupMemberController {
     /**
      * UC25 - Demote Leader to Member
      */
-    @PutMapping("/{userId}/demote")
+        @PutMapping("/{userId:\\d+}/demote")
     @PreAuthorize("hasRole('ADMIN') or hasRole('LECTURER')")
     public ResponseEntity<MemberResponse> demoteToMember(
-            @PathVariable Long groupId,
-            @PathVariable Long userId) {
+            @PathVariable @Min(value = 1, message = "groupId must be greater than 0") Long groupId,
+            @PathVariable @Min(value = 1, message = "userId must be greater than 0") Long userId) {
         
         log.info("Demoting user {} to MEMBER in group {}", userId, groupId);
         MemberResponse response = memberService.demoteToMember(groupId, userId);
@@ -96,11 +96,11 @@ public class GroupMemberController {
     /**
      * UC26 - Remove Member from Group
      */
-    @DeleteMapping("/{userId}")
+        @DeleteMapping("/{userId:\\d+}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> removeMember(
-            @PathVariable Long groupId,
-            @PathVariable Long userId,
+            @PathVariable @Min(value = 1, message = "groupId must be greater than 0") Long groupId,
+            @PathVariable @Min(value = 1, message = "userId must be greater than 0") Long userId,
             @AuthenticationPrincipal CurrentUser currentUser) {
 
         log.info("Removing member {} from group {}", userId, groupId);
