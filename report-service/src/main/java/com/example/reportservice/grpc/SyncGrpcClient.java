@@ -2,9 +2,9 @@ package com.example.reportservice.grpc;
 
 import com.example.reportservice.grpc.*;
 import com.example.reportservice.web.UpstreamServiceException;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
-import io.github.resilience4j.retry.annotation.Retry;
+import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import jakarta.persistence.EntityNotFoundException;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
 
@@ -19,8 +19,6 @@ public class SyncGrpcClient {
     @GrpcClient("sync-service")
     private SyncServiceGrpc.SyncServiceBlockingStub stub;
 
-    @Retry(name = "syncGrpc")
-    @CircuitBreaker(name = "syncGrpc")
     public List<IssueResponse> getIssues(Long projectConfigId) {
 
         ProjectConfigRequest request =
@@ -34,6 +32,13 @@ public class SyncGrpcClient {
                     .withDeadlineAfter(2, TimeUnit.SECONDS)
                     .getIssuesByProjectConfig(request);
         } catch (StatusRuntimeException ex) {
+            Status.Code statusCode = ex.getStatus().getCode();
+            if (statusCode == Status.Code.INVALID_ARGUMENT) {
+                throw new EntityNotFoundException("Project configuration not found");
+            }
+            if (statusCode == Status.Code.NOT_FOUND) {
+                throw new EntityNotFoundException("Project configuration not found");
+            }
             throw new UpstreamServiceException("sync-service unavailable", ex);
         }
 

@@ -38,7 +38,7 @@ public class StudentDashboardController {
     private final AuthenticatedRequestSupport requestSupport;
 
     @GetMapping("/tasks")
-    @PreAuthorize("hasRole('STUDENT')")
+    @PreAuthorize("hasAnyRole('STUDENT','ADMIN','LECTURER')")
     @Operation(summary = "Get current student tasks")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Tasks retrieved", content = @Content(schema = @Schema(implementation = PageResponse.class), examples = @ExampleObject(value = "{\"success\":true,\"status\":200,\"path\":\"/api/reports/students/me/tasks\",\"data\":{\"content\":[{\"taskId\":\"10001\",\"source\":\"JIRA\",\"key\":\"SAMT-12\",\"title\":\"Implement dashboard API\",\"status\":\"IN_PROGRESS\",\"priority\":\"High\",\"groupId\":3,\"groupName\":\"SE1848-G1\",\"assignee\":\"Nguyen Van A\",\"updatedAt\":\"2026-03-12T08:00:00Z\",\"url\":\"https://jira.example.com/browse/SAMT-12\"}],\"page\":0,\"size\":20,\"totalElements\":1,\"totalPages\":1},\"timestamp\":\"2026-03-12T08:30:01Z\"}"))),

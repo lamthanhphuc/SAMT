@@ -33,7 +33,7 @@ public class UserGroupClient {
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(properties.getUserGroupBaseUrl())
             .path("/api/groups")
             .queryParam("page", 0)
-            .queryParam("size", 200);
+            .queryParam("size", 100);
         if (lecturerId != null) {
             builder.queryParam("lecturerId", lecturerId);
         }

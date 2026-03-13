@@ -132,6 +132,9 @@ resilience4j:
       syncGrpc:
         max-attempts: 3
         wait-duration: 300ms
+        ignore-exceptions:
+          - com.example.reportservice.web.BadRequestException
+          - jakarta.persistence.EntityNotFoundException
       analysisApi:
         max-attempts: 3
         wait-duration: 300ms

@@ -32,4 +32,43 @@ public interface GithubCommitRepository extends JpaRepository<GithubCommit, Long
         """)
     long countActiveCommitDays(@Param("projectConfigIds") List<UUID> projectConfigIds,
                                @Param("authorEmail") String authorEmail);
+
+    @Query("""
+        select count(g) from GithubCommit g
+        where g.projectConfigId in :projectConfigIds
+          and lower(coalesce(g.authorEmail, '')) = lower(:authorEmail)
+          and g.deletedAt is null
+          and (:fromDate is null or g.committedDate >= :fromDate)
+          and (:toDate is null or g.committedDate <= :toDate)
+        """)
+    long countByAuthorAndProjectConfigWithinRange(@Param("projectConfigIds") List<UUID> projectConfigIds,
+                                                  @Param("authorEmail") String authorEmail,
+                                                  @Param("fromDate") LocalDateTime fromDate,
+                                                  @Param("toDate") LocalDateTime toDate);
+
+    @Query("""
+        select max(g.committedDate) from GithubCommit g
+        where g.projectConfigId in :projectConfigIds
+          and lower(coalesce(g.authorEmail, '')) = lower(:authorEmail)
+          and g.deletedAt is null
+          and (:fromDate is null or g.committedDate >= :fromDate)
+          and (:toDate is null or g.committedDate <= :toDate)
+        """)
+    LocalDateTime findLastCommitAtWithinRange(@Param("projectConfigIds") List<UUID> projectConfigIds,
+                                              @Param("authorEmail") String authorEmail,
+                                              @Param("fromDate") LocalDateTime fromDate,
+                                              @Param("toDate") LocalDateTime toDate);
+
+    @Query("""
+        select count(distinct date(g.committedDate)) from GithubCommit g
+        where g.projectConfigId in :projectConfigIds
+          and lower(coalesce(g.authorEmail, '')) = lower(:authorEmail)
+          and g.deletedAt is null
+          and (:fromDate is null or g.committedDate >= :fromDate)
+          and (:toDate is null or g.committedDate <= :toDate)
+        """)
+    long countActiveCommitDaysWithinRange(@Param("projectConfigIds") List<UUID> projectConfigIds,
+                                          @Param("authorEmail") String authorEmail,
+                                          @Param("fromDate") LocalDateTime fromDate,
+                                          @Param("toDate") LocalDateTime toDate);
 }

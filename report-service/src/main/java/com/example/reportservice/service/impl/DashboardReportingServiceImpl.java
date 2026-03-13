@@ -23,6 +23,7 @@ import com.example.reportservice.repository.GithubCommitRepository;
 import com.example.reportservice.repository.JiraIssueRepository;
 import com.example.reportservice.repository.SyncJobRepository;
 import com.example.reportservice.repository.UnifiedActivityRepository;
+import com.example.reportservice.web.UpstreamServiceException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -152,11 +153,16 @@ public class DashboardReportingServiceImpl implements com.example.reportservice.
 
     @Override
     public PageResponse<StudentTaskResponse> getStudentTasks(Long studentId, Long semesterId, String status, int page, int size) {
-        validateTaskStatus(status);
-        UserProfile profile = userGroupClient.getUserProfile(studentId);
-        List<UserGroupMembership> memberships = userGroupClient.getUserGroups(studentId).stream()
-            .filter(group -> semesterId == null || semesterId.equals(group.semesterId()))
-            .toList();
+        UserProfile profile;
+        List<UserGroupMembership> memberships;
+        try {
+            profile = userGroupClient.getUserProfile(studentId);
+            memberships = userGroupClient.getUserGroups(studentId).stream()
+                .filter(group -> semesterId == null || semesterId.equals(group.semesterId()))
+                .toList();
+        } catch (UpstreamServiceException ex) {
+            return emptyPage(page, size);
+        }
 
         if (memberships.isEmpty()) {
             return emptyPage(page, size);
@@ -199,12 +205,15 @@ public class DashboardReportingServiceImpl implements com.example.reportservice.
         }
 
         List<UUID> configIds = List.of(configOpt.get().configId());
-        List<GithubCommit> commits = githubCommitRepository.findAll().stream()
-            .filter(commit -> configIds.contains(commit.getProjectConfigId()))
-            .filter(commit -> commit.getDeletedAt() == null)
-            .filter(commit -> profile.email().equalsIgnoreCase(defaultLabel(commit.getAuthorEmail())))
-            .filter(commit -> withinRange(commit.getCommittedDate(), from, to))
-            .toList();
+        LocalDateTime fromDate = toFromDateTime(from);
+        LocalDateTime toDate = toToDateTime(to);
+
+        long commitCount = githubCommitRepository.countByAuthorAndProjectConfigWithinRange(
+            configIds,
+            profile.email(),
+            fromDate,
+            toDate
+        );
 
         List<UnifiedActivity> pullRequests = unifiedActivityRepository
             .findByProjectConfigIdInAndActivityTypeAndAuthorEmailIgnoreCaseAndDeletedAtIsNull(configIds, ActivityType.PULL_REQUEST, profile.email()).stream()
@@ -212,11 +221,21 @@ public class DashboardReportingServiceImpl implements com.example.reportservice.
             .filter(activity -> withinRange(activity.getCreatedAt(), from, to))
             .toList();
 
-        LocalDateTime lastCommitAt = commits.stream().map(GithubCommit::getCommittedDate).max(LocalDateTime::compareTo).orElse(null);
-        long activeDays = commits.stream().map(commit -> commit.getCommittedDate().toLocalDate()).distinct().count();
+        LocalDateTime lastCommitAt = githubCommitRepository.findLastCommitAtWithinRange(
+            configIds,
+            profile.email(),
+            fromDate,
+            toDate
+        );
+        long activeDays = githubCommitRepository.countActiveCommitDaysWithinRange(
+            configIds,
+            profile.email(),
+            fromDate,
+            toDate
+        );
 
         return GithubStatsResponse.builder()
-            .commitCount(commits.size())
+            .commitCount(commitCount)
             .prCount(pullRequests.size())
             .mergedPrCount(pullRequests.stream().filter(activity -> "merged".equalsIgnoreCase(activity.getStatus())).count())
             .reviewCount(0)
@@ -247,12 +266,12 @@ public class DashboardReportingServiceImpl implements com.example.reportservice.
         );
         long completedTaskCount = tasks.stream().filter(issue -> "DONE".equals(normalizeTaskStatus(issue.getStatus()))).count();
 
-        long githubCommitCount = githubCommitRepository.findAll().stream()
-            .filter(commit -> configIds.contains(commit.getProjectConfigId()))
-            .filter(commit -> commit.getDeletedAt() == null)
-            .filter(commit -> profile.email().equalsIgnoreCase(defaultLabel(commit.getAuthorEmail())))
-            .filter(commit -> withinRange(commit.getCommittedDate(), from, to))
-            .count();
+        long githubCommitCount = githubCommitRepository.countByAuthorAndProjectConfigWithinRange(
+            configIds,
+            profile.email(),
+            toFromDateTime(from),
+            toToDateTime(to)
+        );
 
         List<UnifiedActivity> pullRequests = unifiedActivityRepository
             .findByProjectConfigIdInAndActivityTypeAndAuthorEmailIgnoreCaseAndDeletedAtIsNull(configIds, ActivityType.PULL_REQUEST, profile.email()).stream()
@@ -337,16 +356,6 @@ public class DashboardReportingServiceImpl implements com.example.reportservice.
         return ActivitySource.valueOf(source.toUpperCase());
     }
 
-    private void validateTaskStatus(String status) {
-        if (status == null || status.isBlank()) {
-            return;
-        }
-
-        if (!List.of("TODO", "IN_PROGRESS", "DONE").contains(status)) {
-            throw new IllegalArgumentException("status must be TODO, IN_PROGRESS, or DONE");
-        }
-    }
-
     private RecentActivityResponse mapRecentActivity(UnifiedActivity activity, ProjectConfigSnapshot config) {
         return RecentActivityResponse.builder()
             .activityId(activity.getId())
@@ -419,6 +428,14 @@ public class DashboardReportingServiceImpl implements com.example.reportservice.
             return "IN_PROGRESS";
         }
         return "TODO";
+    }
+
+    private LocalDateTime toFromDateTime(LocalDate from) {
+        return from == null ? null : from.atStartOfDay();
+    }
+
+    private LocalDateTime toToDateTime(LocalDate to) {
+        return to == null ? null : to.plusDays(1).atStartOfDay().minusNanos(1);
     }
 
     private String buildActivityUrl(UnifiedActivity activity, ProjectConfigSnapshot config) {

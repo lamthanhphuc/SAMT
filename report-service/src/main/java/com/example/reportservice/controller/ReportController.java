@@ -69,7 +69,7 @@ public class ReportController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping("/{reportId}")
+    @GetMapping("/{reportId:[0-9a-fA-F-]{36}}")
     @PreAuthorize("hasAnyRole('ADMIN','LECTURER')")
     @Operation(summary = "Get report metadata")
     @ApiResponses({
@@ -97,7 +97,7 @@ public class ReportController {
         return service.listReports(projectConfigId, type, createdBy, page, size);
     }
 
-    @GetMapping("/{reportId}/download")
+    @GetMapping("/{reportId:[0-9a-fA-F-]{36}}/download")
     @PreAuthorize("hasAnyRole('ADMIN','LECTURER')")
     @Operation(summary = "Download generated report file")
     @ApiResponses({

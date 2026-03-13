@@ -13,10 +13,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
@@ -27,6 +27,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+
+import com.example.reportservice.web.BadRequestException;
 
 @RestController
 @RequestMapping("/api/reports/lecturer")
@@ -46,10 +49,11 @@ public class LecturerDashboardController {
         @ApiResponse(responseCode = "403", description = "Forbidden"),
         @ApiResponse(responseCode = "503", description = "Dependency unavailable")
     })
-    public LecturerOverviewResponse getOverview(@RequestParam(required = false) Long semesterId,
+    public LecturerOverviewResponse getOverview(@RequestParam(required = false) String semesterId,
                                                 Authentication authentication) {
+        Long parsedSemesterId = parseOptionalPositiveLong(semesterId, "semesterId");
         Long actorId = requestSupport.requireUserId(authentication);
-        return dashboardReportingService.getLecturerOverview(actorId, requestSupport.roles(authentication), semesterId);
+        return dashboardReportingService.getLecturerOverview(actorId, requestSupport.roles(authentication), parsedSemesterId);
     }
 
     @GetMapping("/groups/{groupId}/progress")
@@ -60,12 +64,48 @@ public class LecturerDashboardController {
         @ApiResponse(responseCode = "403", description = "Lecturer does not supervise this group"),
         @ApiResponse(responseCode = "404", description = "Group not found")
     })
-    public GroupProgressResponse getGroupProgress(@PathVariable Long groupId,
-                                                  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-                                                  @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+    public GroupProgressResponse getGroupProgress(@PathVariable @Positive(message = "groupId must be greater than 0") Long groupId,
+                                                  @RequestParam(required = false) String from,
+                                                  @RequestParam(required = false) String to,
                                                   Authentication authentication) {
+        LocalDate fromDate = parseOptionalDate(from, "from");
+        LocalDate toDate = parseOptionalDate(to, "to");
         Long actorId = requestSupport.requireUserId(authentication);
-        return dashboardReportingService.getGroupProgress(actorId, requestSupport.roles(authentication), groupId, from, to);
+        return dashboardReportingService.getGroupProgress(actorId, requestSupport.roles(authentication), groupId, fromDate, toDate);
+    }
+
+    private LocalDate parseOptionalDate(String value, String fieldName) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            throw new BadRequestException("Invalid value for parameter '" + fieldName + "'");
+        }
+        try {
+            return LocalDate.parse(trimmed);
+        } catch (DateTimeParseException ex) {
+            throw new BadRequestException("Invalid value for parameter '" + fieldName + "'");
+        }
+    }
+
+    private Long parseOptionalPositiveLong(String value, String fieldName) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            throw new BadRequestException("Invalid value for parameter '" + fieldName + "'");
+        }
+        try {
+            long parsed = Long.parseLong(trimmed);
+            if (parsed <= 0) {
+                throw new BadRequestException("Invalid value for parameter '" + fieldName + "'");
+            }
+            return parsed;
+        } catch (NumberFormatException ex) {
+            throw new BadRequestException("Invalid value for parameter '" + fieldName + "'");
+        }
     }
 
     @GetMapping("/groups/{groupId}/recent-activities")
@@ -77,7 +117,7 @@ public class LecturerDashboardController {
         @ApiResponse(responseCode = "404", description = "Group not found")
     })
     public PageResponse<RecentActivityResponse> getRecentActivities(
-        @PathVariable Long groupId,
+        @PathVariable @Positive(message = "groupId must be greater than 0") Long groupId,
         @RequestParam(defaultValue = "0") @Min(0) int page,
         @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
         @RequestParam(defaultValue = "ALL") String source,
