@@ -10,6 +10,7 @@ import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 
@@ -74,7 +75,7 @@ class GatewayRoutesConfigTest {
     private Route match(String path) {
         MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get(path).build());
         return routes.stream()
-            .filter(route -> route.getPredicate().apply(exchange))
+            .filter(route -> Boolean.TRUE.equals(Mono.from(route.getPredicate().apply(exchange)).block()))
             .findFirst()
             .orElseThrow(() -> new AssertionError("No route matched path " + path));
     }

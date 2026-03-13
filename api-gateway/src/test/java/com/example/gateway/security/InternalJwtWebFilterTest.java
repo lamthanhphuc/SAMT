@@ -75,7 +75,7 @@ class InternalJwtWebFilterTest {
         return Jwt.withTokenValue("external-jwt")
             .header("alg", "RS256")
             .claim("roles", List.of("ADMIN"))
-            .id("jwt-id")
+            .claim("jti", "jwt-id")
             .subject("42")
             .issuedAt(Instant.parse("2026-03-11T10:00:00Z"))
             .expiresAt(Instant.parse("2026-03-11T10:15:00Z"))

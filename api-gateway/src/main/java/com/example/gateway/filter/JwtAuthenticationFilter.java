@@ -5,6 +5,7 @@ import com.example.gateway.security.ExchangeAttributeSecurityContextRepository;
 import com.example.gateway.security.PublicEndpointPaths;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -42,6 +43,11 @@ public class JwtAuthenticationFilter implements WebFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        // Allow CORS preflight to pass through unauthenticated.
+        if (exchange.getRequest().getMethod() == HttpMethod.OPTIONS) {
+            return chain.filter(exchange);
+        }
+
         String path = exchange.getRequest().getURI().getPath();
         if (isPublicEndpoint(path)) {
             return chain.filter(exchange);

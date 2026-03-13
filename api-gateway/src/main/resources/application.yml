@@ -88,20 +88,23 @@ spring:
               max-life-time: 120s
               acquire-timeout: 45000
 
-          globalcors:
-            cors-configurations:
-              '[/**]':
-                allowedOrigins:
-                  - "*"
-                allowedMethods:
-                  - GET
-                  - POST
-                  - PUT
-                  - DELETE
-                  - PATCH
-                  - OPTIONS
-                allowedHeaders:
-                  - "*"
+      # Enable CORS for frontend dev origin
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:5173"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
 
 jwt:
   jwks-uri: ${JWT_JWKS_URI:http://identity-service:8081/.well-known/jwks.json}

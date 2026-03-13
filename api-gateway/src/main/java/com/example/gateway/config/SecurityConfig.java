@@ -41,6 +41,7 @@ public class SecurityConfig {
         ) {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
+                .cors(cors -> {})
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
                 .logout(ServerHttpSecurity.LogoutSpec::disable)
@@ -74,6 +75,7 @@ public class SecurityConfig {
         ) {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
+                .cors(cors -> {})
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
                 .logout(ServerHttpSecurity.LogoutSpec::disable)

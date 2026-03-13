@@ -4,6 +4,7 @@ import com.example.common.api.ApiProblemDetailsFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -28,17 +29,28 @@ public class GatewayErrorResponseWriter {
 
     public Mono<Void> write(ServerWebExchange exchange, int status, String error, String message) {
         HttpStatus httpStatus = HttpStatus.valueOf(status);
-        exchange.getResponse().setStatusCode(httpStatus);
-        exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_PROBLEM_JSON);
+        var response = exchange.getResponse();
+        response.setStatusCode(httpStatus);
+        var headers = response.getHeaders();
+        headers.setContentType(MediaType.APPLICATION_PROBLEM_JSON);
+
+        // Ensure CORS headers are present on error responses when Origin is set (for browser clients).
+        String origin = exchange.getRequest().getHeaders().getFirst(HttpHeaders.ORIGIN);
+        if (StringUtils.hasText(origin)) {
+            headers.set(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, origin);
+            headers.add(HttpHeaders.VARY, HttpHeaders.ORIGIN);
+            headers.set(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
+        }
+
         String correlationId = resolveCorrelationId(exchange.getRequest().getHeaders().getFirst(HEADER_NAME));
-        exchange.getResponse().getHeaders().set(HEADER_NAME, correlationId);
+        headers.set(HEADER_NAME, correlationId);
 
         ProblemDetail body = ApiProblemDetailsFactory.problemDetail(
             httpStatus,
             typeFor(httpStatus),
             titleFor(httpStatus, error),
             message,
-            exchange.getRequest().getURI().getPath()
+            resolveInstancePath(exchange)
         );
 
         byte[] payload = toJsonBytes(body);
@@ -92,5 +104,13 @@ public class GatewayErrorResponseWriter {
             case SERVICE_UNAVAILABLE -> "External service unavailable";
             default -> "Internal server error";
         };
+    }
+
+    private String resolveInstancePath(ServerWebExchange exchange) {
+        String rawPath = exchange.getRequest().getURI().getRawPath();
+        if (!StringUtils.hasText(rawPath)) {
+            return "/";
+        }
+        return rawPath;
     }
 }

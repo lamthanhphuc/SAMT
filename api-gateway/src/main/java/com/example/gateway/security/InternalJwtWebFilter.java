@@ -67,7 +67,9 @@ public class InternalJwtWebFilter implements WebFilter, Ordered {
 
     private boolean shouldPreserveExternalToken(ServerWebExchange exchange) {
         String path = exchange.getRequest().getURI().getPath();
-        return path.startsWith("/api/auth/")
+        return "/profile".equals(path)
+            || "/api/users/me".equals(path)
+                || path.startsWith("/api/auth/")
                 || path.startsWith("/api/admin/")
                 || path.startsWith("/api/identity/");
     }

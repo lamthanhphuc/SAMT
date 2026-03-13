@@ -77,7 +77,14 @@ public class GlobalErrorWebExceptionHandler extends AbstractErrorWebExceptionHan
         String correlationId = GatewayErrorResponseWriter.resolveCorrelationId(request.headers().firstHeader(GatewayErrorResponseWriter.HEADER_NAME));
 
         // ✅ PRODUCTION-SAFE: Log only generic info with correlation ID
-        logger.warn("Gateway error handled. Status={}, Path={}, CorrelationId={}", status.value(), request.path(), correlationId);
+        logger.warn(
+            "Gateway error handled. Status={}, Path={}, CorrelationId={}, ExceptionType={}, Message={}",
+            status.value(),
+            request.path(),
+            correlationId,
+            ex == null ? "n/a" : ex.getClass().getName(),
+            ex == null ? "n/a" : ex.getMessage()
+        );
 
         ProblemDetail body = ApiProblemDetailsFactory.problemDetail(
             status,
