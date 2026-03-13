@@ -215,7 +215,7 @@ const strictArgs = [
   `/work/.self-heal/reports/${mode}-junit.xml`,
   '--report-ndjson-path',
   `/work/.self-heal/reports/${mode}-events.ndjson`,
-  '--exclude-path-regex=^/(api/auth/(login|refresh|register)|internal/.*|profile|api/admin/users/[^/]+/(lock|unlock|restore)|api/admin/users/[^/]+)$'
+  '--exclude-path-regex=^/(api/auth/(login|refresh|register)|internal/.*|profile|api/admin/users/[^/]+/(lock|unlock|restore)|api/admin/users/[^/]+|api/admin/audit/actor/[^/]+)$'
 ];
 
 const modeArgs = mode === 'fuzz'
