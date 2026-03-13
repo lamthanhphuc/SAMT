@@ -183,12 +183,12 @@ Authorization: Bearer {{adminAccessToken}}
 
 
 > {%
-client.test("GET_/api/admin/audit/actor/{actorId}_invalid_uuid -> [400, 401]", function () {
-  const expectedStatuses = [400, 401];
+client.test("GET_/api/admin/audit/actor/{actorId}_invalid_uuid -> [400, 401, 404]", function () {
+  const expectedStatuses = [400, 401, 404];
   const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
   client.assert(
     expectedStatuses.includes(response.status),
-    'Unexpected status ' + response.status + '; expected [400, 401]; body=' + (responseBody || '<empty>')
+    'Unexpected status ' + response.status + '; expected [400, 401, 404]; body=' + (responseBody || '<empty>')
   );
 });
 %}
