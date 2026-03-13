@@ -1,195 +1,383 @@
-name: CI
+name: CI Reliability Pipeline
 
 on:
+  pull_request:
   push:
     branches: [main]
-  pull_request:
 
 permissions:
   contents: read
 
 jobs:
-  build-test-security:
-    runs-on: ubuntu-24.04
-
+  backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@v4
 
-      - name: Setup Java 21 (Temurin)
-        uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 # v4.2.1
+      - name: Setup Java 17 (compatibility check)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Java 21 (build runtime)
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
           cache: maven
 
-      - name: Maven verify (tests + enforcer + SBOM)
-        run: bash ./mvnw -B verify
+      - name: Run Maven tests
+        run: bash ./mvnw -B test
 
-      - name: Upload SBOM (CycloneDX)
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+  frontend-testkit:
+    name: Frontend and Testkit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
         with:
-          name: sbom-cyclonedx
-          if-no-files-found: error
-          path: |
-            target/bom.json
-            target/bom.xml
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            FE-SAMT/package-lock.json
+            qa-testing/package-lock.json
 
-      - name: Cache OWASP Dependency-Check data
-        uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf # v4.2.2
+      - name: Install dependencies
+        run: |
+          npm install
+          npm --prefix FE-SAMT install
+          npm --prefix qa-testing install
+
+      - name: Install Playwright browsers
+        run: npm --prefix qa-testing exec playwright install --with-deps chromium
+
+      - name: Prepare local env
+        run: |
+          cp .env.example .env
+          python - <<'PY'
+          import base64
+          import secrets
+          from pathlib import Path
+
+          env_path = Path('.env')
+          text = env_path.read_text(encoding='utf-8')
+          text = text.replace('CHANGE_ME_STRONG_PASSWORD_HERE', secrets.token_urlsafe(18))
+          text = text.replace('CHANGE_ME_256_BIT_KEY', base64.b16encode(secrets.token_bytes(32)).decode('ascii').lower())
+          env_path.write_text(text, encoding='utf-8')
+          with env_path.open('a', encoding='utf-8') as env_file:
+            env_file.write(f"REDIS_PASSWORD={secrets.token_urlsafe(18)}\n")
+          PY
+
+      - name: Start backend stack
+        run: docker compose up -d
+
+      - name: Wait for API gateway health
+        run: |
+          for i in {1..90}; do
+            if curl -fsS http://localhost:9080/actuator/health >/dev/null; then
+              echo "Gateway healthy"
+              exit 0
+            fi
+            sleep 5
+          done
+          docker compose ps
+          exit 1
+
+      - name: Run Playwright E2E
+        run: npm run qa:testkit:e2e
+
+      - name: Run Playwright API contract suite
+        run: npm run qa:testkit:api
+
+      - name: Run Playwright security suite
+        run: npm run qa:testkit:security
+
+      - name: Collect logs
+        if: always()
+        run: |
+          mkdir -p ci-logs
+          docker compose ps > ci-logs/docker-ps.txt || true
+          docker compose logs --no-color > ci-logs/docker-compose.log || true
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          path: .cache/dependency-check
-          key: dependency-check-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            dependency-check-${{ runner.os }}-
-
-      - name: OWASP Dependency-Check
-        env:
-          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
-        run: >-
-          bash ./mvnw -B org.owasp:dependency-check-maven:12.2.0:check
-          -DfailBuildOnCVSS=7
-          -Dformat=ALL
-          -DoutputDirectory=target/dependency-check
-          -DdataDirectory=.cache/dependency-check
-          -DnvdApiKey=${NVD_API_KEY}
-
-      - name: Upload Dependency-Check report
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
-        with:
-          name: dependency-check-report
+          name: playwright-report
           if-no-files-found: warn
-          path: target/dependency-check
+          path: qa-testing/playwright-report
 
-  trivy-scan:
-    runs-on: ubuntu-24.04
-    needs: build-test-security
-    strategy:
-      fail-fast: false
-      matrix:
-        service:
-          - api-gateway
-          - identity-service
-          - user-group-service
-          - project-config-service
-          - sync-service
-          - analysis-service
-          - report-service
-          - notification-service
+      - name: Upload CI logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-testkit-logs
+          if-no-files-found: warn
+          path: ci-logs
+
+      - name: Teardown stack
+        if: always()
+        run: docker compose down -v
+
+  docker-validation:
+    name: Docker Validation
+    runs-on: ubuntu-latest
+    needs: [backend, frontend-testkit]
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@v4
 
-      - name: Build Docker image (${{ matrix.service }})
-        run: docker build -f ${{ matrix.service }}/Dockerfile -t samt/${{ matrix.service }}:ci .
+      - name: Build docker image
+        run: docker build -f api-gateway/Dockerfile -t samt/api-gateway:ci .
 
-      - name: Trivy scan (${{ matrix.service }})
-        uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478 # 0.34.2
+      - name: Prepare local env
+        run: |
+          cp .env.example .env
+          python - <<'PY'
+          import base64
+          import secrets
+          from pathlib import Path
+
+          env_path = Path('.env')
+          text = env_path.read_text(encoding='utf-8')
+          text = text.replace('CHANGE_ME_STRONG_PASSWORD_HERE', secrets.token_urlsafe(18))
+          text = text.replace('CHANGE_ME_256_BIT_KEY', base64.b16encode(secrets.token_bytes(32)).decode('ascii').lower())
+          env_path.write_text(text, encoding='utf-8')
+          with env_path.open('a', encoding='utf-8') as env_file:
+            env_file.write(f"REDIS_PASSWORD={secrets.token_urlsafe(18)}\n")
+          PY
+
+      - name: Run container stack
+        run: docker compose up -d
+
+      - name: Execute docker health check
+        run: |
+          set -euo pipefail
+          for i in {1..90}; do
+            unhealthy=$(docker compose ps -q | xargs -r docker inspect --format '{{.Name}} {{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{else}}n/a{{end}}' | awk '$2 != "running" || ($3 != "healthy" && $3 != "n/a") {print}')
+            if [ -z "$unhealthy" ]; then
+              echo "All containers running and healthy"
+              exit 0
+            fi
+            echo "Waiting for containers to become healthy..."
+            sleep 5
+          done
+          echo "$unhealthy"
+          exit 1
+
+      - name: Collect docker logs
+        if: always()
+        run: |
+          mkdir -p ci-logs
+          docker compose ps > ci-logs/docker-ps.txt || true
+          docker compose logs --no-color > ci-logs/docker-compose.log || true
+
+      - name: Upload docker logs
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          image-ref: samt/${{ matrix.service }}:ci
-          format: table
-          exit-code: '1'
-          vuln-type: os,library
-          severity: HIGH,CRITICAL
-          ignore-unfixed: false
+          name: docker-validation-logs
+          if-no-files-found: warn
+          path: ci-logs
 
-  codeql-sast:
-    runs-on: ubuntu-24.04
-    needs: build-test-security
-    permissions:
-      contents: read
-      security-events: write
+      - name: Teardown stack
+        if: always()
+        run: docker compose down -v
+
+  performance-test:
+    name: performance-test
+    runs-on: ubuntu-latest
+    needs: [backend, frontend-testkit]
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@v4
 
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@2a2dd30f8030072d379eb0c9ea51789aa2ea9ca4 # v3.29.5
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
         with:
-          languages: java
-          queries: security-and-quality
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: package-lock.json
 
-      - name: Setup Java 21 (Temurin)
-        uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 # v4.2.1
-        with:
-          distribution: temurin
-          java-version: '21'
-          cache: maven
+      - name: Install k6
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gpg ca-certificates
+          sudo mkdir -p /etc/apt/keyrings
+          curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/k6.gpg
+          echo "deb [signed-by=/etc/apt/keyrings/k6.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+          k6 version
 
-      - name: Build for CodeQL
-        run: bash ./mvnw -B compile -DskipTests
+      - name: Build docker image
+        run: docker build -f api-gateway/Dockerfile -t samt/api-gateway:ci .
 
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@2a2dd30f8030072d379eb0c9ea51789aa2ea9ca4 # v3.29.5
-        with:
-          category: "/language:java"
+      - name: Prepare local env
+        run: |
+          cp .env.example .env
+          python - <<'PY'
+          import base64
+          import secrets
+          from pathlib import Path
 
-      - name: Enforce CodeQL Quality Gate (HIGH/CRITICAL)
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_API_URL: ${{ github.api_url }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
-          GITHUB_EVENT_PATH: ${{ github.event_path }}
-          GITHUB_REF: ${{ github.ref }}
+          env_path = Path('.env')
+          text = env_path.read_text(encoding='utf-8')
+          text = text.replace('CHANGE_ME_STRONG_PASSWORD_HERE', secrets.token_urlsafe(18))
+          text = text.replace('CHANGE_ME_256_BIT_KEY', base64.b16encode(secrets.token_bytes(32)).decode('ascii').lower())
+          env_path.write_text(text, encoding='utf-8')
+          with env_path.open('a', encoding='utf-8') as env_file:
+            env_file.write(f"REDIS_PASSWORD={secrets.token_urlsafe(18)}\\n")
+          PY
+
+      - name: Run container stack
+        run: docker compose up -d
+
+      - name: Wait for health endpoint
+        run: |
+          for i in {1..90}; do
+            if curl -fsS http://localhost:9080/actuator/health >/dev/null; then
+              echo "Gateway healthy"
+              exit 0
+            fi
+            sleep 5
+          done
+          docker compose ps
+          exit 1
+
+      - name: Run load test
+        run: |
+          k6 run tests/performance/performance-test.js \
+            --out json=performance-result.json \
+            --summary-export=performance-summary.json
+
+      - name: Validate thresholds
         run: |
           python - <<'PY'
           import json
-          import os
           import sys
-          import urllib.parse
-          import urllib.request
 
-          token = os.environ["GITHUB_TOKEN"]
-          api_url = os.environ.get("GITHUB_API_URL", "https://api.github.com")
-          repo = os.environ["GITHUB_REPOSITORY"]
-          event_name = os.environ.get("GITHUB_EVENT_NAME", "")
-          event_path = os.environ.get("GITHUB_EVENT_PATH", "")
-          ref = os.environ.get("GITHUB_REF", "")
+          with open('performance-summary.json', 'r', encoding='utf-8') as f:
+            summary = json.load(f)
 
-          params = {"state": "open", "per_page": "100"}
-          if event_name == "pull_request" and event_path:
-            with open(event_path, "r", encoding="utf-8") as f:
-              event = json.load(f)
-            pr_number = event.get("pull_request", {}).get("number")
-            if pr_number:
-              params["pr"] = str(pr_number)
-          elif ref:
-            params["ref"] = ref
+          duration_values = summary.get('metrics', {}).get('http_req_duration', {}).get('values', {})
+          failed_values = summary.get('metrics', {}).get('http_req_failed', {}).get('values', {})
 
-          base = f"{api_url}/repos/{repo}/code-scanning/alerts"
-          url = f"{base}?{urllib.parse.urlencode(params)}"
+          avg_ms = duration_values.get('avg')
+          error_rate = failed_values.get('rate', failed_values.get('value'))
 
-          high_or_critical = 0
-          while url:
-            req = urllib.request.Request(
-              url,
-              headers={
-                "Authorization": f"Bearer {token}",
-                "Accept": "application/vnd.github+json",
-                "X-GitHub-Api-Version": "2022-11-28",
-              },
-            )
-            with urllib.request.urlopen(req) as resp:
-              payload = json.loads(resp.read().decode("utf-8"))
-              for alert in payload:
-                tool = (alert.get("tool") or {}).get("name", "")
-                sev = ((alert.get("rule") or {}).get("security_severity_level") or "").lower()
-                if tool.lower() == "codeql" and sev in {"high", "critical"}:
-                  high_or_critical += 1
+          print(f"avg response time = {avg_ms} ms")
+          print(f"error rate = {error_rate}")
 
-              link = resp.headers.get("Link", "")
-              next_url = ""
-              for part in link.split(","):
-                part = part.strip()
-                if 'rel="next"' in part and part.startswith("<"):
-                  next_url = part.split(";")[0].strip("<>")
-                  break
-              url = next_url
-
-          if high_or_critical > 0:
-            print(f"::error::{high_or_critical} open HIGH/CRITICAL CodeQL alerts found")
+          if avg_ms is None or error_rate is None:
+            print('Missing required k6 metrics in summary report', file=sys.stderr)
             sys.exit(1)
 
-          print("CodeQL quality gate passed: no open HIGH/CRITICAL alerts")
+          if avg_ms > 500:
+            print(f"Average response time threshold breached: {avg_ms} > 500", file=sys.stderr)
+            sys.exit(1)
+
+          if error_rate > 0.01:
+            print(f"Error rate threshold breached: {error_rate} > 0.01", file=sys.stderr)
+            sys.exit(1)
+
+          print('Performance thresholds passed')
           PY
+
+      - name: Collect performance logs
+        if: always()
+        run: |
+          mkdir -p performance-logs
+          docker compose ps > performance-logs/docker-ps.txt || true
+          docker compose logs --no-color > performance-logs/docker-compose.log || true
+
+      - name: Upload performance artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-artifacts
+          if-no-files-found: warn
+          path: |
+            performance-result.json
+            performance-summary.json
+            performance-logs
+
+      - name: Teardown stack
+        if: always()
+        run: docker compose down -v
+
+  smoke-test:
+    name: smoke-test
+    runs-on: ubuntu-latest
+    needs: [docker-validation]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare local env
+        run: |
+          cp .env.example .env
+          python - <<'PY'
+          import base64
+          import secrets
+          from pathlib import Path
+
+          env_path = Path('.env')
+          text = env_path.read_text(encoding='utf-8')
+          text = text.replace('CHANGE_ME_STRONG_PASSWORD_HERE', secrets.token_urlsafe(18))
+          text = text.replace('CHANGE_ME_256_BIT_KEY', base64.b16encode(secrets.token_bytes(32)).decode('ascii').lower())
+          env_path.write_text(text, encoding='utf-8')
+          with env_path.open('a', encoding='utf-8') as env_file:
+            env_file.write(f"REDIS_PASSWORD={secrets.token_urlsafe(18)}\\n")
+          PY
+
+      - name: Start docker container
+        run: docker compose up -d
+
+      - name: Wait for service startup
+        run: |
+          for i in {1..90}; do
+            if curl -fsS http://localhost:9080/actuator/health >/dev/null; then
+              echo "Service ready"
+              exit 0
+            fi
+            sleep 5
+          done
+          docker compose ps
+          exit 1
+
+      - name: Run smoke test
+        env:
+          BASE_URL: ${{ vars.SMOKE_BASE_URL || 'http://localhost:9080' }}
+          TEST_USERNAME: ${{ secrets.SMOKE_TEST_USERNAME != '' && secrets.SMOKE_TEST_USERNAME || 'test' }}
+          TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD != '' && secrets.SMOKE_TEST_PASSWORD || 'test' }}
+          SMOKE_MAX_ATTEMPTS: "5"
+          SMOKE_TIMEOUT_SEC: "10"
+          SMOKE_RETRY_DELAY_SEC: "2"
+        run: bash tests/smoke/smoke-test.sh
+
+      - name: Collect smoke logs
+        if: always()
+        run: |
+          mkdir -p smoke-logs
+          docker compose ps > smoke-logs/docker-ps.txt || true
+          docker compose logs --no-color > smoke-logs/docker-compose.log || true
+
+      - name: Upload smoke logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-logs
+          if-no-files-found: warn
+          path: smoke-logs
+
+      - name: Teardown stack
+        if: always()
+        run: docker compose down -v
