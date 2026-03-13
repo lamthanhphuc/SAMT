@@ -275,7 +275,7 @@ public class AdminController {
                     @ApiResponse(responseCode = "200", description = "Audit logs retrieved")
             }
     )
-    @GetMapping("/audit/entity/{entityType}/{entityId}")
+        @GetMapping("/audit/entity/{entityType}/{entityId:\\d+}")
     public ResponseEntity<com.example.common.api.ApiResponse<Page<AuditLog>>> getAuditByEntity(
             @Parameter(description = "Entity type (e.g., User)") @PathVariable("entityType") String entityType,
             @Parameter(description = "Entity ID") @PathVariable("entityId") Long entityId,
@@ -297,7 +297,7 @@ public class AdminController {
                     @ApiResponse(responseCode = "200", description = "Audit logs retrieved")
             }
     )
-    @GetMapping("/audit/actor/{actorId}")
+        @GetMapping("/audit/actor/{actorId:\\d+}")
     public ResponseEntity<com.example.common.api.ApiResponse<Page<AuditLog>>> getAuditByActor(
             @Parameter(description = "Actor user ID") @PathVariable("actorId") Long actorId,
             @PageableDefault(size = 20, sort = "timestamp", direction = Sort.Direction.DESC) Pageable pageable,
