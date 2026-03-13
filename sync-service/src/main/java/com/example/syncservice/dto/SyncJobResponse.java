@@ -6,7 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Data
@@ -29,10 +29,10 @@ public class SyncJobResponse {
     private String status;
 
     @Schema(format = "date-time")
-    private LocalDateTime startedAt;
+    private OffsetDateTime startedAt;
 
     @Schema(format = "date-time")
-    private LocalDateTime completedAt;
+    private OffsetDateTime completedAt;
 
     @Schema(example = "120")
     private Integer recordsFetched;

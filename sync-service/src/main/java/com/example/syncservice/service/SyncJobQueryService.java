@@ -12,6 +12,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @Service
@@ -69,8 +70,8 @@ public class SyncJobQueryService {
             .projectConfigId(syncJob.getProjectConfigId())
             .jobType(syncJob.getJobType().name())
             .status(syncJob.getStatus().name())
-            .startedAt(syncJob.getStartedAt())
-            .completedAt(syncJob.getCompletedAt())
+            .startedAt(syncJob.getStartedAt() == null ? null : syncJob.getStartedAt().atOffset(ZoneOffset.UTC))
+            .completedAt(syncJob.getCompletedAt() == null ? null : syncJob.getCompletedAt().atOffset(ZoneOffset.UTC))
             .recordsFetched(syncJob.getRecordsFetched())
             .recordsSaved(syncJob.getRecordsSaved())
             .errorMessage(syncJob.getErrorMessage())

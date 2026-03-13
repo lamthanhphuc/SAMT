@@ -23,9 +23,17 @@ public class SyncGrpcService extends SyncServiceGrpc.SyncServiceImplBase {
             StreamObserver<IssueListResponse> responseObserver) {
 
         try {
-
-            UUID projectConfigId =
-                    UUID.fromString(request.getProjectConfigId());
+            UUID projectConfigId;
+            try {
+                projectConfigId = UUID.fromString(request.getProjectConfigId());
+            } catch (IllegalArgumentException ex) {
+                responseObserver.onError(
+                    Status.INVALID_ARGUMENT
+                        .withDescription("projectConfigId must be a valid UUID")
+                        .asRuntimeException()
+                );
+                return;
+            }
 
             List<JiraIssue> issues =
                     jiraIssueRepository.findByProjectConfigIdAndDeletedAtIsNull(projectConfigId);

@@ -9,6 +9,7 @@ import com.example.syncservice.client.grpc.ProjectConfigGrpcClient;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -24,7 +25,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.Arrays;
 import java.util.concurrent.CompletionException;
@@ -104,7 +107,7 @@ public class GlobalExceptionHandler {
         return problem(HttpStatus.BAD_REQUEST, "invalid-request", "Invalid request", ex.getMessage(), request);
     }
 
-    @ExceptionHandler({MethodArgumentNotValidException.class, ValidationException.class})
+    @ExceptionHandler({MethodArgumentNotValidException.class, HandlerMethodValidationException.class, ConstraintViolationException.class, ValidationException.class})
     public ResponseEntity<ProblemDetail> handleValidation(Exception ex, HttpServletRequest request) {
         String message = ex instanceof MethodArgumentNotValidException methodArgumentNotValidException
             ? methodArgumentNotValidException.getBindingResult().getFieldErrors().isEmpty()
@@ -140,6 +143,11 @@ public class GlobalExceptionHandler {
                 "Method not allowed",
                 request.getRequestURI()
             ));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ProblemDetail> handleNoResourceFound(NoResourceFoundException ex, HttpServletRequest request) {
+        return problem(HttpStatus.NOT_FOUND, "resource-not-found", "Resource not found", "Resource not found", request);
     }
 
     @ExceptionHandler({JwtException.class, BadCredentialsException.class})
