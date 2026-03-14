@@ -1,0 +1,99 @@
+﻿version: "3.9"
+
+# ==============================================
+# KAFKA (PRODUCTION EXAMPLE) â€” SSL ONLY
+# - No PLAINTEXT listeners
+# - No external port publishing
+# - Use SSL or SASL_SSL for all broker/controller traffic
+# ==============================================
+
+services:
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0@sha256:24cdd3a7fa89d2bed150560ebea81ff1943badfa61e51d66bb541a6b0d7fb047
+    container_name: kafka
+    # SECURITY: no host port publishing in production
+    ports: []
+    environment:
+      ENV: ${ENV:-production}
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+
+      # Listeners (NO PLAINTEXT)
+      # Expected production baseline (single SSL listener):
+      #   KAFKA_LISTENERS=SSL://:9093
+      #   KAFKA_ADVERTISED_LISTENERS=SSL://kafka:9093
+      #   KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=SSL:SSL
+      #   KAFKA_SSL_CLIENT_AUTH=required
+      KAFKA_LISTENERS: SSL://0.0.0.0:9093,CONTROLLER://0.0.0.0:29093
+      KAFKA_ADVERTISED_LISTENERS: SSL://kafka:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: SSL:SSL,CONTROLLER:SSL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      KAFKA_INTER_BROKER_LISTENER_NAME: SSL
+
+      # SSL material (mount these as secrets or volumes)
+      KAFKA_SSL_KEYSTORE_LOCATION: /run/secrets/kafka.keystore.p12
+      KAFKA_SSL_KEYSTORE_PASSWORD: ${KAFKA_SSL_KEYSTORE_PASSWORD:?KAFKA_SSL_KEYSTORE_PASSWORD is required}
+      KAFKA_SSL_KEY_PASSWORD: ${KAFKA_SSL_KEY_PASSWORD:?KAFKA_SSL_KEY_PASSWORD is required}
+      KAFKA_SSL_KEYSTORE_TYPE: PKCS12
+
+      KAFKA_SSL_TRUSTSTORE_LOCATION: /run/secrets/kafka.truststore.p12
+      KAFKA_SSL_TRUSTSTORE_PASSWORD: ${KAFKA_SSL_TRUSTSTORE_PASSWORD:?KAFKA_SSL_TRUSTSTORE_PASSWORD is required}
+      KAFKA_SSL_TRUSTSTORE_TYPE: PKCS12
+
+      # Require mTLS client auth in production
+      KAFKA_SSL_CLIENT_AUTH: required
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+
+    command:
+      - bash
+      - -ec
+      - |
+        if [[ "${ENV:-}" == "production" ]]; then
+          if echo "${KAFKA_LISTENERS:-}" | grep -qi 'PLAINTEXT://' || echo "${KAFKA_LISTENER_SECURITY_PROTOCOL_MAP:-}" | grep -qi 'PLAINTEXT'; then
+            echo "FATAL: ENV=production but Kafka is configured with PLAINTEXT listeners."
+            exit 1
+          fi
+        fi
+        exec /etc/confluent/docker/run
+
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9093 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+    secrets:
+      - kafka.keystore.p12
+      - kafka.truststore.p12
+
+    networks:
+      - samt-network
+
+    restart: unless-stopped
+
+networks:
+  samt-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  kafka_data:
+    driver: local
+
+secrets:
+  kafka.keystore.p12:
+    file: ../../secrets/kafka.keystore.p12
+  kafka.truststore.p12:
+    file: ../../secrets/kafka.truststore.p12
+

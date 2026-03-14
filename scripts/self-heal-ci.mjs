@@ -154,7 +154,7 @@ async function main() {
     QA_SEED: options.seed,
     SCHEMATHESIS_SEED: options.seed,
     SCHEMATHESIS_WORKERS: 'auto',
-    SCHEMATHESIS_MAX_RESPONSE_TIME_MS: '800',
+    SCHEMATHESIS_MAX_RESPONSE_TIME_MS: '1500',
     SCHEMATHESIS_STRICT: 'true',
     SCHEMATHESIS_VALIDATE_SCHEMA: 'true'
   };

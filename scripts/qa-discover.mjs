@@ -1,4 +1,4 @@
-import fs from 'node:fs/promises';
+﻿import fs from 'node:fs/promises';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import { parseArgs, toPosix, writeJson, writeText } from './qa-helpers.mjs';
@@ -284,7 +284,7 @@ function endpointMarkdown(report) {
 }
 
 async function main() {
-  const openapiDoc = yaml.load(await fs.readFile(path.join(workspacePath, 'openapi.yaml'), 'utf8'));
+  const openapiDoc = yaml.load(await fs.readFile(path.join(workspacePath, 'docs/api/openapi.yaml'), 'utf8'));
   const gatewayConfigSource = await fs.readFile(path.join(workspacePath, 'api-gateway', 'src', 'main', 'java', 'com', 'example', 'gateway', 'config', 'GatewayRoutesConfig.java'), 'utf8');
   const publicPathsSource = await fs.readFile(path.join(workspacePath, 'api-gateway', 'src', 'main', 'java', 'com', 'example', 'gateway', 'security', 'PublicEndpointPaths.java'), 'utf8');
 
@@ -362,9 +362,9 @@ async function main() {
     generatedAt: new Date().toISOString(),
     baseUrl: openapiDoc.servers?.[0]?.url || 'http://localhost:9080',
     sources: {
-      openapi: 'openapi.yaml',
-      gatewayRoutes: 'api-gateway/src/main/java/com/example/gateway/config/GatewayRoutesConfig.java',
-      publicPaths: 'api-gateway/src/main/java/com/example/gateway/security/PublicEndpointPaths.java',
+      openapi: 'docs/api/openapi.yaml',
+      gatewayRoutes: 'services/api-gateway/src/main/java/com/example/gateway/config/GatewayRoutesConfig.java',
+      publicPaths: 'services/api-gateway/src/main/java/com/example/gateway/security/PublicEndpointPaths.java',
       controllersScanned: controllerEndpoints.length
     },
     summary: {
@@ -387,3 +387,6 @@ main().catch((error) => {
   process.stderr.write(`${error.stack || error.message || String(error)}\n`);
   process.exit(1);
 });
+
+
+

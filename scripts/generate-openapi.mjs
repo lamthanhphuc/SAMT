@@ -1,4 +1,4 @@
-import fs from 'node:fs/promises';
+﻿import fs from 'node:fs/promises';
 import path from 'node:path';
 import dotenv from 'dotenv';
 import yaml from 'js-yaml';
@@ -381,7 +381,7 @@ function applySchemaOverrides(doc) {
     patchProperty(updateUser, 'fullName', {
       minLength: 2,
       maxLength: 100,
-      pattern: '^[a-zA-ZÀ-ỹ]+(?: [a-zA-ZÀ-ỹ]+)*$'
+      pattern: '^[a-zA-ZĂ€-á»¹]+(?: [a-zA-ZĂ€-á»¹]+)*$'
     });
   }
 
@@ -625,8 +625,8 @@ async function main() {
     sortKeys: false
   });
 
-  await fs.writeFile(path.resolve('openapi.yaml'), yamlOutput, 'utf8');
-  console.log(`openapi.yaml generated with ${Object.keys(unified.paths).length} paths.`);
+  await fs.writeFile(path.resolve('docs/api/openapi.yaml'), yamlOutput, 'utf8');
+  console.log(`docs/api/openapi.yaml generated with ${Object.keys(unified.paths).length} paths.`);
 
   if (errors.length > 0) {
     console.log('Completed with partial sources:');
@@ -638,3 +638,5 @@ main().catch((err) => {
   console.error(err.message || err);
   process.exit(1);
 });
+
+

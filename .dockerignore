@@ -1,4 +1,4 @@
-# Keep Docker build context minimal and prevent leaking secrets/certs into daemon cache
+﻿# Keep Docker build context minimal and prevent leaking secrets/certs into daemon cache
 .env
 .env.*
 .local-certs/
@@ -9,22 +9,22 @@ secrets/
 .tmp/
 **/target/
 target/
-!analysis-service/target/
-!analysis-service/target/*.jar
-!api-gateway/target/
-!api-gateway/target/*.jar
-!identity-service/target/
-!identity-service/target/*.jar
-!notification-service/target/
-!notification-service/target/*.jar
-!project-config-service/target/
-!project-config-service/target/*.jar
-!report-service/target/
-!report-service/target/*.jar
-!sync-service/target/
-!sync-service/target/*.jar
-!user-group-service/target/
-!user-group-service/target/*.jar
+!services/analysis-service/target/
+!services/analysis-service/target/*.jar
+!services/api-gateway/target/
+!services/api-gateway/target/*.jar
+!services/identity-service/target/
+!services/identity-service/target/*.jar
+!services/notification-service/target/
+!services/notification-service/target/*.jar
+!services/project-config-service/target/
+!services/project-config-service/target/*.jar
+!services/report-service/target/
+!services/report-service/target/*.jar
+!services/sync-service/target/
+!services/sync-service/target/*.jar
+!services/user-group-service/target/
+!services/user-group-service/target/*.jar
 **/*.log
 **/*.pem
 **/*.key
@@ -38,3 +38,4 @@ docker-compose*.yml
 docs/
 CLEANUP_REPORT.md
 DEPLOYMENT.md
+

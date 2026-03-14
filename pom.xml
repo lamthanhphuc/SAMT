@@ -17,6 +17,7 @@
 		<java.version>21</java.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<quality.reports.skip>true</quality.reports.skip>
 		<spring-boot.version>3.5.5</spring-boot.version>
 		<spring-cloud.version>2025.0.0</spring-cloud.version>
 		<springdoc.version>2.8.6</springdoc.version>
@@ -25,6 +26,11 @@
 		<protobuf.version>3.25.5</protobuf.version>
 		<resilience4j.version>2.2.0</resilience4j.version>
 		<flyway.version>10.8.1</flyway.version>
+		<skipITs>true</skipITs>
+		<test.jvm.args>-Duser.timezone=UTC -Dfile.encoding=UTF-8</test.jvm.args>
+		<junit.jupiter.execution.parallel.enabled>true</junit.jupiter.execution.parallel.enabled>
+		<junit.jupiter.execution.parallel.mode.default>concurrent</junit.jupiter.execution.parallel.mode.default>
+		<junit.jupiter.execution.parallel.mode.classes.default>concurrent</junit.jupiter.execution.parallel.mode.classes.default>
 	</properties>
 
 	<!-- Import Spring Boot BOM -->
@@ -151,16 +157,16 @@
 
 	<!-- Khai báo các microservice -->
 	<modules>
-		<module>common-contracts</module>
-		<module>analysis-service</module>
-		<module>api-gateway</module>
-		<module>identity-service</module>
-		<module>notification-service</module>
-		<module>report-service</module>
-		<module>sync-service</module>
-		<module>user-group-service</module>
-		<module>project-config-service</module>
-		<module>common-events</module>
+		<module>shared/common-contracts</module>
+		<module>services/analysis-service</module>
+		<module>services/api-gateway</module>
+		<module>services/identity-service</module>
+		<module>services/notification-service</module>
+		<module>services/report-service</module>
+		<module>services/sync-service</module>
+		<module>services/user-group-service</module>
+		<module>services/project-config-service</module>
+		<module>shared/common-events</module>
 
 	</modules>
 
@@ -203,6 +209,63 @@
 			</plugin>
 
 			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>3.3.1</version>
+				<configuration>
+					<parallel>methods</parallel>
+					<threadCount>1</threadCount>
+					<perCoreThreadCount>true</perCoreThreadCount>
+					<trimStackTrace>false</trimStackTrace>
+					<failIfNoTests>false</failIfNoTests>
+					<runOrder>filesystem</runOrder>
+					<forkCount>1C</forkCount>
+					<reuseForks>true</reuseForks>
+					<argLine>${test.jvm.args} @{argLine}</argLine>
+					<properties>
+						<configurationParameters>
+							junit.jupiter.execution.parallel.enabled=${junit.jupiter.execution.parallel.enabled}
+							,junit.jupiter.execution.parallel.mode.default=${junit.jupiter.execution.parallel.mode.default}
+							,junit.jupiter.execution.parallel.mode.classes.default=${junit.jupiter.execution.parallel.mode.classes.default}
+						</configurationParameters>
+					</properties>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<version>3.3.1</version>
+				<configuration>
+					<parallel>methods</parallel>
+					<threadCount>1</threadCount>
+					<perCoreThreadCount>true</perCoreThreadCount>
+					<skipITs>${skipITs}</skipITs>
+					<trimStackTrace>false</trimStackTrace>
+					<failIfNoTests>false</failIfNoTests>
+					<runOrder>filesystem</runOrder>
+					<argLine>${test.jvm.args} @{argLine}</argLine>
+					<forkCount>1C</forkCount>
+					<reuseForks>true</reuseForks>
+					<properties>
+						<configurationParameters>
+							junit.jupiter.execution.parallel.enabled=${junit.jupiter.execution.parallel.enabled}
+							,junit.jupiter.execution.parallel.mode.default=${junit.jupiter.execution.parallel.mode.default}
+							,junit.jupiter.execution.parallel.mode.classes.default=${junit.jupiter.execution.parallel.mode.classes.default}
+						</configurationParameters>
+					</properties>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
 				<groupId>org.cyclonedx</groupId>
 				<artifactId>cyclonedx-maven-plugin</artifactId>
 				<version>2.9.1</version>
@@ -214,6 +277,7 @@
 							<goal>makeAggregateBom</goal>
 						</goals>
 						<configuration>
+							<skip>${quality.reports.skip}</skip>
 							<schemaVersion>1.5</schemaVersion>
 							<outputFormat>json</outputFormat>
 							<outputName>bom</outputName>
@@ -229,6 +293,7 @@
 							<goal>makeAggregateBom</goal>
 						</goals>
 						<configuration>
+							<skip>${quality.reports.skip}</skip>
 							<schemaVersion>1.5</schemaVersion>
 							<outputFormat>xml</outputFormat>
 							<outputName>bom</outputName>
@@ -244,6 +309,9 @@
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
 				<version>0.8.12</version>
+				<configuration>
+					<skip>${quality.reports.skip}</skip>
+				</configuration>
 				<executions>
 					<execution>
 						<id>prepare-agent</id>

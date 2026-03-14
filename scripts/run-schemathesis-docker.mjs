@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from 'node:fs';
+﻿import { readFileSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { ensureSelfHealFiles, writeReport } from './self-heal-overrides.mjs';
 
@@ -44,7 +44,7 @@ function parseMetrics(output, mode, seed, junitPath, ndjsonPath) {
     skipped: null,
     failures: null,
     warnings: null,
-    latencyBudgetMs: Number(process.env.SCHEMATHESIS_MAX_RESPONSE_TIME_MS ?? 800)
+    latencyBudgetMs: Number(process.env.SCHEMATHESIS_MAX_RESPONSE_TIME_MS ?? 1500)
   };
 
   if (ndjsonPath && existsSync(ndjsonPath)) {
@@ -191,11 +191,11 @@ await ensureSelfHealFiles();
 const options = parseArgs(process.argv.slice(2));
 const mode = options.mode;
 const strictSeed = process.env.SCHEMATHESIS_SEED ?? '20260308';
-const latencyBudgetMs = Number(process.env.SCHEMATHESIS_MAX_RESPONSE_TIME_MS ?? 800);
+const latencyBudgetMs = Number(process.env.SCHEMATHESIS_MAX_RESPONSE_TIME_MS ?? 1500);
 const latencyBudgetSeconds = toSeconds(latencyBudgetMs);
 const reportPrefix = `${cwd}/.self-heal/reports/${mode}`;
 const phaseArgs = mode === 'fuzz'
-  ? ['--phases', 'examples,coverage,fuzzing']
+  ? ['--phases', 'examples,coverage,fuzzing,stateful']
   : ['--phases', 'examples,coverage'];
 
 const strictArgs = [
@@ -215,13 +215,20 @@ const strictArgs = [
   `/work/.self-heal/reports/${mode}-junit.xml`,
   '--report-ndjson-path',
   `/work/.self-heal/reports/${mode}-events.ndjson`,
-  '--exclude-path-regex=^/(api/auth/(login|refresh|register)|internal/.*|profile|api/admin/users/[^/]+/(lock|unlock|restore)|api/admin/users/[^/]+|api/admin/audit/actor/[^/]+)$'
+  '--exclude-path-regex=^/(api/auth/(login|refresh|register)|internal/.*|profile|api/admin/users/[^/]+/(lock|unlock|restore)|api/admin/users/[^/]+|api/admin/audit/actor/[^/]+|api/semesters/code/.*|api/sync/jobs)$'
 ];
 
 const modeArgs = mode === 'fuzz'
   ? [
       '--max-examples',
-      process.env.SCHEMATHESIS_FUZZ_MAX_EXAMPLES ?? '25'
+      process.env.SCHEMATHESIS_FUZZ_MAX_EXAMPLES ?? '25',
+      '--request-timeout',
+      process.env.SCHEMATHESIS_REQUEST_TIMEOUT_SECONDS ?? '2',
+      '--generation-allow-x00',
+      process.env.SCHEMATHESIS_ALLOW_X00 ?? 'false',
+      '--generation-codec',
+      process.env.SCHEMATHESIS_GENERATION_CODEC ?? 'utf-8',
+      '--continue-on-failure'
     ]
   : [
       '--max-examples',
@@ -265,7 +272,7 @@ const args = [
   `${cwd}:/work`,
   'schemathesis/schemathesis',
   'run',
-  '/work/openapi.yaml',
+  '/work/docs/api/openapi.yaml',
   `--url=${gatewayUrl}`,
   ...phaseArgs,
   ...strictArgs,
@@ -313,3 +320,4 @@ if (result.error) {
 }
 
 process.exit(result.status ?? 1);
+

@@ -1,4 +1,4 @@
-# ==============================================
+﻿# ==============================================
 # SAMT MICROSERVICES - MAKEFILE
 # ==============================================
 # Shortcuts for common operations
@@ -23,19 +23,22 @@ build-skip-tests: ## Build all Maven projects (skip tests)
 	./mvnw -B clean package -DskipTests
 
 up: ## Start all containers
-	docker-compose up -d
+	docker compose -f config/docker/docker-compose.yml up -d
 
 down: ## Stop all containers
-	docker-compose down
+	docker compose -f config/docker/docker-compose.yml down
 
 restart: down up ## Restart all containers
 
 logs: ## Follow logs
-	docker-compose logs -f
+	docker compose -f config/docker/docker-compose.yml logs -f
 
 clean: ## Clean Maven target & Docker volumes
 	./mvnw clean
-	docker-compose down -v
+	docker compose -f config/docker/docker-compose.yml down -v
 
 db-only: ## Start only databases (Redis + PostgreSQL)
-	docker-compose up -d postgres-identity postgres-core redis
+	docker compose -f config/docker/docker-compose.yml up -d postgres-identity postgres-core redis
+
+
+

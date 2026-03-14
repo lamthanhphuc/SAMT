@@ -1,4 +1,4 @@
-name: QA System
+﻿name: QA System
 
 on:
   workflow_dispatch:
@@ -105,10 +105,11 @@ jobs:
           if-no-files-found: warn
           path: |
             qa/
-            openapi.yaml
+            docs/api/openapi.yaml
             tests/
             .self-heal/reports/
 
       - name: Tear down
         if: always()
         run: docker compose down -v
+

@@ -1,9 +1,9 @@
-import { spawnSync } from 'node:child_process';
+﻿import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { ensureSelfHealFiles, writeReport } from './self-heal-overrides.mjs';
 
 const watchedFiles = [
-  'openapi.yaml',
+  'docs/api/openapi.yaml',
   'tests/api-auth.http',
   'tests/api-users.http',
   'tests/api-groups.http',
@@ -135,7 +135,7 @@ async function main() {
   const report = {
     generatedAt: new Date().toISOString(),
     driftDetected: changedFiles.length > 0,
-    openapiChanged: changedFiles.includes('openapi.yaml'),
+    openapiChanged: changedFiles.includes('docs/api/openapi.yaml'),
     generatedTestsChanged: changedFiles.some((filePath) => filePath.startsWith('tests/api-')),
     overrideStateChanged: changedFiles.some((filePath) => filePath.startsWith('.self-heal/')),
     changedFiles,
@@ -155,3 +155,4 @@ main().catch((error) => {
   process.stderr.write(`${error.stack || error.message || String(error)}\n`);
   process.exit(1);
 });
+

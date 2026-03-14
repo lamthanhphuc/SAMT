@@ -1,0 +1,91 @@
+﻿version: "3.9"
+
+# ==============================================
+# SAMT MICROSERVICES - SECURE OVERRIDES
+# ==============================================
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.secure.yml up -d
+#
+# Goals:
+# - Read Redis password from Docker secret file (/run/secrets/redis_password)
+# - Avoid placing Redis credentials directly in this file.
+# - Use environment variables or a secrets manager instead.
+# - Let Spring Boot read secrets via configtree (SPRING_CONFIG_IMPORT)
+
+services:
+  redis:
+    secrets:
+      - redis_password
+    command:
+      - sh
+      - -ec
+      - |
+        exec redis-server \
+          --appendonly yes \
+          --maxmemory 256mb \
+          --maxmemory-policy allkeys-lru \
+          --requirepass "$(cat /run/secrets/redis_password)" \
+          --protected-mode yes \
+          --bind 0.0.0.0
+
+  api-gateway:
+    secrets:
+      - redis_password
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configtree:/run/secrets/
+      # Placeholder only. Apps prefer `redis_password` from configtree.
+      REDIS_PASSWORD: __SET_VIA_DOCKER_SECRET__
+
+  identity-service:
+    secrets:
+      - redis_password
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configtree:/run/secrets/
+      REDIS_PASSWORD: __SET_VIA_DOCKER_SECRET__
+
+  user-group-service:
+    secrets:
+      - redis_password
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configtree:/run/secrets/
+      REDIS_PASSWORD: __SET_VIA_DOCKER_SECRET__
+
+  project-config-service:
+    secrets:
+      - redis_password
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configtree:/run/secrets/
+      REDIS_PASSWORD: __SET_VIA_DOCKER_SECRET__
+
+  sync-service:
+    secrets:
+      - redis_password
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configtree:/run/secrets/
+      REDIS_PASSWORD: __SET_VIA_DOCKER_SECRET__
+
+  analysis-service:
+    secrets:
+      - redis_password
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configtree:/run/secrets/
+      REDIS_PASSWORD: __SET_VIA_DOCKER_SECRET__
+
+  report-service:
+    secrets:
+      - redis_password
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configtree:/run/secrets/
+      REDIS_PASSWORD: __SET_VIA_DOCKER_SECRET__
+
+  notification-service:
+    secrets:
+      - redis_password
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configtree:/run/secrets/
+      REDIS_PASSWORD: __SET_VIA_DOCKER_SECRET__
+
+secrets:
+  redis_password:
+    file: ../../secrets/redis_password
+

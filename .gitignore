@@ -1,4 +1,4 @@
-HELP.md
+﻿HELP.md
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
@@ -77,3 +77,14 @@ node_modules/
 
 # Temporary locally built application jars
 .tmp-*.jar
+
+stability/
+.self-heal/reports/
+k6-results/
+playwright-report/
+test-results/
+# Refactor phase-1 artifacts
+artifacts/logs/
+artifacts/reports/
+artifacts/tmp/
+

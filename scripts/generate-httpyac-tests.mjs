@@ -1,11 +1,11 @@
-import fs from 'node:fs/promises';
+﻿import fs from 'node:fs/promises';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import { createSchemaPayloadGenerator } from './schema-payload-generator.mjs';
 import { loadGeneratorOverrides, operationKey } from './self-heal-overrides.mjs';
 
 const outputDir = path.resolve('tests');
-const openapiPath = path.resolve('openapi.yaml');
+const openapiPath = path.resolve('docs/api/docs/api/openapi.yaml');
 let generatorOverrides = { operations: {}, globals: {} };
 let payloadGenerator = null;
 
@@ -758,7 +758,7 @@ async function main() {
   }
 
   if (operationEntries.length === 0) {
-    throw new Error('No operations found in openapi.yaml');
+    throw new Error('No operations found in docs/api/openapi.yaml');
   }
 
   const methodOrder = { post: 0, get: 1, put: 2, patch: 3, delete: 4 };
@@ -978,3 +978,5 @@ main().catch((err) => {
   console.error(err.message || err);
   process.exit(1);
 });
+
+

@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "samt-api-qa",
   "version": "1.0.0",
   "private": true,
@@ -15,16 +15,27 @@
     "qa:dashboard": "node scripts/qa-dashboard.mjs",
     "qa:load": "node scripts/qa-run-load.mjs",
     "qa:system": "node scripts/qa-system.mjs",
-    "test:smoke": "httpyac tests/api-smoke.http --all",
-    "test:regression": "httpyac tests/bootstrap.http tests/fixtures.http tests/wait-auth-cooldown.http tests/api-auth.http tests/api-users.http tests/api-groups.http tests/api-semesters.http tests/api-project-configs.http tests/api-permissions.http --all",
-    "tests:bootstrap": "httpyac tests/bootstrap.http --all",
-    "tests:fixtures": "httpyac tests/bootstrap.http tests/fixtures.http --all",
-    "tests:regression": "httpyac tests/bootstrap.http tests/fixtures.http tests/wait-auth-cooldown.http tests/api-auth.http tests/api-users.http tests/api-groups.http tests/api-semesters.http tests/api-project-configs.http tests/api-permissions.http --all",
-    "tests:regression:ci": "httpyac tests/bootstrap.http tests/fixtures.http tests/wait-auth-cooldown.http tests/api-auth.http tests/api-users.http tests/api-groups.http tests/api-semesters.http tests/api-project-configs.http tests/api-permissions.http --all",
+    "test:smoke": "httpyac ./contract-tests/http/suites/api-smoke.http --all",
+    "test:api:edge": "httpyac ./contract-tests/http/suites/bootstrap.http ./contract-tests/http/suites/fixtures.http ./contract-tests/http/suites/api-edge-cases.http --all",
+    "test:regression": "httpyac ./contract-tests/http/suites/bootstrap.http ./contract-tests/http/suites/fixtures.http ./contract-tests/http/suites/wait-auth-cooldown.http ./contract-tests/http/suites/api-auth.http ./contract-tests/http/suites/api-users.http ./contract-tests/http/suites/api-groups.http ./contract-tests/http/suites/api-semesters.http ./contract-tests/http/suites/api-project-configs.http ./contract-tests/http/suites/api-permissions.http --all",
+    "tests:bootstrap": "httpyac ./contract-tests/http/suites/bootstrap.http --all",
+    "tests:fixtures": "httpyac ./contract-tests/http/suites/bootstrap.http ./contract-tests/http/suites/fixtures.http --all",
+    "tests:regression": "httpyac ./contract-tests/http/suites/bootstrap.http ./contract-tests/http/suites/fixtures.http ./contract-tests/http/suites/wait-auth-cooldown.http ./contract-tests/http/suites/api-auth.http ./contract-tests/http/suites/api-users.http ./contract-tests/http/suites/api-groups.http ./contract-tests/http/suites/api-semesters.http ./contract-tests/http/suites/api-project-configs.http ./contract-tests/http/suites/api-permissions.http ./contract-tests/http/suites/api-edge-cases.http --all",
+    "tests:regression:ci": "httpyac ./contract-tests/http/suites/bootstrap.http ./contract-tests/http/suites/fixtures.http ./contract-tests/http/suites/wait-auth-cooldown.http ./contract-tests/http/suites/api-auth.http ./contract-tests/http/suites/api-users.http ./contract-tests/http/suites/api-groups.http ./contract-tests/http/suites/api-semesters.http ./contract-tests/http/suites/api-project-configs.http ./contract-tests/http/suites/api-permissions.http ./contract-tests/http/suites/api-edge-cases.http --all",
     "tests:contract": "npm run contract:schemathesis",
     "tests:contract:strict": "node scripts/run-schemathesis-docker.mjs --mode=contract",
     "tests:fuzz": "node scripts/run-schemathesis-docker.mjs --mode=fuzz",
+    "tests:contract:parallel": "node scripts/run-contract-parallel.mjs",
     "tests:all": "npm run qa:testkit:e2e && npm run tests:contract && npm run test:smoke && npm run test:regression",
+    "tests:all:deterministic": "npm run tests:unit:backend && npm run tests:unit:frontend && npm run test:smoke && npm run tests:regression:ci && npm run tests:contract:strict && npm run qa:testkit:e2e",
+    "tests:fast": "npm --prefix ../frontend run test:unit && npm run test:smoke && npm run test:api:edge",
+    "build:fast": "./mvnw -T 1C -DskipITs verify",
+    "build:unit": "./mvnw -T 1C test",
+    "build:ci:deterministic": "./mvnw -T 1C -DskipITs -B verify",
+    "tests:unit": "node scripts/run-maven-tests.mjs --goal=test",
+    "tests:unit:backend": "node scripts/run-maven-tests.mjs --goal=test",
+    "tests:unit:frontend": "npm --prefix ../frontend run test:unit",
+    "tests:quality:unit": "npm --prefix ../frontend run lint && npm --prefix ../frontend run build && npm --prefix ../frontend run test:unit && node scripts/run-maven-tests.mjs",
     "tests:self-heal": "node scripts/self-heal-orchestrator.mjs",
     "tests:self-heal:ci": "node scripts/self-heal-ci.mjs",
     "tests:schema-drift": "node scripts/schema-drift-check.mjs",
@@ -33,15 +44,15 @@
     "qa:analyze-failure": "node scripts/autonomous-qa-agent.mjs",
     "openapi:generate": "node scripts/generate-openapi.mjs",
     "tests:generate": "node scripts/generate-httpyac-tests.mjs",
-    "postman:generate": "openapi2postmanv2 -s openapi.yaml -o postman-collection.json -p",
+    "postman:generate": "openapi2postmanv2 -s docs/api/openapi.yaml -o postman-collection.json -p",
     "contract:schemathesis": "node scripts/run-schemathesis-docker.mjs",
     "contract:schemathesis:docker": "node scripts/run-schemathesis-docker.mjs",
-    "qa:testkit:install": "npm --prefix qa-testing install && npm --prefix qa-testing exec playwright install chromium",
-    "qa:testkit:e2e": "npm --prefix qa-testing run test:e2e",
-    "qa:testkit:api": "npm --prefix qa-testing run test:e2e:api",
-    "qa:testkit:security": "npm --prefix qa-testing run test:e2e:security",
-    "qa:docker:health": "powershell -ExecutionPolicy Bypass -File qa-testing/devops/docker-health-check.ps1",
-    "qa:docker:health:build": "powershell -ExecutionPolicy Bypass -File qa-testing/devops/docker-health-check.ps1 -Build"
+    "qa:testkit:install": "npm --prefix ../qa/playwright install && npm --prefix ../qa/playwright exec playwright install chromium",
+    "qa:testkit:e2e": "npm --prefix ../qa/playwright run test:e2e",
+    "qa:testkit:api": "npm --prefix ../qa/playwright run test:e2e:api",
+    "qa:testkit:security": "npm --prefix ../qa/playwright run test:e2e:security",
+    "qa:docker:health": "powershell -ExecutionPolicy Bypass -File ../qa/playwright/devops/docker-health-check.ps1",
+    "qa:docker:health:build": "powershell -ExecutionPolicy Bypass -File ../qa/playwright/devops/docker-health-check.ps1 -Build"
   },
   "devDependencies": {
     "dotenv": "^16.6.1",
@@ -50,3 +61,5 @@
     "openapi-to-postmanv2": "^5.3.0"
   }
 }
+
+

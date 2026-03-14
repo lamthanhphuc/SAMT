@@ -1,0 +1,164 @@
+@baseUrl = http://localhost:9080
+@invalidUuid = not-a-uuid
+
+### EDGE_auth_malformed_bearer_token
+# @name EDGE_auth_malformed_bearer_token
+GET {{baseUrl}}/api/users?page=0&size=1
+Authorization: Bearer malformed.token
+
+> {%
+client.test("EDGE_auth_malformed_bearer_token -> [401]", function () {
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
+  client.assert(!!responseBody, 'Expected non-empty unauthorized response body');
+});
+%}
+
+### EDGE_users_list_schema_strict
+# @name EDGE_users_list_schema_strict
+GET {{baseUrl}}/api/users?page=0&size=1
+Authorization: Bearer {{adminAccessToken}}
+
+> {%
+client.test("EDGE_users_list_schema_strict -> [200] + schema", function () {
+  client.assert(response.status === 200, 'Unexpected status ' + response.status + '; expected [200]');
+  const body = response.body || {};
+  const payload = body.data ? body.data : body;
+  client.assert(payload && typeof payload === 'object', 'Expected object payload');
+  client.assert(Array.isArray(payload.content), 'Expected payload.content to be an array');
+  client.assert(typeof payload.totalElements === 'number', 'Expected payload.totalElements number');
+  if (payload.content.length > 0) {
+    const first = payload.content[0];
+    client.assert(typeof first.id === 'number', 'Expected first item id:number');
+    client.assert(typeof first.email === 'string', 'Expected first item email:string');
+  }
+});
+%}
+
+### EDGE_users_invalid_role_filter
+# @name EDGE_users_invalid_role_filter
+GET {{baseUrl}}/api/users?page=0&size=20&role=__INVALID_ROLE__
+Authorization: Bearer {{adminAccessToken}}
+
+> {%
+client.test("EDGE_users_invalid_role_filter -> [200] + payload", function () {
+  client.assert(response.status === 200, 'Unexpected status ' + response.status + '; expected [200]');
+  const body = response.body || {};
+  const payload = body.data ? body.data : body;
+  client.assert(payload && typeof payload === 'object', 'Expected object payload');
+  client.assert(Array.isArray(payload.content), 'Expected payload.content to be an array');
+  client.assert(typeof payload.totalElements === 'number', 'Expected payload.totalElements number');
+});
+%}
+
+### EDGE_groups_negative_pagination
+# @name EDGE_groups_negative_pagination
+GET {{baseUrl}}/api/groups?page=-1&size=20
+Authorization: Bearer {{adminAccessToken}}
+
+> {%
+client.test("EDGE_groups_negative_pagination -> [400]", function () {
+  const expectedStatuses = [400];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400]; body=' + (responseBody || '<empty>')
+  );
+  client.assert(!!responseBody, 'Expected validation error payload for negative pagination');
+});
+%}
+
+### EDGE_semesters_oversized_page
+# @name EDGE_semesters_oversized_page
+GET {{baseUrl}}/api/semesters?page=0&size=10000
+Authorization: Bearer {{adminAccessToken}}
+
+> {%
+client.test("EDGE_semesters_oversized_page -> [200] + payload", function () {
+  client.assert(response.status === 200, 'Unexpected status ' + response.status + '; expected [200]');
+  const body = response.body || {};
+  const payload = body.data ? body.data : body;
+  client.assert(Array.isArray(payload), 'Expected array payload for semesters endpoint');
+});
+%}
+
+### EDGE_project_config_invalid_uuid
+# @name EDGE_project_config_invalid_uuid
+GET {{baseUrl}}/api/project-configs/{{invalidUuid}}
+Authorization: Bearer {{adminAccessToken}}
+
+> {%
+client.test("EDGE_project_config_invalid_uuid -> [400]", function () {
+  const expectedStatuses = [400];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400]; body=' + (responseBody || '<empty>')
+  );
+  client.assert(!!responseBody, 'Expected validation error payload for invalid UUID');
+});
+%}
+
+### EDGE_register_missing_confirm_password
+# @name EDGE_register_missing_confirm_password
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "edge.case.user@samt.local",
+  "password": "Str0ng@Pass!",
+  "fullName": "Edge Case User",
+  "role": "STUDENT"
+}
+
+> {%
+client.test("EDGE_register_missing_confirm_password -> [400]", function () {
+  const expectedStatuses = [400];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400]; body=' + (responseBody || '<empty>')
+  );
+  client.assert(!!responseBody, 'Expected validation error payload for missing confirm password');
+});
+%}
+
+### EDGE_permissions_forbidden_role
+# @name EDGE_permissions_forbidden_role
+GET {{baseUrl}}/api/admin/permissions?page=0&size=20
+Authorization: Bearer {{studentAccessToken}}
+
+> {%
+client.test("EDGE_permissions_forbidden_role -> [403]", function () {
+  const expectedStatuses = [403];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [403]; body=' + (responseBody || '<empty>')
+  );
+  client.assert(!!responseBody, 'Expected non-empty forbidden response body');
+});
+%}
+
+### EDGE_login_empty_payload
+# @name EDGE_login_empty_payload
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{}
+
+> {%
+client.test("EDGE_login_empty_payload -> [400]", function () {
+  const expectedStatuses = [400];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400]; body=' + (responseBody || '<empty>')
+  );
+  client.assert(!!responseBody, 'Expected validation error payload for empty login payload');
+});
+%}

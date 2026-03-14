@@ -1,40 +1,63 @@
-name: CI Reliability Pipeline
+name: Nightly Full Pipeline
 
 on:
-  pull_request:
-  push:
-    branches: [main]
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: nightly-full-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  backend:
-    name: Backend Tests
-    runs-on: ubuntu-latest
+  unit-backend:
+    name: Unit | Backend
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java 17 (compatibility check)
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Setup Java 21 (build runtime)
+      - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
           cache: maven
 
-      - name: Run Maven tests
-        run: bash ./mvnw -B test
+      - name: Run backend unit tests
+        run: ./mvnw -T 1C -B -DskipITs=true test
 
-  frontend-testkit:
-    name: Frontend and Testkit
-    runs-on: ubuntu-latest
+  unit-frontend:
+    name: Unit | Frontend
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm --prefix frontend install
+
+      - name: Run frontend unit tests
+        run: npm --prefix frontend run test:unit
+
+  nightly-full:
+    name: Nightly | Full QA
+    runs-on: ubuntu-24.04
+    needs: [unit-backend, unit-frontend]
+    env:
+      BASE_URL: http://localhost:9080
+      SCHEMATHESIS_SEED: '20260308'
+      SCHEMATHESIS_STRICT: 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,19 +69,35 @@ jobs:
           cache: npm
           cache-dependency-path: |
             package-lock.json
-            FE-SAMT/package-lock.json
-            qa-testing/package-lock.json
+            frontend/package-lock.json
+            qa/playwright/package-lock.json
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('qa/playwright/package-lock.json') }}
 
       - name: Install dependencies
         run: |
           npm install
-          npm --prefix FE-SAMT install
-          npm --prefix qa-testing install
+          npm --prefix frontend install
+          npm --prefix qa/playwright install
 
       - name: Install Playwright browsers
-        run: npm --prefix qa-testing exec playwright install --with-deps chromium
+        run: npm --prefix qa/playwright exec playwright install --with-deps chromium
 
-      - name: Prepare local env
+      - name: Install k6
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gpg ca-certificates
+          sudo mkdir -p /etc/apt/keyrings
+          curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/k6.gpg
+          echo "deb [signed-by=/etc/apt/keyrings/k6.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+
+      - name: Prepare environment
         run: |
           cp .env.example .env
           python - <<'PY'
@@ -90,293 +129,34 @@ jobs:
           docker compose ps
           exit 1
 
-      - name: Run Playwright E2E
-        run: npm run qa:testkit:e2e
-
-      - name: Run Playwright API contract suite
-        run: npm run qa:testkit:api
-
-      - name: Run Playwright security suite
-        run: npm run qa:testkit:security
-
-      - name: Collect logs
-        if: always()
+      - name: Run nightly full suite
         run: |
-          mkdir -p ci-logs
-          docker compose ps > ci-logs/docker-ps.txt || true
-          docker compose logs --no-color > ci-logs/docker-compose.log || true
+          npm run tests:bootstrap
+          npm run tests:fixtures
+          npm run test:smoke
+          npm run tests:regression:ci
+          npm run tests:contract:strict
+          mkdir -p logs
+          npm run tests:fuzz | tee logs/fuzz-nightly.log || true
+          npm run qa:testkit:e2e
+          npm run qa:testkit:api
+          npm run qa:testkit:security
+          BASE_URL=http://localhost:9080 TEST_USERNAME=test TEST_PASSWORD=test bash scripts/smoke-test.sh
+          k6 run qa/performance/performance-test.js --out json=performance-result.json --summary-export=performance-summary.json
+          npm run qa:chaos
 
-      - name: Upload Playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          if-no-files-found: warn
-          path: qa-testing/playwright-report
-
-      - name: Upload CI logs
+      - name: Upload nightly artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: frontend-testkit-logs
-          if-no-files-found: warn
-          path: ci-logs
-
-      - name: Teardown stack
-        if: always()
-        run: docker compose down -v
-
-  docker-validation:
-    name: Docker Validation
-    runs-on: ubuntu-latest
-    needs: [backend, frontend-testkit]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Build docker image
-        run: docker build -f api-gateway/Dockerfile -t samt/api-gateway:ci .
-
-      - name: Prepare local env
-        run: |
-          cp .env.example .env
-          python - <<'PY'
-          import base64
-          import secrets
-          from pathlib import Path
-
-          env_path = Path('.env')
-          text = env_path.read_text(encoding='utf-8')
-          text = text.replace('CHANGE_ME_STRONG_PASSWORD_HERE', secrets.token_urlsafe(18))
-          text = text.replace('CHANGE_ME_256_BIT_KEY', base64.b16encode(secrets.token_bytes(32)).decode('ascii').lower())
-          env_path.write_text(text, encoding='utf-8')
-          with env_path.open('a', encoding='utf-8') as env_file:
-            env_file.write(f"REDIS_PASSWORD={secrets.token_urlsafe(18)}\n")
-          PY
-
-      - name: Run container stack
-        run: docker compose up -d
-
-      - name: Execute docker health check
-        run: |
-          set -euo pipefail
-          for i in {1..90}; do
-            unhealthy=$(docker compose ps -q | xargs -r docker inspect --format '{{.Name}} {{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{else}}n/a{{end}}' | awk '$2 != "running" || ($3 != "healthy" && $3 != "n/a") {print}')
-            if [ -z "$unhealthy" ]; then
-              echo "All containers running and healthy"
-              exit 0
-            fi
-            echo "Waiting for containers to become healthy..."
-            sleep 5
-          done
-          echo "$unhealthy"
-          exit 1
-
-      - name: Collect docker logs
-        if: always()
-        run: |
-          mkdir -p ci-logs
-          docker compose ps > ci-logs/docker-ps.txt || true
-          docker compose logs --no-color > ci-logs/docker-compose.log || true
-
-      - name: Upload docker logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-validation-logs
-          if-no-files-found: warn
-          path: ci-logs
-
-      - name: Teardown stack
-        if: always()
-        run: docker compose down -v
-
-  performance-test:
-    name: performance-test
-    runs-on: ubuntu-latest
-    needs: [backend, frontend-testkit]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: npm
-          cache-dependency-path: package-lock.json
-
-      - name: Install k6
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gpg ca-certificates
-          sudo mkdir -p /etc/apt/keyrings
-          curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/k6.gpg
-          echo "deb [signed-by=/etc/apt/keyrings/k6.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
-          sudo apt-get update
-          sudo apt-get install -y k6
-          k6 version
-
-      - name: Build docker image
-        run: docker build -f api-gateway/Dockerfile -t samt/api-gateway:ci .
-
-      - name: Prepare local env
-        run: |
-          cp .env.example .env
-          python - <<'PY'
-          import base64
-          import secrets
-          from pathlib import Path
-
-          env_path = Path('.env')
-          text = env_path.read_text(encoding='utf-8')
-          text = text.replace('CHANGE_ME_STRONG_PASSWORD_HERE', secrets.token_urlsafe(18))
-          text = text.replace('CHANGE_ME_256_BIT_KEY', base64.b16encode(secrets.token_bytes(32)).decode('ascii').lower())
-          env_path.write_text(text, encoding='utf-8')
-          with env_path.open('a', encoding='utf-8') as env_file:
-            env_file.write(f"REDIS_PASSWORD={secrets.token_urlsafe(18)}\\n")
-          PY
-
-      - name: Run container stack
-        run: docker compose up -d
-
-      - name: Wait for health endpoint
-        run: |
-          for i in {1..90}; do
-            if curl -fsS http://localhost:9080/actuator/health >/dev/null; then
-              echo "Gateway healthy"
-              exit 0
-            fi
-            sleep 5
-          done
-          docker compose ps
-          exit 1
-
-      - name: Run load test
-        run: |
-          k6 run tests/performance/performance-test.js \
-            --out json=performance-result.json \
-            --summary-export=performance-summary.json
-
-      - name: Validate thresholds
-        run: |
-          python - <<'PY'
-          import json
-          import sys
-
-          with open('performance-summary.json', 'r', encoding='utf-8') as f:
-            summary = json.load(f)
-
-          duration_values = summary.get('metrics', {}).get('http_req_duration', {}).get('values', {})
-          failed_values = summary.get('metrics', {}).get('http_req_failed', {}).get('values', {})
-
-          avg_ms = duration_values.get('avg')
-          error_rate = failed_values.get('rate', failed_values.get('value'))
-
-          print(f"avg response time = {avg_ms} ms")
-          print(f"error rate = {error_rate}")
-
-          if avg_ms is None or error_rate is None:
-            print('Missing required k6 metrics in summary report', file=sys.stderr)
-            sys.exit(1)
-
-          if avg_ms > 500:
-            print(f"Average response time threshold breached: {avg_ms} > 500", file=sys.stderr)
-            sys.exit(1)
-
-          if error_rate > 0.01:
-            print(f"Error rate threshold breached: {error_rate} > 0.01", file=sys.stderr)
-            sys.exit(1)
-
-          print('Performance thresholds passed')
-          PY
-
-      - name: Collect performance logs
-        if: always()
-        run: |
-          mkdir -p performance-logs
-          docker compose ps > performance-logs/docker-ps.txt || true
-          docker compose logs --no-color > performance-logs/docker-compose.log || true
-
-      - name: Upload performance artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: performance-artifacts
+          name: nightly-artifacts
           if-no-files-found: warn
           path: |
+            qa/playwright/playwright-report
             performance-result.json
             performance-summary.json
-            performance-logs
-
-      - name: Teardown stack
-        if: always()
-        run: docker compose down -v
-
-  smoke-test:
-    name: smoke-test
-    runs-on: ubuntu-latest
-    needs: [docker-validation]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Prepare local env
-        run: |
-          cp .env.example .env
-          python - <<'PY'
-          import base64
-          import secrets
-          from pathlib import Path
-
-          env_path = Path('.env')
-          text = env_path.read_text(encoding='utf-8')
-          text = text.replace('CHANGE_ME_STRONG_PASSWORD_HERE', secrets.token_urlsafe(18))
-          text = text.replace('CHANGE_ME_256_BIT_KEY', base64.b16encode(secrets.token_bytes(32)).decode('ascii').lower())
-          env_path.write_text(text, encoding='utf-8')
-          with env_path.open('a', encoding='utf-8') as env_file:
-            env_file.write(f"REDIS_PASSWORD={secrets.token_urlsafe(18)}\\n")
-          PY
-
-      - name: Start docker container
-        run: docker compose up -d
-
-      - name: Wait for service startup
-        run: |
-          for i in {1..90}; do
-            if curl -fsS http://localhost:9080/actuator/health >/dev/null; then
-              echo "Service ready"
-              exit 0
-            fi
-            sleep 5
-          done
-          docker compose ps
-          exit 1
-
-      - name: Run smoke test
-        env:
-          BASE_URL: ${{ vars.SMOKE_BASE_URL || 'http://localhost:9080' }}
-          TEST_USERNAME: ${{ secrets.SMOKE_TEST_USERNAME != '' && secrets.SMOKE_TEST_USERNAME || 'test' }}
-          TEST_PASSWORD: ${{ secrets.SMOKE_TEST_PASSWORD != '' && secrets.SMOKE_TEST_PASSWORD || 'test' }}
-          SMOKE_MAX_ATTEMPTS: "5"
-          SMOKE_TIMEOUT_SEC: "10"
-          SMOKE_RETRY_DELAY_SEC: "2"
-        run: bash tests/smoke/smoke-test.sh
-
-      - name: Collect smoke logs
-        if: always()
-        run: |
-          mkdir -p smoke-logs
-          docker compose ps > smoke-logs/docker-ps.txt || true
-          docker compose logs --no-color > smoke-logs/docker-compose.log || true
-
-      - name: Upload smoke logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: smoke-test-logs
-          if-no-files-found: warn
-          path: smoke-logs
+            logs/fuzz-nightly.log
+            .self-heal/reports
 
       - name: Teardown stack
         if: always()

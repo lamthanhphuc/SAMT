@@ -1,4 +1,4 @@
-name: API Tests
+﻿name: API Tests
 
 on:
   workflow_dispatch:
@@ -63,7 +63,7 @@ jobs:
         with:
           name: api-test-artifacts
           path: |
-            openapi.yaml
+            docs/api/openapi.yaml
             tests/
             postman-collection.json
             .self-heal/reports/
@@ -72,3 +72,4 @@ jobs:
       - name: Tear down
         if: always()
         run: docker compose down -v
+

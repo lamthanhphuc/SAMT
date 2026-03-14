@@ -1,10 +1,10 @@
-import crypto from 'node:crypto';
+﻿import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { ensureSelfHealFiles, writeReport } from './self-heal-overrides.mjs';
 
 const trackedFiles = [
-  'openapi.yaml',
+  'docs/api/openapi.yaml',
   'tests/api-auth.http',
   'tests/api-users.http',
   'tests/api-groups.http',
@@ -227,3 +227,4 @@ main().catch((error) => {
   process.stderr.write(`${error.stack || error.message || String(error)}\n`);
   process.exit(1);
 });
+

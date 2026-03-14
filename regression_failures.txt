@@ -1,2 +1,0 @@
-[-] GET_/api/admin/audit/actor/{actorId}_not_found -> [404, 401] (AssertionError
-[-] GET_/api/admin/audit/entity/{entityType}/{entityId}_not_found -> [404, 401] 
