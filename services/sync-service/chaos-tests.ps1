@@ -9,7 +9,13 @@ param(
     [string]$ServiceUrl = "http://localhost:8084",
     
     [Parameter(Mandatory=$false)]
-    [string]$PrometheusUrl = "http://localhost:9090"
+    [string]$PrometheusUrl = "http://localhost:9090",
+
+    [Parameter(Mandatory=$false)]
+    [switch]$ConfirmStaging,
+
+    [Parameter(Mandatory=$false)]
+    [int]$PostManualStepWaitSeconds = 5
 )
 
 $ErrorActionPreference = "Continue"
@@ -22,9 +28,8 @@ Write-Host "WARNING: This script will intentionally cause errors!" -ForegroundCo
 Write-Host "DO NOT run in production environment!" -ForegroundColor Yellow
 Write-Host ""
 
-$confirmation = Read-Host "Are you in STAGING environment? (yes/no)"
-if ($confirmation -ne "yes") {
-    Write-Host "Aborted. Safety first!" -ForegroundColor Red
+if (-not $ConfirmStaging) {
+    Write-Host "Aborted. Non-interactive safety guard: re-run with -ConfirmStaging." -ForegroundColor Red
     exit 0
 }
 
@@ -254,8 +259,8 @@ $beforeTotal = Get-MetricValue "sync_job_total_count_total"
 $beforeFailure = Get-MetricValue "sync_job_failure_count_total"
 
 Write-Host "  Before: total=$beforeTotal, failure=$beforeFailure" -ForegroundColor Cyan
-Write-Host "  (Execute sync job now, then press Enter)" -ForegroundColor Yellow
-Read-Host
+Write-Host "  Waiting $PostManualStepWaitSeconds second(s) for external sync trigger (non-interactive mode)" -ForegroundColor Yellow
+Start-Sleep -Seconds $PostManualStepWaitSeconds
 
 $afterTotal = Get-MetricValue "sync_job_total_count_total"
 $afterFailure = Get-MetricValue "sync_job_failure_count_total"
