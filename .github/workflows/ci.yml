@@ -80,9 +80,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm install
-          npm --prefix frontend install
-          npm --prefix qa/playwright install
+          npm ci --no-audit --no-fund
+          npm --prefix frontend ci --no-audit --no-fund
+          npm --prefix qa/playwright ci --no-audit --no-fund
 
       - name: Install Playwright browsers
         run: npm --prefix qa/playwright exec playwright install --with-deps chromium

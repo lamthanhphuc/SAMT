@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "samt-api-qa",
   "version": "1.0.0",
   "private": true,
@@ -56,10 +56,11 @@
   },
   "devDependencies": {
     "dotenv": "^16.6.1",
-    "httpyac": "^6.16.4",
+    "httpyac": "6.16.4",
     "js-yaml": "^4.1.0",
     "openapi-to-postmanv2": "^5.3.0"
+  },
+  "dependencies": {
+    "hookpoint": "3.0.0"
   }
 }
-
-

@@ -1,0 +1,109 @@
+@baseUrl = http://localhost:9080
+@unknownEmail = unknown.user@samt.local
+@badPassword = WrongPass@123
+@studentEmail = qa.student@samt.local
+@studentPassword = Str0ng@Pass!
+
+### GEN_auth_login_unknown_user
+# @name GEN_auth_login_unknown_user
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{unknownEmail}}",
+  "password": "{{badPassword}}"
+}
+
+> {%
+client.test("GEN_auth_login_unknown_user -> [401]", function () {
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### GEN_auth_login_wrong_password
+# @name GEN_auth_login_wrong_password
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{studentEmail}}",
+  "password": "{{badPassword}}"
+}
+
+> {%
+client.test("GEN_auth_login_wrong_password -> [401]", function () {
+  const expectedStatuses = [401];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [401]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### GEN_auth_login_missing_password
+# @name GEN_auth_login_missing_password
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{studentEmail}}"
+}
+
+> {%
+client.test("GEN_auth_login_missing_password -> [400]", function () {
+  const expectedStatuses = [400];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### GEN_auth_refresh_missing_token
+# @name GEN_auth_refresh_missing_token
+POST {{baseUrl}}/api/auth/refresh
+Content-Type: application/json
+
+{}
+
+> {%
+client.test("GEN_auth_refresh_missing_token -> [400]", function () {
+  const expectedStatuses = [400];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400]; body=' + (responseBody || '<empty>')
+  );
+});
+%}
+
+### GEN_auth_register_password_mismatch
+# @name GEN_auth_register_password_mismatch
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "generated.user@samt.local",
+  "password": "Str0ng@Pass!",
+  "confirmPassword": "Mismatch@Pass1",
+  "fullName": "Generated User",
+  "role": "STUDENT"
+}
+
+> {%
+client.test("GEN_auth_register_password_mismatch -> [400]", function () {
+  const expectedStatuses = [400];
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  client.assert(
+    expectedStatuses.includes(response.status),
+    'Unexpected status ' + response.status + '; expected [400]; body=' + (responseBody || '<empty>')
+  );
+});
+%}

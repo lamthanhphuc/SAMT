@@ -7,7 +7,8 @@ const dockerEnv = { ...process.env };
 delete dockerEnv.DOCKER_API_VERSION;
 
 const dockerNetwork = process.env.SCHEMATHESIS_DOCKER_NETWORK ?? 'samt_samt-network';
-const useComposeNetwork = !process.env.SCHEMATHESIS_BASE_URL && dockerNetworkExists(dockerNetwork);
+const composeNetworkOptIn = (process.env.SCHEMATHESIS_USE_COMPOSE_NETWORK ?? '').toLowerCase() === 'true';
+const useComposeNetwork = !process.env.SCHEMATHESIS_BASE_URL && composeNetworkOptIn && dockerNetworkExists(dockerNetwork);
 const gatewayUrl = process.env.SCHEMATHESIS_BASE_URL ?? (useComposeNetwork ? 'http://api-gateway:8080' : 'http://host.docker.internal:9080');
 const loginUrl = process.env.SCHEMATHESIS_LOGIN_URL ?? 'http://localhost:9080/api/auth/login';
 const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
@@ -235,10 +236,14 @@ const modeArgs = mode === 'fuzz'
       process.env.SCHEMATHESIS_CONTRACT_MAX_EXAMPLES ?? '1'
     ];
 
-const seedResult = spawnSync(npxCommand, ['httpyac', 'tests/bootstrap.http', 'tests/fixtures.http', '--all'], {
+const seedResult = spawnSync(
+  npxCommand,
+  ['httpyac', 'contract-tests/http/suites/bootstrap.http', 'contract-tests/http/suites/fixtures.http', '--all'],
+  {
   encoding: 'utf8',
   shell: process.platform === 'win32'
-});
+  }
+);
 
 process.stdout.write(seedResult.stdout || '');
 process.stderr.write(seedResult.stderr || '');

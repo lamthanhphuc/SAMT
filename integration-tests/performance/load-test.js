@@ -32,7 +32,7 @@ function scenariosForProfile(profile) {
   }
 
   return {
-    login_flow: { exec: 'loginFlow', executor: 'ramping-vus', stages: [{ duration: '20s', target: 8 }, { duration: '40s', target: 16 }, { duration: '20s', target: 0 }] },
+    login_flow: { exec: 'loginFlow', executor: 'ramping-vus', stages: [{ duration: '20s', target: 6 }, { duration: '40s', target: 12 }, { duration: '20s', target: 0 }] },
     profile_retrieval: { exec: 'profileRetrieval', executor: 'ramping-vus', stages: [{ duration: '20s', target: 12 }, { duration: '40s', target: 24 }, { duration: '20s', target: 0 }] },
     group_creation: { exec: 'groupCreation', executor: 'ramping-vus', startTime: '20s', stages: [{ duration: '15s', target: 3 }, { duration: '30s', target: 6 }, { duration: '15s', target: 0 }] },
     project_config_verification: { exec: 'projectConfigVerification', executor: 'ramping-vus', startTime: '35s', stages: [{ duration: '15s', target: 2 }, { duration: '30s', target: 5 }, { duration: '15s', target: 0 }] }

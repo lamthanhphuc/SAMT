@@ -20,11 +20,12 @@ const options = parseArgs(process.argv.slice(2), {
 const workspacePath = path.resolve(options.workspace);
 const reportsDir = path.join(workspacePath, '.self-heal', 'reports');
 const baselinesDir = path.join(workspacePath, '.self-heal', 'baselines');
-const dockerNetwork = process.env.QA_DOCKER_NETWORK || process.env.SCHEMATHESIS_DOCKER_NETWORK || 'samt_samt-network';
+const dockerNetwork = process.env.QA_DOCKER_NETWORK || process.env.SCHEMATHESIS_DOCKER_NETWORK || 'docker_samt-network';
 const summaryFile = path.join(reportsDir, `${options.reportName}-summary.json`);
 const jsonReport = path.join(reportsDir, `${options.reportName}.json`);
 const markdownReport = path.join(reportsDir, `${options.reportName}.md`);
 const baselineFile = path.join(baselinesDir, `${options.profile}.json`);
+const loadScriptRelative = 'integration-tests/performance/load-test.js';
 const requireLoadRunner = String(process.env.QA_LOAD_REQUIRED || 'false').toLowerCase() === 'true';
 const updateBaseline = String(process.env.QA_LOAD_UPDATE_BASELINE || 'false').toLowerCase() === 'true';
 
@@ -131,18 +132,19 @@ function toMarkdown(report) {
 }
 
 async function main() {
+  await ensureDir(reportsDir);
   await ensureDir(baselinesDir);
   const baseUrl = resolveDockerGatewayUrl();
   const localK6 = hasLocalK6();
   const command = localK6
-    ? `k6 run load-test.js --summary-export ${toPosix(path.relative(workspacePath, summaryFile))}`
+    ? `k6 run ${loadScriptRelative} --summary-export ${toPosix(path.relative(workspacePath, summaryFile))}`
     : [
         'docker run --rm',
         ...(baseUrl === 'http://api-gateway:8080' ? [`--network ${dockerNetwork}`] : []),
         `-v "${workspacePath}:/work"`,
         `-e BASE_URL=${baseUrl}`,
         `-e K6_PROFILE=${options.profile}`,
-        `grafana/k6 run /work/load-test.js --summary-export /work/${toPosix(path.relative(workspacePath, summaryFile))}`
+        `grafana/k6 run /work/${toPosix(loadScriptRelative)} --summary-export /work/${toPosix(path.relative(workspacePath, summaryFile))}`
       ].join(' ');
 
   const result = runCommand(command, workspacePath, {
