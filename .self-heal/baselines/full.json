@@ -1,0 +1,10 @@
+{
+  "capturedAt": "2026-03-15T09:33:12.590Z",
+  "profile": "full",
+  "httpReqs": 4413,
+  "throughputPerSecond": 45.87300272856967,
+  "failureRate": 0.00045320643553138455,
+  "p50DurationMs": 9.020176,
+  "p95DurationMs": 226.0333566,
+  "p99DurationMs": 881.023659
+}

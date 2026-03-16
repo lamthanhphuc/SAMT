@@ -1,255 +1,233 @@
 {
     "metrics": {
+        "http_req_blocked": {
+            "avg": 0.010461271244051653,
+            "min": 0.001052,
+            "med": 0.004746,
+            "max": 3.286212,
+            "p(90)": 0.007859,
+            "p(95)": 0.009398799999999987
+        },
         "http_req_tls_handshaking": {
-            "avg": 0,
             "min": 0,
             "med": 0,
             "max": 0,
             "p(90)": 0,
-            "p(95)": 0
-        },
-        "group_duration": {
-            "p(95)": 483.0686610499998,
-            "avg": 171.7999805,
-            "min": 38.833001,
-            "med": 49.7160155,
-            "max": 946.203465,
-            "p(90)": 439.38226979999996
-        },
-        "http_req_duration{flow:login}": {
-            "p(95)": 222.8079965999994,
-            "avg": 126.2562890810811,
-            "min": 84.007222,
-            "med": 109.966865,
-            "max": 342.567672,
-            "p(90)": 183.53626899999998,
-            "thresholds": {
-                "p(95)<900": false
-            }
-        },
-        "http_req_sending": {
-            "min": 0.005341,
-            "med": 0.0171105,
-            "max": 1.03256,
-            "p(90)": 0.06182040000000001,
-            "p(95)": 0.08433004999999998,
-            "avg": 0.03319810629921259
+            "p(95)": 0,
+            "avg": 0
         },
         "vus_max": {
-            "min": 6,
-            "max": 6,
-            "value": 6
+            "value": 47,
+            "min": 47,
+            "max": 47
         },
-        "http_req_duration{flow:profile}": {
-            "min": 8.639237,
-            "med": 16.900582,
-            "max": 101.842908,
-            "p(90)": 21.918791900000002,
-            "p(95)": 26.404136949999987,
-            "avg": 17.68682052631579,
-            "thresholds": {
-                "p(95)<900": false
-            }
+        "data_sent": {
+            "count": 3302482,
+            "rate": 34329.201404271975
         },
-        "http_req_connecting": {
-            "avg": 0.008773425196850395,
-            "min": 0,
-            "med": 0,
-            "max": 0.49747,
-            "p(90)": 0,
-            "p(95)": 0
+        "iteration_duration": {
+            "med": 1070.153363,
+            "max": 2205.272541,
+            "p(90)": 1327.747754,
+            "p(95)": 1411.729566,
+            "avg": 1122.8138028279388,
+            "min": 1017.048747
+        },
+        "http_req_waiting": {
+            "min": 3.408352,
+            "med": 8.819574,
+            "max": 851.195401,
+            "p(90)": 104.1869216,
+            "p(95)": 225.72017919999993,
+            "avg": 48.36944542805331
         },
         "vus": {
             "value": 1,
             "min": 1,
-            "max": 6
+            "max": 44
+        },
+        "http_req_receiving": {
+            "max": 88.147905,
+            "p(90)": 0.33069980000000004,
+            "p(95)": 0.40749479999999927,
+            "avg": 0.2139062667119872,
+            "min": 0.020885,
+            "med": 0.151509
+        },
+        "group_duration": {
+            "avg": 84.43734061612619,
+            "min": 16.477233,
+            "med": 26.141482,
+            "max": 803.392423,
+            "p(90)": 303.152608,
+            "p(95)": 335.334673
+        },
+        "http_req_failed": {
+            "passes": 2,
+            "fails": 4411,
+            "thresholds": {
+                "rate<0.05": false
+            },
+            "value": 0.00045320643553138455
+        },
+        "http_req_duration{flow:profile}": {
+            "avg": 16.712832982217904,
+            "min": 3.507529,
+            "med": 8.016442,
+            "max": 245.070543,
+            "p(90)": 53.118770000000005,
+            "p(95)": 82.16527919999996,
+            "thresholds": {
+                "p(95)<900": false
+            }
         },
         "http_reqs": {
-            "count": 254,
-            "rate": 11.911742783406657
+            "rate": 45.87300272856967,
+            "count": 4413
         },
-        "iteration_duration": {
-            "p(95)": 1453.6873573999999,
-            "avg": 1159.757774180953,
-            "min": 1040.014469,
-            "med": 1108.919509,
-            "max": 1946.878953,
-            "p(90)": 1399.3991136
+        "http_req_duration{flow:group_creation}": {
+            "max": 405.838827,
+            "p(90)": 92.7862628,
+            "p(95)": 102.73158844999999,
+            "avg": 35.318741984076425,
+            "min": 6.850629,
+            "med": 16.1822905,
+            "thresholds": {
+                "p(95)<1800": false
+            }
+        },
+        "http_req_duration{flow:project_verification}": {
+            "min": 5.424831,
+            "med": 39.6606865,
+            "max": 796.064411,
+            "p(90)": 404.05964159999996,
+            "p(95)": 659.9618214499981,
+            "avg": 200.49460730909098,
+            "thresholds": {
+                "p(95)<2500": false
+            }
+        },
+        "iterations": {
+            "count": 1761,
+            "rate": 18.305542217315022
+        },
+        "http_req_duration": {
+            "avg": 48.60686091819617,
+            "min": 3.507529,
+            "med": 9.020176,
+            "max": 881.023659,
+            "p(90)": 104.52180320000001,
+            "p(95)": 226.0333566,
+            "thresholds": {
+                "p(95)<1500": false
+            }
+        },
+        "http_req_duration{flow:login}": {
+            "max": 881.023659,
+            "p(90)": 383.626454,
+            "p(95)": 553.7273172999996,
+            "avg": 165.560135637149,
+            "min": 63.269354,
+            "med": 102.559387,
+            "thresholds": {
+                "p(95)<900": false
+            }
+        },
+        "data_received": {
+            "count": 8975641,
+            "rate": 93301.51916692994
+        },
+        "http_req_connecting": {
+            "p(95)": 0,
+            "avg": 0.0035894529798323137,
+            "min": 0,
+            "med": 0,
+            "max": 3.15943,
+            "p(90)": 0
+        },
+        "http_req_sending": {
+            "p(90)": 0.0483552,
+            "p(95)": 0.062297799999999987,
+            "avg": 0.023509223430772715,
+            "min": 0.003934,
+            "med": 0.015582,
+            "max": 3.058094
         },
         "checks": {
-            "passes": 213,
+            "passes": 4090,
             "fails": 0,
             "thresholds": {
                 "rate>0.95": false
             },
             "value": 1
         },
-        "http_req_duration": {
-            "max": 928.797459,
-            "p(90)": 116.79859400000001,
-            "p(95)": 368.0775162,
-            "avg": 67.16782207480314,
-            "min": 8.639237,
-            "med": 19.6365585,
-            "thresholds": {
-                "p(95)<1500": false
-            }
-        },
         "http_req_duration{expected_response:true}": {
-            "avg": 67.16782207480314,
-            "min": 8.639237,
-            "med": 19.6365585,
-            "max": 928.797459,
-            "p(90)": 116.79859400000001,
-            "p(95)": 368.0775162
-        },
-        "iterations": {
-            "count": 105,
-            "rate": 4.924145638809839
-        },
-        "http_req_duration{flow:group_creation}": {
-            "avg": 32.29597379411764,
-            "min": 18.624872,
-            "med": 32.211566499999996,
-            "max": 98.431817,
-            "p(90)": 42.22331,
-            "p(95)": 49.492138499999996,
-            "thresholds": {
-                "p(95)<1800": false
-            }
-        },
-        "http_req_waiting": {
-            "max": 928.184158,
-            "p(90)": 115.37851410000003,
-            "p(95)": 367.57157865,
-            "avg": 66.59796158661416,
-            "min": 8.301606,
-            "med": 19.229742
-        },
-        "http_req_duration{flow:project_verification}": {
-            "min": 14.625007,
-            "med": 193.64863100000002,
-            "max": 928.797459,
-            "p(90)": 458.63205700000003,
-            "p(95)": 711.3628280999995,
-            "avg": 246.04323914285715,
-            "thresholds": {
-                "p(95)<2500": false
-            }
-        },
-        "http_req_failed": {
-            "passes": 0,
-            "fails": 254,
-            "thresholds": {
-                "rate<0.05": false
-            },
-            "value": 0
-        },
-        "http_req_blocked": {
-            "max": 6.588972,
-            "p(90)": 0.008367500000000003,
-            "p(95)": 0.010605249999999997,
-            "avg": 0.039279811023622026,
-            "min": 0.001625,
-            "med": 0.004909
-        },
-        "data_received": {
-            "count": 518969,
-            "rate": 24337.89464788098
-        },
-        "http_req_receiving": {
-            "min": 0.045662,
-            "med": 0.29774,
-            "max": 49.808706,
-            "p(90)": 0.6300138000000001,
-            "p(95)": 0.7282739999999999,
-            "avg": 0.5366623818897637
-        },
-        "data_sent": {
-            "count": 187544,
-            "rate": 8795.180663666213
+            "avg": 48.625067244615664,
+            "min": 3.507529,
+            "med": 9.020553,
+            "max": 881.023659,
+            "p(90)": 104.528086,
+            "p(95)": 226.03596499999998
         }
     },
     "setup_data": {
-        "token": "eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiJiNmVjYjY2Ni0wMTg4LTQwNzctOTVjMS1jNmI3NmVlMzFmZGIiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjIiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzczMjkwODM1LCJleHAiOjE3NzMyOTE3MzV9.omzofA1A1HRTGe8KOXvc7I6vDXaBx8JB-3RJZE4fB2aHCMQXL4VYobKV-SQ6ZBitOpdOZT19JmftjuBdXqtBfiYxovihSmEH1jE8I0bP1QvYJrezQVdu4hKKY-u89M6zRNJXrdCVfdBkSRirF9qj4402arCMaSmhuIB9q0ieLSqS1HJNP-0aBwVyU2B7wBQPTXqDr2HOBfazaA5qvLIBF9N76PelPF8B5OjGHGf1BjEZCOK4DpbDtj9W5jIlJSvpzf1zSkEpUtbilDblFf0yuRvG3Tq3Z5slJdYD89esg6EjfdkuH9ue7_mlOpKUkSnVDJqobXMVd7wiVir9hhBmkw",
-        "groupId": 139,
-        "lecturerId": 232,
-        "projectConfigId": "870cee71-a33f-4cd1-a520-b37849f1b3b7",
-        "semesterId": 23
+        "lecturerId": 1351,
+        "projectConfigId": "37f2769d-917c-4f10-87e2-8edb58e574d9",
+        "semesterId": 15,
+        "token": "eyJ0eXAiOiJKV1QiLCJraWQiOiJpZGVudGl0eS1sb2NhbC0xIiwiYWxnIjoiUlMyNTYifQ.eyJqdGkiOiI5OWY1NjJhOC0zYzQyLTQxOWUtYWNjZS0zNjM0NGZlMjE3M2UiLCJpc3MiOiJpZGVudGl0eS1zZXJ2aWNlIiwiYXVkIjpbImFwaS1nYXRld2F5Il0sInN1YiI6IjIiLCJlbWFpbCI6ImFkbWluQHNhbXQubG9jYWwiLCJyb2xlcyI6WyJBRE1JTiJdLCJ0b2tlbl90eXBlIjoiQUNDRVNTIiwiaWF0IjoxNzczNTY3MDk1LCJleHAiOjE3NzM1Njc5OTV9.q2ndvc90Srre8Ilx4_Xked7PitKt7U_FRzGzGdJY7GJSghatc018We_uUbP0Y2L2F0Q0qBlwpLX7KxDhHVBia9UGOSZOglqkKa6B3AnToR2vRjQVnVL1ECBQ_PtGU1sCaILaF4s8eSRvptZfpY4PX108zCYCGJdPx638-De6sNFZv0N4HFvmPS7Q6hWamvdYXEX1GYaahf6Oe2AGW92SdY4o2SvKk_G8odZV_agkAhR6Cc9DmQKsEfiu1JWuOyIFCoZz07W10LqE90RklvGQ7QrwDqpocivqoXZmOSW7qzVMvP1M1KMIe3xy9OYBPHWmmaVEBdUtTQLuE8CZqRLcIw",
+        "groupId": 1227
     },
     "root_group": {
-        "checks": {
-            "login remains healthy under load": {
-                "fails": 0,
-                "name": "login remains healthy under load",
-                "path": "::login remains healthy under load",
-                "id": "95ab88f3c7a9f2ff0ef462b4b6f2848d",
-                "passes": 36
-            },
-            "group creation is healthy": {
-                "passes": 17,
-                "fails": 0,
-                "name": "group creation is healthy",
-                "path": "::group creation is healthy",
-                "id": "3b5b5e7c6ce5020961c2dee7398cfab5"
-            },
-            "created group is readable": {
-                "passes": 17,
-                "fails": 0,
-                "name": "created group is readable",
-                "path": "::created group is readable",
-                "id": "918c15ccdcd2e5f4906c1a7d0391600b"
-            }
-        },
         "name": "",
         "path": "",
         "id": "d41d8cd98f00b204e9800998ecf8427e",
         "groups": {
             "setup": {
-                "name": "setup",
-                "path": "::setup",
                 "id": "5c0f8025f7e0b6654089e5b00e950f1a",
                 "groups": {},
                 "checks": {
                         "setup login succeeded": {
-                            "name": "setup login succeeded",
-                            "path": "::setup::setup login succeeded",
                             "id": "b4a2b4eed360da13f2dd967da0640c51",
                             "passes": 1,
-                            "fails": 0
+                            "fails": 0,
+                            "name": "setup login succeeded",
+                            "path": "::setup::setup login succeeded"
                         }
-                    }
+                    },
+                "name": "setup",
+                "path": "::setup"
             },
             "profile-retrieval": {
+                "name": "profile-retrieval",
+                "path": "::profile-retrieval",
+                "id": "0ff05c3035d758df7cf55ae9f79807b2",
                 "groups": {},
                 "checks": {
                         "profile retrieval is healthy": {
-                            "name": "profile retrieval is healthy",
-                            "path": "::profile-retrieval::profile retrieval is healthy",
                             "id": "04e4dbc78c6ae6d1c3798b80e2610ffb",
-                            "passes": 38,
-                            "fails": 0
+                            "passes": 1031,
+                            "fails": 0,
+                            "name": "profile retrieval is healthy",
+                            "path": "::profile-retrieval::profile retrieval is healthy"
                         },
                         "groups retrieval is healthy": {
-                            "passes": 38,
+                            "id": "c3a4ce9dc7373460e7f880bbd4dd971e",
+                            "passes": 1031,
                             "fails": 0,
                             "name": "groups retrieval is healthy",
-                            "path": "::profile-retrieval::groups retrieval is healthy",
-                            "id": "c3a4ce9dc7373460e7f880bbd4dd971e"
+                            "path": "::profile-retrieval::groups retrieval is healthy"
                         },
                         "semesters retrieval is healthy": {
                             "path": "::profile-retrieval::semesters retrieval is healthy",
                             "id": "35997a082fed415f06ce39b062c36902",
-                            "passes": 38,
+                            "passes": 1031,
                             "fails": 0,
                             "name": "semesters retrieval is healthy"
                         }
-                    },
-                "name": "profile-retrieval",
-                "path": "::profile-retrieval",
-                "id": "0ff05c3035d758df7cf55ae9f79807b2"
+                    }
             },
             "project-config-verification": {
+                "name": "project-config-verification",
                 "path": "::project-config-verification",
                 "id": "a7473cec1527354d4ac18b6923ff87fa",
                 "groups": {},
@@ -258,18 +236,40 @@
                             "name": "project config verification is healthy",
                             "path": "::project-config-verification::project config verification is healthy",
                             "id": "a888672eba5c7ff81dfd73a8e1b04d78",
-                            "passes": 14,
+                            "passes": 110,
                             "fails": 0
                         },
                         "project config remains readable": {
-                            "id": "bc4741f9480e92937ec4b6ef9832d5dc",
-                            "passes": 14,
-                            "fails": 0,
                             "name": "project config remains readable",
-                            "path": "::project-config-verification::project config remains readable"
+                            "path": "::project-config-verification::project config remains readable",
+                            "id": "bc4741f9480e92937ec4b6ef9832d5dc",
+                            "passes": 110,
+                            "fails": 0
                         }
-                    },
-                "name": "project-config-verification"
+                    }
+            }
+        },
+        "checks": {
+            "login remains healthy under load": {
+                "fails": 0,
+                "name": "login remains healthy under load",
+                "path": "::login remains healthy under load",
+                "id": "95ab88f3c7a9f2ff0ef462b4b6f2848d",
+                "passes": 462
+            },
+            "group creation is healthy": {
+                "name": "group creation is healthy",
+                "path": "::group creation is healthy",
+                "id": "3b5b5e7c6ce5020961c2dee7398cfab5",
+                "passes": 158,
+                "fails": 0
+            },
+            "created group is readable": {
+                "name": "created group is readable",
+                "path": "::created group is readable",
+                "id": "918c15ccdcd2e5f4906c1a7d0391600b",
+                "passes": 156,
+                "fails": 0
             }
         }
     }
