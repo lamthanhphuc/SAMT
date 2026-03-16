@@ -2,7 +2,7 @@ FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
-COPY identity-service/target/*.jar /app/app.jar
+COPY services/identity-service/target/*.jar /app/app.jar
 
 EXPOSE 8081
 

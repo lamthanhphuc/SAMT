@@ -1,4 +1,4 @@
-﻿version: "3.9"
+version: "3.9"
 
 # ==============================================
 # SAMT MICROSERVICES - SECURE OVERRIDES
@@ -88,4 +88,6 @@ services:
 secrets:
   redis_password:
     file: ../../secrets/redis_password
+
+
 

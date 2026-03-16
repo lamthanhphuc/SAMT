@@ -1,13 +1,13 @@
-﻿# ==============================================
+# ==============================================
 # SAMT MICROSERVICES - DOCKER COMPOSE
 # ==============================================
-# â ï¸ Báº®T BUá»˜C: Táº¡o file .env tá»« .env.example trÆ°á»›c khi cháº¡y!
-# â ï¸ KHĂ”NG DĂ™NG default credentials trong Production!
+# Create `.env` from `.env.example` before running.
+# Do not use default credentials in production.
 #
-# Sá»­ dá»¥ng:
-#   1. cp .env.example .env
-#   2. Sá»­a POSTGRES_PASSWORD trong .env
-#   3. docker-compose up -d
+# Usage:
+#   1. Copy `.env.example` to `.env`
+#   2. Set `POSTGRES_PASSWORD` in `.env`
+#   3. Run `docker compose up -d`
 
 services:
 
@@ -22,8 +22,8 @@ services:
       - ../../.env
     environment:
       POSTGRES_DB: ${DB_IDENTITY_NAME:-samt_identity}
-      POSTGRES_USER: ${POSTGRES_USER:?â ï¸ POSTGRES_USER is required - create .env file}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?â ï¸ POSTGRES_PASSWORD is required - create .env file}
+      POSTGRES_USER: ${POSTGRES_USER:? POSTGRES_USER is required - create .env file}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:? POSTGRES_PASSWORD is required - create .env file}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
       - identity_data:/var/lib/postgresql/data
@@ -54,8 +54,8 @@ services:
       - ../../.env
     environment:
       POSTGRES_DB: ${DB_CORE_NAME:-samt_core}
-      POSTGRES_USER: ${POSTGRES_USER:?â ï¸ POSTGRES_USER is required}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?â ï¸ POSTGRES_PASSWORD is required}
+      POSTGRES_USER: ${POSTGRES_USER:? POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:? POSTGRES_PASSWORD is required}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
       - core_data:/var/lib/postgresql/data
@@ -86,8 +86,8 @@ services:
       - ../../.env
     environment:
       POSTGRES_DB: ${DB_PROJECTCONFIG_NAME:-projectconfig_db}
-      POSTGRES_USER: ${POSTGRES_USER:?â ï¸ POSTGRES_USER is required}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?â ï¸ POSTGRES_PASSWORD is required}
+      POSTGRES_USER: ${POSTGRES_USER:? POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:? POSTGRES_PASSWORD is required}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
       - projectconfig_data:/var/lib/postgresql/data
@@ -118,8 +118,8 @@ services:
       - ../../.env
     environment:
       POSTGRES_DB: ${DB_USERGROUP_NAME:-samt_usergroup}
-      POSTGRES_USER: ${POSTGRES_USER:?â ï¸ POSTGRES_USER is required}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?â ï¸ POSTGRES_PASSWORD is required}
+      POSTGRES_USER: ${POSTGRES_USER:? POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:? POSTGRES_PASSWORD is required}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
       - usergroup_data:/var/lib/postgresql/data
@@ -150,8 +150,8 @@ services:
       - ../../.env
     environment:
       POSTGRES_DB: ${DB_SYNC_NAME:-sync_db}
-      POSTGRES_USER: ${POSTGRES_USER:?â ï¸ POSTGRES_USER is required}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?â ï¸ POSTGRES_PASSWORD is required}
+      POSTGRES_USER: ${POSTGRES_USER:? POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:? POSTGRES_PASSWORD is required}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
       - sync_data:/var/lib/postgresql/data
@@ -182,8 +182,8 @@ services:
       - ../../.env
     environment:
       POSTGRES_DB: ${DB_ANALYSIS_NAME:-samt_analysis}
-      POSTGRES_USER: ${POSTGRES_USER:?â ï¸ POSTGRES_USER is required}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?â ï¸ POSTGRES_PASSWORD is required}
+      POSTGRES_USER: ${POSTGRES_USER:? POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:? POSTGRES_PASSWORD is required}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
       - analysis_data:/var/lib/postgresql/data
@@ -214,8 +214,8 @@ services:
       - ../../.env
     environment:
       POSTGRES_DB: ${DB_REPORT_NAME:-samt_report}
-      POSTGRES_USER: ${POSTGRES_USER:?â ï¸ POSTGRES_USER is required}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?â ï¸ POSTGRES_PASSWORD is required}
+      POSTGRES_USER: ${POSTGRES_USER:? POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:? POSTGRES_PASSWORD is required}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
       - report_data:/var/lib/postgresql/data
@@ -296,7 +296,7 @@ services:
     env_file:
       - ../../.env
     environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?â ï¸ REDIS_PASSWORD is required - create .env file}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:? REDIS_PASSWORD is required - create .env file}
     # SECURITY: avoid passing secrets in process arguments. The password comes from env at runtime
     # and is written into a restrictive config file before starting redis-server.
     command:
@@ -304,7 +304,7 @@ services:
       - -ec
       - |
         umask 077
-        : "${REDIS_PASSWORD:?â ï¸ REDIS_PASSWORD is required - create .env file}"
+        : "${REDIS_PASSWORD:? REDIS_PASSWORD is required - create .env file}"
         printf 'requirepass %s\n' "$${REDIS_PASSWORD}" > /tmp/redis.conf
         exec redis-server /tmp/redis.conf \
           --appendonly yes \
@@ -351,7 +351,7 @@ services:
       SERVER_PORT: 8080
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?â ï¸ REDIS_PASSWORD is required - create .env file}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:? REDIS_PASSWORD is required - create .env file}
       JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms384m -Xmx768m -Dreactor.netty.ioWorkerCount=8 -Dreactor.netty.ioSelectCount=2}
       RATE_LIMIT_GLOBAL_REQUESTS_PER_SECOND: ${RATE_LIMIT_GLOBAL_REQUESTS_PER_SECOND:-400}
       RATE_LIMIT_GLOBAL_BURST_CAPACITY: ${RATE_LIMIT_GLOBAL_BURST_CAPACITY:-800}
@@ -440,7 +440,7 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?â ï¸ REDIS_PASSWORD is required - create .env file}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:? REDIS_PASSWORD is required - create .env file}
       JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
       DB_POOL_SIZE: ${IDENTITY_DB_POOL_SIZE:-30}
       DB_POOL_MIN_IDLE: ${IDENTITY_DB_POOL_MIN_IDLE:-10}
@@ -503,7 +503,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?â ï¸ REDIS_PASSWORD is required - create .env file}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:? REDIS_PASSWORD is required - create .env file}
       JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
     ports:
       - "${USER_GROUP_SERVICE_PORT:-8082}:${USER_GROUP_SERVICE_PORT:-8082}"
@@ -563,8 +563,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?â ï¸ REDIS_PASSWORD is required - create .env file}
-      ENCRYPTION_SECRET_KEY: ${ENCRYPTION_SECRET_KEY:?â ï¸ ENCRYPTION_SECRET_KEY is required - create .env file}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:? REDIS_PASSWORD is required - create .env file}
+      ENCRYPTION_SECRET_KEY: ${ENCRYPTION_SECRET_KEY:? ENCRYPTION_SECRET_KEY is required - create .env file}
       JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms384m -Xmx768m}
       DB_POOL_SIZE: ${PROJECT_CONFIG_DB_POOL_SIZE:-30}
       DB_POOL_MIN_IDLE: ${PROJECT_CONFIG_DB_POOL_MIN_IDLE:-10}
@@ -628,7 +628,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?â ï¸ REDIS_PASSWORD is required - create .env file}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:? REDIS_PASSWORD is required - create .env file}
       JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms384m -Xmx768m}
       DB_POOL_SIZE: ${SYNC_DB_POOL_SIZE:-30}
       DB_POOL_MIN_IDLE: ${SYNC_DB_POOL_MIN_IDLE:-10}
@@ -695,7 +695,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?â ï¸ REDIS_PASSWORD is required - create .env file}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:? REDIS_PASSWORD is required - create .env file}
       JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
     ports:
       - "${ANALYSIS_SERVICE_PORT:-8087}:${ANALYSIS_SERVICE_PORT:-8087}"
@@ -747,7 +747,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?â ï¸ REDIS_PASSWORD is required - create .env file}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:? REDIS_PASSWORD is required - create .env file}
       JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
     ports:
       - "${REPORT_SERVICE_PORT:-8088}:${REPORT_SERVICE_PORT:-8088}"
@@ -801,7 +801,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?â ï¸ REDIS_PASSWORD is required - create .env file}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:? REDIS_PASSWORD is required - create .env file}
       JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
     ports:
       - "${NOTIFICATION_SERVICE_PORT:-8085}:${NOTIFICATION_SERVICE_PORT:-8085}"
@@ -846,7 +846,7 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.20.0.0/16
+        - subnet: 172.31.0.0/16
 
 volumes:
   identity_data:
@@ -867,6 +867,9 @@ volumes:
     driver: local
   kafka_data:
     driver: local
+
+
+
 
 
 

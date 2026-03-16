@@ -8,7 +8,7 @@ FROM eclipse-temurin:21.0.6_7-jre-alpine@sha256:4e9ab608d97796571b1d5bbcd1c9f430
 RUN addgroup -S app && adduser -S -G app -h /app app
 
 WORKDIR /app
-COPY --chown=app:app api-gateway/target/*.jar /app/app.jar
+COPY --chown=app:app services/api-gateway/target/*.jar /app/app.jar
 
 # Minimal container-level healthcheck (can be replaced by orchestration probes)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \

@@ -1,4 +1,4 @@
-﻿version: "3.9"
+version: "3.9"
 
 # ==============================================
 # SAMT MICROSERVICES - IMPLEMENTATION (HARDENED)
@@ -101,4 +101,6 @@ volumes:
     driver: local
   kafka-data:
     driver: local
+
+
 

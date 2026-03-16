@@ -1,7 +1,7 @@
-﻿version: "3.9"
+version: "3.9"
 
 # ==============================================
-# KAFKA (PRODUCTION EXAMPLE) â€” SSL ONLY
+# KAFKA (PRODUCTION EXAMPLE)  SSL ONLY
 # - No PLAINTEXT listeners
 # - No external port publishing
 # - Use SSL or SASL_SSL for all broker/controller traffic
@@ -96,4 +96,6 @@ secrets:
     file: ../../secrets/kafka.keystore.p12
   kafka.truststore.p12:
     file: ../../secrets/kafka.truststore.p12
+
+
 
