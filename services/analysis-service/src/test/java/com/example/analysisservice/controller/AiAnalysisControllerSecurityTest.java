@@ -1,5 +1,6 @@
 package com.example.analysisservice.controller;
 
+import com.example.analysisservice.AnalysisServiceApplication;
 import com.example.analysisservice.dto.request.AiRequest;
 import com.example.analysisservice.service.AiService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -9,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
@@ -21,6 +23,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = AiAnalysisController.class)
+@ContextConfiguration(classes = AnalysisServiceApplication.class)
 @Import(com.example.analysisservice.config.SecurityConfig.class)
 @SuppressWarnings({"deprecation", "removal"})
 class AiAnalysisControllerSecurityTest {

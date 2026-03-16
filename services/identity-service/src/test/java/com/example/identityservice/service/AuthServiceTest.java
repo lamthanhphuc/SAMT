@@ -11,6 +11,7 @@ import com.example.identityservice.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -19,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -122,5 +124,98 @@ class AuthServiceTest {
         verify(auditService).logLoginDenied(activeUser, "Account is locked");
         verify(jwtService, never()).generateAccessToken(any());
         verify(refreshTokenService, never()).createRefreshToken(any());
+    }
+
+    @Test
+    void registerCreatesActiveUserAndReturnsTokens() {
+        when(passwordEncoder.encode(registerRequest.password())).thenReturn("hashed-password");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User saved = invocation.getArgument(0);
+            saved.setId(100L);
+            return saved;
+        });
+        when(jwtService.generateAccessToken(any(User.class))).thenReturn("access-token");
+        when(refreshTokenService.createRefreshToken(any(User.class))).thenReturn("refresh-token");
+
+        var response = authService.register(registerRequest);
+
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(userCaptor.capture());
+        User savedUser = userCaptor.getValue();
+        assertThat(savedUser.getEmail()).isEqualTo(registerRequest.email());
+        assertThat(savedUser.getPasswordHash()).isEqualTo("hashed-password");
+        assertThat(savedUser.getRole()).isEqualTo(User.Role.STUDENT);
+        assertThat(savedUser.getStatus()).isEqualTo(User.Status.ACTIVE);
+        assertThat(response.accessToken()).isEqualTo("access-token");
+        assertThat(response.refreshToken()).isEqualTo("refresh-token");
+        assertThat(response.tokenType()).isEqualTo("Bearer");
+        assertThat(response.expiresIn()).isEqualTo(900);
+        verify(auditService).logUserCreated(any(User.class));
+    }
+
+    @Test
+    void loginRejectsUnknownUser() {
+        when(userRepository.findByEmail(loginRequest.email())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.login(loginRequest))
+            .isInstanceOf(InvalidCredentialsException.class);
+
+        verify(auditService).logLoginFailure(loginRequest.email(), "User not found");
+        verify(passwordEncoder, never()).matches(any(), any());
+        verify(jwtService, never()).generateAccessToken(any());
+    }
+
+    @Test
+    void loginTreatsLockedAccountWithWrongPasswordAsInvalidCredentials() {
+        activeUser.setStatus(User.Status.LOCKED);
+        when(userRepository.findByEmail(loginRequest.email())).thenReturn(Optional.of(activeUser));
+        when(passwordEncoder.matches(loginRequest.password(), activeUser.getPasswordHash())).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.login(loginRequest))
+            .isInstanceOf(InvalidCredentialsException.class);
+
+        verify(auditService).logLoginFailure(loginRequest.email(), "Invalid password");
+        verify(auditService, never()).logLoginDenied(any(User.class), any());
+    }
+
+    @Test
+    void loginReturnsTokensAndExpiresInOnSuccess() {
+        when(userRepository.findByEmail(loginRequest.email())).thenReturn(Optional.of(activeUser));
+        when(passwordEncoder.matches(loginRequest.password(), activeUser.getPasswordHash())).thenReturn(true);
+        when(jwtService.generateAccessToken(activeUser)).thenReturn("access-token");
+        when(refreshTokenService.createRefreshToken(activeUser)).thenReturn("refresh-token");
+
+        var response = authService.login(loginRequest);
+
+        assertThat(response.accessToken()).isEqualTo("access-token");
+        assertThat(response.refreshToken()).isEqualTo("refresh-token");
+        assertThat(response.tokenType()).isEqualTo("Bearer");
+        assertThat(response.expiresIn()).isEqualTo(900);
+        verify(auditService).logLoginSuccess(activeUser);
+    }
+
+    @Test
+    void loginDoesNotIssueTokensWhenLocked() {
+        activeUser.setStatus(User.Status.LOCKED);
+        when(userRepository.findByEmail(loginRequest.email())).thenReturn(Optional.of(activeUser));
+        when(passwordEncoder.matches(loginRequest.password(), activeUser.getPasswordHash())).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.login(loginRequest))
+            .isInstanceOf(AccountLockedException.class);
+
+        verify(jwtService, never()).generateAccessToken(any(User.class));
+        verify(refreshTokenService, never()).createRefreshToken(any(User.class));
+    }
+
+    @Test
+    void registerDoesNotGenerateTokensWhenSaveFails() {
+        when(passwordEncoder.encode(registerRequest.password())).thenReturn("hashed-password");
+        when(userRepository.save(any(User.class))).thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        assertThatThrownBy(() -> authService.register(registerRequest))
+            .isInstanceOf(EmailAlreadyExistsException.class);
+
+        verify(jwtService, never()).generateAccessToken(any(User.class));
+        verify(refreshTokenService, never()).createRefreshToken(any(User.class));
     }
 }

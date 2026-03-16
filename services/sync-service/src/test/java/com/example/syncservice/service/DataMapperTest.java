@@ -4,16 +4,16 @@ import com.example.syncservice.dto.GithubCommitDto;
 import com.example.syncservice.dto.JiraIssueDto;
 import com.example.syncservice.entity.UnifiedActivity;
 import com.example.syncservice.metrics.SyncMetrics;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 
 class DataMapperTest {
 
-    private final DataMapper dataMapper = new DataMapper(mock(SyncMetrics.class));
+    private final DataMapper dataMapper = new DataMapper(new SyncMetrics(new SimpleMeterRegistry()));
 
     @Test
     void githubCommitToUnifiedActivity_usesFirstLineForTitle_andFullMessageForDescription() {
