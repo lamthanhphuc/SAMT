@@ -6,6 +6,7 @@ import com.example.reportservice.repository.GithubCommitRepository;
 import com.example.reportservice.repository.JiraIssueRepository;
 import com.example.reportservice.repository.SyncJobRepository;
 import com.example.reportservice.repository.UnifiedActivityRepository;
+import com.example.reportservice.service.JiraService;
 import com.example.reportservice.service.impl.DashboardReportingServiceImpl;
 import com.example.reportservice.web.UpstreamServiceException;
 import org.junit.jupiter.api.Test;
@@ -40,6 +41,9 @@ class DashboardReportingServiceImplTest {
     @Mock
     private SyncJobRepository syncJobRepository;
 
+    @Mock
+    private JiraService jiraService;
+
     @InjectMocks
     private DashboardReportingServiceImpl service;
 
@@ -57,7 +61,7 @@ class DashboardReportingServiceImplTest {
     @Test
     void getStudentTasksShouldReturnEmptyPageWhenMembershipNotFound() {
         when(userGroupClient.getUserProfile(202L)).thenReturn(
-            new UserGroupClient.UserProfile(202L, "student@example.com", "Student Name")
+            new UserGroupClient.UserProfile(202L, "student@example.com", "Student Name", null)
         );
         when(userGroupClient.getUserGroups(202L)).thenReturn(List.of());
 

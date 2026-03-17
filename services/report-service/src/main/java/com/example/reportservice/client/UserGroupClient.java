@@ -20,6 +20,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import jakarta.persistence.EntityNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Component
 @RequiredArgsConstructor
@@ -63,12 +64,54 @@ public class UserGroupClient {
             .buildAndExpand(groupId)
             .toUriString();
         JsonNode data = get(url).path("data");
+        List<Long> memberUserIds = new ArrayList<>();
+        List<GroupMember> membersDetailed = new ArrayList<>();
+        JsonNode members = data.path("members");
+        if (members.isArray()) {
+            for (JsonNode member : members) {
+                JsonNode userIdNode = member.path("userId");
+                Long userId = null;
+                if (userIdNode.canConvertToLong()) {
+                    userId = userIdNode.asLong();
+                } else {
+                    JsonNode nestedIdNode = member.path("user").path("id");
+                    if (nestedIdNode.canConvertToLong()) {
+                        userId = nestedIdNode.asLong();
+                    }
+                }
+
+                if (userId != null) {
+                    memberUserIds.add(userId);
+                }
+
+                String fullName = textOrNull(member.path("fullName"));
+                String email = textOrNull(member.path("email"));
+                JsonNode userNode = member.path("user");
+                if (fullName == null) {
+                    fullName = textOrNull(userNode.path("fullName"));
+                }
+                if (email == null) {
+                    email = textOrNull(userNode.path("email"));
+                }
+                String jiraAccountId = textOrNull(member.path("jiraAccountId"));
+                if (jiraAccountId == null) {
+                    jiraAccountId = textOrNull(userNode.path("jiraAccountId"));
+                }
+                String role = textOrNull(member.path("role"));
+                if (role == null) {
+                    role = textOrNull(member.path("groupRole"));
+                }
+                membersDetailed.add(new GroupMember(userId, email, fullName, role, jiraAccountId));
+            }
+        }
         return new GroupDetail(
             data.path("id").asLong(),
             data.path("groupName").asText(),
             data.path("semesterId").asLong(),
             data.path("memberCount").asLong(),
-            data.path("lecturer").path("id").asLong()
+            data.path("lecturer").path("id").asLong(),
+            memberUserIds.stream().filter(Objects::nonNull).distinct().toList(),
+            membersDetailed.stream().filter(item -> item.userId() != null).toList()
         );
     }
 
@@ -81,7 +124,8 @@ public class UserGroupClient {
         return new UserProfile(
             data.path("id").asLong(),
             data.path("email").asText(),
-            data.path("fullName").asText()
+            data.path("fullName").asText(),
+            textOrNull(data.path("jiraAccountId"))
         );
     }
 
@@ -141,6 +185,17 @@ public class UserGroupClient {
         }
     }
 
+    private String textOrNull(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+        String value = node.asText(null);
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value;
+    }
+
     public record GroupSummary(
         Long groupId,
         String groupName,
@@ -155,14 +210,26 @@ public class UserGroupClient {
         String groupName,
         Long semesterId,
         Long memberCount,
-        Long lecturerId
+        Long lecturerId,
+        List<Long> memberUserIds,
+        List<GroupMember> members
+    ) {
+    }
+
+    public record GroupMember(
+        Long userId,
+        String email,
+        String fullName,
+        String role,
+        String jiraAccountId
     ) {
     }
 
     public record UserProfile(
         Long userId,
         String email,
-        String fullName
+        String fullName,
+        String jiraAccountId
     ) {
     }
 

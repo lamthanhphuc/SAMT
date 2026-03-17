@@ -1,8 +1,12 @@
 package com.example.syncservice.client.grpc;
 
 import com.example.syncservice.client.grpc.*;
+import com.example.syncservice.entity.GithubCommit;
 import com.example.syncservice.entity.JiraIssue;
+import com.example.syncservice.entity.UnifiedActivity;
+import com.example.syncservice.repository.GithubCommitRepository;
 import com.example.syncservice.repository.JiraIssueRepository;
+import com.example.syncservice.repository.UnifiedActivityRepository;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +20,8 @@ import java.util.UUID;
 public class SyncGrpcService extends SyncServiceGrpc.SyncServiceImplBase {
 
     private final JiraIssueRepository jiraIssueRepository;
+    private final GithubCommitRepository githubCommitRepository;
+    private final UnifiedActivityRepository unifiedActivityRepository;
 
     @Override
     public void getIssuesByProjectConfig(
@@ -23,15 +29,8 @@ public class SyncGrpcService extends SyncServiceGrpc.SyncServiceImplBase {
             StreamObserver<IssueListResponse> responseObserver) {
 
         try {
-            UUID projectConfigId;
-            try {
-                projectConfigId = UUID.fromString(request.getProjectConfigId());
-            } catch (IllegalArgumentException ex) {
-                responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                        .withDescription("projectConfigId must be a valid UUID")
-                        .asRuntimeException()
-                );
+            UUID projectConfigId = parseProjectConfigId(request, responseObserver);
+            if (projectConfigId == null) {
                 return;
             }
 
@@ -56,6 +55,8 @@ public class SyncGrpcService extends SyncServiceGrpc.SyncServiceImplBase {
                                 .setAssigneeName(nullSafe(issue.getAssigneeName()))
                                 .setReporterEmail(nullSafe(issue.getReporterEmail()))
                                 .setReporterName(nullSafe(issue.getReporterName()))
+                        .setCreatedAt(issue.getCreatedAt() == null ? "" : issue.getCreatedAt().toString())
+                        .setUpdatedAt(issue.getUpdatedAt() == null ? "" : issue.getUpdatedAt().toString())
                                 .build()
                 );
             }
@@ -71,6 +72,100 @@ public class SyncGrpcService extends SyncServiceGrpc.SyncServiceImplBase {
                             .withCause(ex)
                             .asRuntimeException()
             );
+        }
+    }
+
+    @Override
+    public void getGithubCommitsByProjectConfig(
+            ProjectConfigRequest request,
+            StreamObserver<GithubCommitListResponse> responseObserver) {
+
+        try {
+            UUID projectConfigId = parseProjectConfigId(request, responseObserver);
+            if (projectConfigId == null) {
+                return;
+            }
+
+            List<GithubCommit> commits = githubCommitRepository.findByProjectConfigIdAndDeletedAtIsNull(projectConfigId);
+            GithubCommitListResponse.Builder response = GithubCommitListResponse.newBuilder();
+
+            for (GithubCommit commit : commits) {
+                response.addCommits(
+                    GithubCommitResponse.newBuilder()
+                        .setCommitSha(nullSafe(commit.getCommitSha()))
+                        .setMessage(nullSafe(commit.getMessage()))
+                        .setCommittedDate(commit.getCommittedDate() == null ? "" : commit.getCommittedDate().toString())
+                        .setAuthorEmail(nullSafe(commit.getAuthorEmail()))
+                        .setAuthorName(nullSafe(commit.getAuthorName()))
+                        .build()
+                );
+            }
+
+            responseObserver.onNext(response.build());
+            responseObserver.onCompleted();
+        } catch (Exception ex) {
+            responseObserver.onError(
+                Status.INTERNAL
+                    .withDescription("Failed to fetch github commits")
+                    .withCause(ex)
+                    .asRuntimeException()
+            );
+        }
+    }
+
+    @Override
+    public void getUnifiedActivitiesByProjectConfig(
+            ProjectConfigRequest request,
+            StreamObserver<UnifiedActivityListResponse> responseObserver) {
+
+        try {
+            UUID projectConfigId = parseProjectConfigId(request, responseObserver);
+            if (projectConfigId == null) {
+                return;
+            }
+
+            List<UnifiedActivity> activities = unifiedActivityRepository.findByProjectConfigIdAndDeletedAtIsNull(projectConfigId);
+            UnifiedActivityListResponse.Builder response = UnifiedActivityListResponse.newBuilder();
+
+            for (UnifiedActivity activity : activities) {
+                response.addActivities(
+                    UnifiedActivityResponse.newBuilder()
+                        .setSource(activity.getSource() == null ? "" : activity.getSource().name())
+                        .setActivityType(activity.getActivityType() == null ? "" : activity.getActivityType().name())
+                        .setExternalId(nullSafe(activity.getExternalId()))
+                        .setTitle(nullSafe(activity.getTitle()))
+                        .setDescription(nullSafe(activity.getDescription()))
+                        .setAuthorEmail(nullSafe(activity.getAuthorEmail()))
+                        .setAuthorName(nullSafe(activity.getAuthorName()))
+                        .setStatus(nullSafe(activity.getStatus()))
+                        .setCreatedAt(activity.getCreatedAt() == null ? "" : activity.getCreatedAt().toString())
+                        .setUpdatedAt(activity.getUpdatedAt() == null ? "" : activity.getUpdatedAt().toString())
+                        .build()
+                );
+            }
+
+            responseObserver.onNext(response.build());
+            responseObserver.onCompleted();
+        } catch (Exception ex) {
+            responseObserver.onError(
+                Status.INTERNAL
+                    .withDescription("Failed to fetch unified activities")
+                    .withCause(ex)
+                    .asRuntimeException()
+            );
+        }
+    }
+
+    private UUID parseProjectConfigId(ProjectConfigRequest request, StreamObserver<?> responseObserver) {
+        try {
+            return UUID.fromString(request.getProjectConfigId());
+        } catch (IllegalArgumentException ex) {
+            responseObserver.onError(
+                Status.INVALID_ARGUMENT
+                    .withDescription("projectConfigId must be a valid UUID")
+                    .asRuntimeException()
+            );
+            return null;
         }
     }
 

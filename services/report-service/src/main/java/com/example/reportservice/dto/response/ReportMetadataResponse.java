@@ -19,8 +19,8 @@ public class ReportMetadataResponse {
     @Schema(format = "uuid")
     private UUID reportId;
 
-    @Schema(example = "42")
-    private Long projectConfigId;
+    @Schema(example = "4d783f6c-79ef-4db5-9b0f-df6f18fcb2e3")
+    private String projectConfigId;
 
     @Schema(example = "SRS")
     private String type;

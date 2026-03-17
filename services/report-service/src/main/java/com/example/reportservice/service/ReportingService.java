@@ -7,12 +7,16 @@ import com.example.reportservice.entity.Report;
 import com.example.reportservice.entity.ReportType;
 import com.example.reportservice.exporter.IReportExporter;
 import com.example.reportservice.exporter.ReportFactory;
+import com.example.reportservice.grpc.GithubCommitResponse;
 import com.example.reportservice.grpc.IssueResponse;
 import com.example.reportservice.grpc.SyncGrpcClient;
+import com.example.reportservice.grpc.UnifiedActivityResponse;
 import com.example.reportservice.web.BadRequestException;
 import com.example.reportservice.repository.ReportRepository;
+import com.example.reportservice.repository.SyncJobRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.data.domain.Page;
@@ -28,32 +32,41 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ReportingService {
 
         private static final String REPORT_STATUS_COMPLETED = "COMPLETED";
         private static final MediaType DOCX_MEDIA_TYPE = MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        private static final int MIN_EVIDENCE_THRESHOLD = 5;
+        private static final List<String> SRS_RELEVANT_SYNC_TYPES = List.of("JIRA_ISSUES", "GITHUB_COMMITS");
+        private static final String DEGRADED_STATUS = "PARTIAL_FAILURE";
 
     private final SyncGrpcClient syncClient;
     private final RawSrsBuilder rawBuilder;
     private final AiClient aiClient;
     private final ReportFactory reportFactory;
     private final ReportRepository reportRepository;
+        private final SyncJobRepository syncJobRepository;
         private final TransactionTemplate transactionTemplate;
 
     public ReportResponse generate(
-            Long projectConfigId,
+            String projectConfigId,
             String subject,
             boolean useAi,
             String exportType) {
 
-                if (projectConfigId == null || projectConfigId <= 0) {
-                        throw new BadRequestException("projectConfigId must be a positive number");
+                if (projectConfigId == null || projectConfigId.isBlank()) {
+                        throw new BadRequestException("projectConfigId is required");
                 }
 
                 if (subject == null || subject.isBlank()) {
@@ -62,20 +75,43 @@ public class ReportingService {
 
         UUID createdBy = toCreatedBy(subject);
 
-        // 1️⃣ Call Sync
-        List<IssueResponse> issues =
-                syncClient.getIssues(projectConfigId);
+        String normalizedProjectConfigId = projectConfigId.trim();
+
+        List<IssueResponse> issues = fetchIssuesByProjectConfigId(normalizedProjectConfigId);
 
         if (issues.isEmpty()) {
                         throw new BadRequestException("No issues found for project configuration");
         }
 
+        UUID uuidProjectConfigId = tryParseUuid(normalizedProjectConfigId);
+        List<GithubCommitResponse> commits = uuidProjectConfigId == null
+                ? List.of()
+                : syncClient.getGithubCommits(uuidProjectConfigId);
+        List<UnifiedActivityResponse> activities = uuidProjectConfigId == null
+                ? List.of()
+                : syncClient.getUnifiedActivities(uuidProjectConfigId);
+
+        List<EvidenceBlock> evidenceBlocks = buildEvidenceBlocks(issues, commits, activities);
+        evidenceBlocks.sort(Comparator
+                .comparing(this::extractTimestampOrMin, Comparator.reverseOrder())
+                .thenComparing(EvidenceBlock::sourceId, Comparator.nullsLast(String::compareTo)));
+
         // 2️⃣ Build raw SRS
-        String rawText = rawBuilder.build(issues);
+        String rawText = rawBuilder.build(evidenceBlocks);
 
         // 3️⃣ AI enhancement
-        String finalText =
-                useAi ? aiClient.generateSrs(rawText) : rawText;
+        String finalText = rawText;
+        if (useAi) {
+                if (isDataInsufficient(uuidProjectConfigId, evidenceBlocks)) {
+                        throw new BadRequestException("INSUFFICIENT_DATA: Not enough high-quality evidence to generate SRS");
+                }
+                try {
+                        finalText = aiClient.generateSrs(rawText);
+                } catch (AiClient.TransientAiUpstreamException ex) {
+                        log.warn("AI service temporarily unavailable, fallback to raw SRS content", ex);
+                        finalText = rawText;
+                }
+        }
 
         // 4️⃣ Export
         IReportExporter exporter =
@@ -87,7 +123,7 @@ public class ReportingService {
         return transactionTemplate.execute(status -> {
                         LocalDateTime createdAt = LocalDateTime.now();
             Report report = Report.builder()
-                    .projectConfigId(projectConfigId)
+                    .projectConfigId(normalizedProjectConfigId)
                     .type(ReportType.SRS)
                     .filePath(filePath)
                                         .createdBy(createdBy)
@@ -104,10 +140,10 @@ public class ReportingService {
                 return toMetadataResponse(findReport(reportId));
         }
 
-        public PageResponse<ReportMetadataResponse> listReports(Long projectConfigId, String type, UUID createdBy, int page, int size) {
+        public PageResponse<ReportMetadataResponse> listReports(String projectConfigId, String type, UUID createdBy, int page, int size) {
                 Specification<Report> specification = (root, query, builder) -> builder.conjunction();
 
-                if (projectConfigId != null) {
+                if (projectConfigId != null && !projectConfigId.isBlank()) {
                         specification = specification.and((root, query, builder) -> builder.equal(root.get("projectConfigId"), projectConfigId));
                 }
 
@@ -199,6 +235,136 @@ public class ReportingService {
                 } catch (IllegalArgumentException ignored) {
                         return UUID.nameUUIDFromBytes(("user:" + subject).getBytes(StandardCharsets.UTF_8));
                 }
+        }
+
+        private List<IssueResponse> fetchIssuesByProjectConfigId(String projectConfigId) {
+                try {
+                        return syncClient.getIssues(UUID.fromString(projectConfigId));
+                } catch (IllegalArgumentException ignored) {
+                }
+
+                try {
+                        long numericId = Long.parseLong(projectConfigId);
+                        if (numericId <= 0) {
+                                throw new NumberFormatException("projectConfigId must be positive");
+                        }
+                        return syncClient.getIssues(numericId);
+                } catch (NumberFormatException ex) {
+                        throw new BadRequestException("projectConfigId must be a valid UUID or positive number");
+                }
+        }
+
+        private boolean isDataInsufficient(UUID projectConfigId, List<EvidenceBlock> evidenceBlocks) {
+                boolean notEnoughEvidence = evidenceBlocks.size() < MIN_EVIDENCE_THRESHOLD;
+                boolean degraded = projectConfigId != null && syncJobRepository
+                        .existsByProjectConfigIdAndJobTypeInAndStatus(projectConfigId, SRS_RELEVANT_SYNC_TYPES, DEGRADED_STATUS);
+                return degraded || notEnoughEvidence;
+        }
+
+        private UUID tryParseUuid(String value) {
+                try {
+                        return UUID.fromString(value);
+                } catch (IllegalArgumentException ignored) {
+                        return null;
+                }
+        }
+
+        private List<EvidenceBlock> buildEvidenceBlocks(
+                List<IssueResponse> issues,
+                List<GithubCommitResponse> commits,
+                List<UnifiedActivityResponse> activities
+        ) {
+                List<EvidenceBlock> result = new ArrayList<>();
+
+                for (IssueResponse issue : issues) {
+                        String sourceId = firstNonBlank(issue.getIssueKey(), issue.getIssueId(), "ISSUE-UNKNOWN");
+                        result.add(EvidenceBlock.builder()
+                                .sourceType("ISSUE")
+                                .sourceId(sourceId)
+                                .summary(defaultText(issue.getSummary(), sourceId))
+                                .description(defaultText(issue.getDescription(), issue.getSummary()))
+                                .status(defaultText(issue.getStatus(), "UNKNOWN"))
+                                .timestamp(firstNonBlank(issue.getUpdatedAt(), issue.getCreatedAt()))
+                                .build());
+                }
+
+                for (GithubCommitResponse commit : commits) {
+                        String sourceId = firstNonBlank(commit.getCommitSha(), "COMMIT-UNKNOWN");
+                        String summary = firstLine(defaultText(commit.getMessage(), sourceId));
+                        result.add(EvidenceBlock.builder()
+                                .sourceType("COMMIT")
+                                .sourceId(sourceId)
+                                .summary(summary)
+                                .description(defaultText(commit.getMessage(), summary))
+                                .status("COMMITTED")
+                                .timestamp(commit.getCommittedDate())
+                                .build());
+                }
+
+                for (UnifiedActivityResponse activity : activities) {
+                        String sourceId = firstNonBlank(activity.getExternalId(), "ACTIVITY-UNKNOWN");
+                        result.add(EvidenceBlock.builder()
+                                .sourceType("ACTIVITY")
+                                .sourceId(sourceId)
+                                .summary(defaultText(activity.getTitle(), sourceId))
+                                .description(defaultText(activity.getDescription(), activity.getTitle()))
+                                .status(defaultText(activity.getStatus(), "UNKNOWN"))
+                                .timestamp(firstNonBlank(activity.getUpdatedAt(), activity.getCreatedAt()))
+                                .build());
+                }
+
+                return result;
+        }
+
+        private LocalDateTime extractTimestampOrMin(EvidenceBlock evidenceBlock) {
+                if (evidenceBlock.timestamp() == null || evidenceBlock.timestamp().isBlank()) {
+                        return LocalDateTime.MIN;
+                }
+
+                String timestamp = evidenceBlock.timestamp().trim();
+                try {
+                        return LocalDateTime.parse(timestamp);
+                } catch (DateTimeParseException ignored) {
+                }
+
+                try {
+                        return OffsetDateTime.parse(timestamp).toLocalDateTime();
+                } catch (DateTimeParseException ignored) {
+                }
+
+                return LocalDateTime.MIN;
+        }
+
+        private String defaultText(String value, String fallback) {
+                String normalized = normalize(value);
+                return normalized != null ? normalized : firstNonBlank(fallback, "N/A");
+        }
+
+        private String firstLine(String value) {
+                String normalized = normalize(value);
+                if (normalized == null) {
+                        return "N/A";
+                }
+                int index = normalized.indexOf('\n');
+                return index >= 0 ? normalized.substring(0, index).trim() : normalized;
+        }
+
+        private String firstNonBlank(String... values) {
+                for (String value : values) {
+                        String normalized = normalize(value);
+                        if (normalized != null) {
+                                return normalized;
+                        }
+                }
+                return null;
+        }
+
+        private String normalize(String value) {
+                if (value == null) {
+                        return null;
+                }
+                String trimmed = value.trim();
+                return trimmed.isEmpty() ? null : trimmed;
         }
 
         private MediaType resolveMediaType(String fileName) {
