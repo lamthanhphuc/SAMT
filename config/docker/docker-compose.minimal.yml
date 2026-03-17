@@ -1,0 +1,185 @@
+services:
+  postgres-sync:
+    image: postgres:15-alpine
+    container_name: postgres-sync-min
+    env_file: ../../.env
+    environment:
+      POSTGRES_DB: ${DB_SYNC_NAME:-sync_db}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5437:5432"
+    volumes:
+      - sync_data_min:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      retries: 5
+
+  postgres-report:
+    image: postgres:15-alpine
+    container_name: postgres-report-min
+    env_file: ../../.env
+    environment:
+      POSTGRES_DB: ${DB_REPORT_NAME:-samt_report}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5439:5432"
+    volumes:
+      - report_data_min:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      retries: 5
+
+  postgres-projectconfig:
+    image: postgres:15-alpine
+    container_name: postgres-projectconfig-min
+    env_file: ../../.env
+    environment:
+      POSTGRES_DB: ${DB_PROJECTCONFIG_NAME:-projectconfig_db}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5435:5432"
+    volumes:
+      - projectconfig_data_min:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      retries: 5
+
+  postgres-analysis:
+    image: postgres:15-alpine
+    container_name: postgres-analysis-min
+    env_file: ../../.env
+    environment:
+      POSTGRES_DB: ${DB_ANALYSIS_NAME:-samt_analysis}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5438:5432"
+    volumes:
+      - analysis_data_min:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis-min
+    env_file: ../../.env
+    command:
+      - sh
+      - -ec
+      - |
+        printf 'requirepass %s\n' "$${REDIS_PASSWORD}" > /tmp/redis.conf
+        redis-server /tmp/redis.conf --appendonly yes --maxmemory 256mb --protected-mode yes --bind 0.0.0.0
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_min:/data
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$${REDIS_PASSWORD}\" redis-cli ping | grep -q PONG"]
+      interval: 10s
+      retries: 5
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-min
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data_min:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 20s
+      retries: 10
+      start_period: 30s
+
+  sync-service:
+    build:
+      context: ../../services/sync-service
+    container_name: sync-service-min
+    env_file: ../../.env
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8083
+      GRPC_SERVER_PORT: 9094
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-sync:5432/${DB_SYNC_NAME}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+    ports:
+      - "8083:8083"
+      - "9094:9094"
+    depends_on:
+      postgres-sync:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../../.local-certs:/certs:ro
+
+  analysis-service:
+    build:
+      context: ../../services/analysis-service
+    container_name: analysis-service-min
+    env_file: ../../.env
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8087
+      AI_BASE_URL: http://ollama:11434
+      AI_MODEL: phi3
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-analysis:5432/${DB_ANALYSIS_NAME}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+    ports:
+      - "8087:8087"
+    depends_on:
+      postgres-analysis:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+
+  report-service:
+    build:
+      context: ../../services/report-service
+    container_name: report-service-min
+    env_file: ../../.env
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8088
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-report:5432/${DB_REPORT_NAME}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      AI_SERVICE_URL: http://analysis-service:8087
+      AI_SERVICE_TIMEOUT_MS: 180000
+    ports:
+      - "8088:8088"
+    depends_on:
+      postgres-report:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      analysis-service:
+        condition: service_healthy
+
+volumes:
+  sync_data_min:
+  report_data_min:
+  projectconfig_data_min:
+  analysis_data_min:
+  redis_data_min:
+  ollama_data_min:
+
+networks:
+  default:
+    name: samt-min-network
+

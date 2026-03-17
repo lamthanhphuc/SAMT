@@ -31,7 +31,7 @@ class ReportControllerUnitTest {
     @Test
     void generateSrsShouldReturnCreatedResponse() {
         ReportRequest request = new ReportRequest();
-        request.setProjectConfigId(5L);
+        request.setProjectConfigId("5");
         request.setUseAi(true);
         request.setExportType("PDF");
 
@@ -39,12 +39,12 @@ class ReportControllerUnitTest {
         Jwt jwt = new Jwt("token", null, null, Map.of("alg", "none"), Map.of("sub", subject));
 
         ReportResponse expected = new ReportResponse(UUID.randomUUID(), "COMPLETED", LocalDateTime.now(), "/api/reports/1/download");
-        when(reportingService.generate(5L, subject, true, "PDF")).thenReturn(expected);
+        when(reportingService.generate("5", subject, true, "PDF")).thenReturn(expected);
 
         var response = reportController.generateSrs(request, jwt);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).isEqualTo(expected);
-        verify(reportingService).generate(5L, subject, true, "PDF");
+        verify(reportingService).generate("5", subject, true, "PDF");
     }
 }

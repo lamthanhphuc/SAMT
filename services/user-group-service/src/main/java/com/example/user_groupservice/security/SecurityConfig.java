@@ -28,9 +28,7 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.firewall.HttpFirewall;
 import org.springframework.security.web.firewall.StrictHttpFirewall;
-import org.springframework.data.redis.core.StringRedisTemplate;
 
-import com.example.common.security.JtiReplayValidator;
 
 import java.time.Duration;
 import java.util.Collection;
@@ -141,8 +139,7 @@ public class SecurityConfig {
     @Bean
     public JwtDecoder jwtDecoder(
         @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}") String jwkSetUri,
-        InternalJwtValidationProperties internalJwtValidationProperties,
-        StringRedisTemplate redisTemplate
+        InternalJwtValidationProperties internalJwtValidationProperties
     ) {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
 
@@ -178,8 +175,7 @@ public class SecurityConfig {
             timestampValidator,
             serviceClaimValidator,
             jtiRequiredValidator,
-            kidRequiredValidator,
-            new JtiReplayValidator(redisTemplate, Duration.ofSeconds(60))
+            kidRequiredValidator
         );
 
         decoder.setJwtValidator(validator);

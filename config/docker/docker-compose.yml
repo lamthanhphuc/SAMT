@@ -334,6 +334,26 @@ services:
       start_period: 5s
     restart: unless-stopped
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    environment:
+      OLLAMA_NUM_PARALLEL: 1
+      OLLAMA_MAX_LOADED_MODELS: 1
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - samt-network
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
   # ========================================
   #   APPLICATION SERVICES
   # ========================================
@@ -690,6 +710,9 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
       SERVER_PORT: ${ANALYSIS_SERVICE_PORT:-8087}
+      AI_BASE_URL: ${AI_BASE_URL:-http://ollama:11434}
+      AI_MODEL: ${AI_MODEL:-phi3}
+      AI_TIMEOUT_MS: ${AI_TIMEOUT_MS:-120000}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-analysis:5432/${DB_ANALYSIS_NAME:-samt_analysis}?serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
@@ -705,6 +728,8 @@ services:
       postgres-analysis:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      ollama:
         condition: service_healthy
     networks:
       - samt-network
@@ -748,6 +773,8 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:? REDIS_PASSWORD is required - create .env file}
+      AI_SERVICE_URL: http://analysis-service:8087
+      AI_SERVICE_TIMEOUT_MS: ${AI_SERVICE_TIMEOUT_MS:-180000}
       JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
     ports:
       - "${REPORT_SERVICE_PORT:-8088}:${REPORT_SERVICE_PORT:-8088}"
@@ -866,6 +893,8 @@ volumes:
   redis_data:
     driver: local
   kafka_data:
+    driver: local
+  ollama_data:
     driver: local
 
 

@@ -17,4 +17,6 @@ public interface SyncJobRepository extends JpaRepository<SyncJob, Long> {
           and s.completedAt is not null
         """)
     LocalDateTime findLastCompletedAt(@Param("projectConfigIds") List<UUID> projectConfigIds);
+
+    boolean existsByProjectConfigIdAndJobTypeInAndStatus(UUID projectConfigId, List<String> jobTypes, String status);
 }

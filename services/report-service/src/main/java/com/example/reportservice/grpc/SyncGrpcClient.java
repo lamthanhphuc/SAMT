@@ -19,18 +19,68 @@ public class SyncGrpcClient {
     @GrpcClient("sync-service")
     private SyncServiceGrpc.SyncServiceBlockingStub stub;
 
-    public List<IssueResponse> getIssues(Long projectConfigId) {
+    public List<IssueResponse> getIssues(UUID projectConfigId) {
 
-        ProjectConfigRequest request =
+        return executeWithStandardErrorHandling(() -> {
+            ProjectConfigRequest request =
                 ProjectConfigRequest.newBuilder()
-                        .setProjectConfigId(projectConfigId.toString())
-                        .build();
+                    .setProjectConfigId(projectConfigId.toString())
+                    .build();
 
-        IssueListResponse response;
+            IssueListResponse response = stub
+                .withDeadlineAfter(2, TimeUnit.SECONDS)
+                .getIssuesByProjectConfig(request);
+            return response.getIssuesList();
+        });
+    }
+
+    public List<IssueResponse> getIssues(Long projectConfigId) {
+        return executeWithStandardErrorHandling(() -> {
+            ProjectConfigRequest request =
+                ProjectConfigRequest.newBuilder()
+                    .setProjectConfigId(projectConfigId.toString())
+                    .build();
+
+            IssueListResponse response = stub
+                .withDeadlineAfter(2, TimeUnit.SECONDS)
+                .getIssuesByProjectConfig(request);
+            return response.getIssuesList();
+        });
+    }
+
+    public List<GithubCommitResponse> getGithubCommits(UUID projectConfigId) {
+
+        return executeWithStandardErrorHandling(() -> {
+            ProjectConfigRequest request =
+                ProjectConfigRequest.newBuilder()
+                    .setProjectConfigId(projectConfigId.toString())
+                    .build();
+
+            GithubCommitListResponse response = stub
+                .withDeadlineAfter(2, TimeUnit.SECONDS)
+                .getGithubCommitsByProjectConfig(request);
+            return response.getCommitsList();
+        });
+    }
+
+    public List<UnifiedActivityResponse> getUnifiedActivities(UUID projectConfigId) {
+
+        return executeWithStandardErrorHandling(() -> {
+            ProjectConfigRequest request =
+                ProjectConfigRequest.newBuilder()
+                    .setProjectConfigId(projectConfigId.toString())
+                    .build();
+
+            UnifiedActivityListResponse response = stub
+                .withDeadlineAfter(2, TimeUnit.SECONDS)
+                .getUnifiedActivitiesByProjectConfig(request);
+            return response.getActivitiesList();
+        });
+    }
+
+    private <T> T executeWithStandardErrorHandling(GrpcCall<T> call) {
         try {
-            response = stub
-                    .withDeadlineAfter(2, TimeUnit.SECONDS)
-                    .getIssuesByProjectConfig(request);
+            return call.execute();
         } catch (StatusRuntimeException ex) {
             Status.Code statusCode = ex.getStatus().getCode();
             if (statusCode == Status.Code.INVALID_ARGUMENT) {
@@ -41,7 +91,10 @@ public class SyncGrpcClient {
             }
             throw new UpstreamServiceException("sync-service unavailable", ex);
         }
+    }
 
-        return response.getIssuesList();
+    @FunctionalInterface
+    private interface GrpcCall<T> {
+        T execute();
     }
 }

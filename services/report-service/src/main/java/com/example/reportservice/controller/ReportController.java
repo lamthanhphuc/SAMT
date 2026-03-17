@@ -88,7 +88,7 @@ public class ReportController {
         @ApiResponse(responseCode = "400", description = "Invalid filter")
     })
     public PageResponse<ReportMetadataResponse> listReports(
-        @RequestParam(required = false) Long projectConfigId,
+        @RequestParam(required = false) String projectConfigId,
         @RequestParam(required = false) String type,
         @RequestParam(required = false) UUID createdBy,
         @RequestParam(defaultValue = "0") @Min(0) int page,

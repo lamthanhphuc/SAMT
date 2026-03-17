@@ -38,8 +38,8 @@ public interface GithubCommitRepository extends JpaRepository<GithubCommit, Long
         where g.projectConfigId in :projectConfigIds
           and lower(coalesce(g.authorEmail, '')) = lower(:authorEmail)
           and g.deletedAt is null
-          and (:fromDate is null or g.committedDate >= :fromDate)
-          and (:toDate is null or g.committedDate <= :toDate)
+          and g.committedDate >= coalesce(:fromDate, g.committedDate)
+          and g.committedDate <= coalesce(:toDate, g.committedDate)
         """)
     long countByAuthorAndProjectConfigWithinRange(@Param("projectConfigIds") List<UUID> projectConfigIds,
                                                   @Param("authorEmail") String authorEmail,
@@ -51,8 +51,8 @@ public interface GithubCommitRepository extends JpaRepository<GithubCommit, Long
         where g.projectConfigId in :projectConfigIds
           and lower(coalesce(g.authorEmail, '')) = lower(:authorEmail)
           and g.deletedAt is null
-          and (:fromDate is null or g.committedDate >= :fromDate)
-          and (:toDate is null or g.committedDate <= :toDate)
+          and g.committedDate >= coalesce(:fromDate, g.committedDate)
+          and g.committedDate <= coalesce(:toDate, g.committedDate)
         """)
     LocalDateTime findLastCommitAtWithinRange(@Param("projectConfigIds") List<UUID> projectConfigIds,
                                               @Param("authorEmail") String authorEmail,
@@ -64,11 +64,22 @@ public interface GithubCommitRepository extends JpaRepository<GithubCommit, Long
         where g.projectConfigId in :projectConfigIds
           and lower(coalesce(g.authorEmail, '')) = lower(:authorEmail)
           and g.deletedAt is null
-          and (:fromDate is null or g.committedDate >= :fromDate)
-          and (:toDate is null or g.committedDate <= :toDate)
+          and g.committedDate >= coalesce(:fromDate, g.committedDate)
+          and g.committedDate <= coalesce(:toDate, g.committedDate)
         """)
     long countActiveCommitDaysWithinRange(@Param("projectConfigIds") List<UUID> projectConfigIds,
                                           @Param("authorEmail") String authorEmail,
                                           @Param("fromDate") LocalDateTime fromDate,
                                           @Param("toDate") LocalDateTime toDate);
+
+    @Query("""
+        select g from GithubCommit g
+        where g.projectConfigId in :projectConfigIds
+          and g.deletedAt is null
+          and g.committedDate >= coalesce(:fromDate, g.committedDate)
+          and g.committedDate <= coalesce(:toDate, g.committedDate)
+        """)
+    List<GithubCommit> findByProjectConfigIdsWithinRange(@Param("projectConfigIds") List<UUID> projectConfigIds,
+                                                          @Param("fromDate") LocalDateTime fromDate,
+                                                          @Param("toDate") LocalDateTime toDate);
 }

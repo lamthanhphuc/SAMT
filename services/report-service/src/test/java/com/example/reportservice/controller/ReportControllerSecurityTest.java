@@ -37,7 +37,7 @@ class ReportControllerSecurityTest {
     @Test
     void shouldReturnUnauthorizedWithoutToken() throws Exception {
         ReportRequest request = new ReportRequest();
-        request.setProjectConfigId(1L);
+                request.setProjectConfigId("1");
         request.setUseAi(false);
         request.setExportType("PDF");
 
@@ -50,11 +50,11 @@ class ReportControllerSecurityTest {
     @Test
     void shouldAllowAuthorizedRole() throws Exception {
         ReportRequest request = new ReportRequest();
-        request.setProjectConfigId(1L);
+                request.setProjectConfigId("1");
         request.setUseAi(false);
         request.setExportType("PDF");
 
-        Mockito.when(reportingService.generate(Mockito.anyLong(), Mockito.any(), Mockito.anyBoolean(), Mockito.anyString()))
+                Mockito.when(reportingService.generate(Mockito.anyString(), Mockito.any(), Mockito.anyBoolean(), Mockito.anyString()))
                 .thenReturn(new ReportResponse(UUID.randomUUID(), "COMPLETED", java.time.LocalDateTime.now(), "/api/reports/test/download"));
 
         mockMvc.perform(post("/api/reports/srs")

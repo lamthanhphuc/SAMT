@@ -11,6 +11,12 @@ service SyncService {
   rpc GetIssuesByProjectConfig(ProjectConfigRequest)
       returns (IssueListResponse);
 
+  rpc GetGithubCommitsByProjectConfig(ProjectConfigRequest)
+      returns (GithubCommitListResponse);
+
+  rpc GetUnifiedActivitiesByProjectConfig(ProjectConfigRequest)
+      returns (UnifiedActivityListResponse);
+
 }
 
 message ProjectConfigRequest {
@@ -29,8 +35,39 @@ message IssueResponse {
   string assigneeName = 9;
   string reporterEmail = 10;
   string reporterName = 11;
+  string createdAt = 12;
+  string updatedAt = 13;
 }
 
 message IssueListResponse {
   repeated IssueResponse issues = 1;
+}
+
+message GithubCommitResponse {
+  string commitSha = 1;
+  string message = 2;
+  string committedDate = 3;
+  string authorEmail = 4;
+  string authorName = 5;
+}
+
+message GithubCommitListResponse {
+  repeated GithubCommitResponse commits = 1;
+}
+
+message UnifiedActivityResponse {
+  string source = 1;
+  string activityType = 2;
+  string externalId = 3;
+  string title = 4;
+  string description = 5;
+  string authorEmail = 6;
+  string authorName = 7;
+  string status = 8;
+  string createdAt = 9;
+  string updatedAt = 10;
+}
+
+message UnifiedActivityListResponse {
+  repeated UnifiedActivityResponse activities = 1;
 }

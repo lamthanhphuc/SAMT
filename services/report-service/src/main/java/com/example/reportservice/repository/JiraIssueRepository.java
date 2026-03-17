@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface JiraIssueRepository
@@ -40,4 +41,12 @@ public interface JiraIssueRepository
         long countCompletedIssuesForAssignee(@Param("projectConfigIds") List<UUID> projectConfigIds,
                                                                                  @Param("assigneeEmail") String assigneeEmail,
                                                                                  @Param("completedStatuses") List<String> completedStatuses);
+
+        @Query("""
+                select j from JiraIssue j
+                where j.projectConfigId = :projectConfigId
+                  and (j.issueId = :taskId or lower(coalesce(j.issueKey, '')) = lower(:taskId))
+                """)
+        Optional<JiraIssue> findTaskByProjectConfigAndTaskId(@Param("projectConfigId") UUID projectConfigId,
+                                                              @Param("taskId") String taskId);
 }

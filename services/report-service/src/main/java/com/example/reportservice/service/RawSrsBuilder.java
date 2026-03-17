@@ -1,30 +1,24 @@
 package com.example.reportservice.service;
 
-import com.example.reportservice.grpc.IssueResponse;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.reportservice.web.UpstreamServiceException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 @Component
+@RequiredArgsConstructor
 public class RawSrsBuilder {
 
-    public String build(List<IssueResponse> issues) {
+    private final ObjectMapper objectMapper;
 
-        StringBuilder sb = new StringBuilder();
-
-        sb.append("Software Requirements Specification\n\n");
-
-        int index = 1;
-
-        for (IssueResponse issue : issues) {
-
-            sb.append("FR-")
-                    .append(String.format("%03d", index++))
-                    .append(": The system SHALL ")
-                    .append(issue.getDescription())
-                    .append("\n\n");
+    public String build(List<EvidenceBlock> evidenceBlocks) {
+        try {
+            return objectMapper.writeValueAsString(evidenceBlocks);
+        } catch (JsonProcessingException ex) {
+            throw new UpstreamServiceException("Failed to serialize evidence blocks", ex);
         }
-
-        return sb.toString();
     }
 }

@@ -18,7 +18,7 @@ public class Report {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID reportId;
 
-    private Long projectConfigId;
+    private String projectConfigId;
 
     @Enumerated(EnumType.STRING)
     private ReportType type;

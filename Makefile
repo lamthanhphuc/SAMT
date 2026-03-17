@@ -5,6 +5,8 @@
 
 .PHONY: help build build-skip-tests up down restart logs clean
 
+COMPOSE = docker compose --env-file .env -f config/docker/docker-compose.yml
+
 help: ## Show this help
 	@echo "Available commands:"
 	@echo "  make build       - Build all services"
@@ -23,22 +25,22 @@ build-skip-tests: ## Build all Maven projects (skip tests)
 	./mvnw -B clean package -DskipTests
 
 up: ## Start all containers
-	docker compose -f config/docker/docker-compose.yml up -d
+	$(COMPOSE) up -d
 
 down: ## Stop all containers
-	docker compose -f config/docker/docker-compose.yml down
+	$(COMPOSE) down
 
 restart: down up ## Restart all containers
 
 logs: ## Follow logs
-	docker compose -f config/docker/docker-compose.yml logs -f
+	$(COMPOSE) logs -f
 
 clean: ## Clean Maven target & Docker volumes
 	./mvnw clean
-	docker compose -f config/docker/docker-compose.yml down -v
+	$(COMPOSE) down -v
 
 db-only: ## Start only databases (Redis + PostgreSQL)
-	docker compose -f config/docker/docker-compose.yml up -d postgres-identity postgres-core redis
+	$(COMPOSE) up -d postgres-identity postgres-core redis
 
 
 

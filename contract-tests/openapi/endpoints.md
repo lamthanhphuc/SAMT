@@ -1,9 +1,9 @@
 # Endpoint Inventory
 
-- Generated at: 2026-03-12T05:00:16.680Z
-- Operations: 45
+- Generated at: 2026-03-16T12:00:00.000Z
+- Operations: 72
 - Public endpoints: 4
-- Protected endpoints: 41
+- Protected endpoints: 68
 
 | Method | Path | Service | Auth | Test Coverage |
 | --- | --- | --- | --- | --- |
@@ -22,6 +22,8 @@
 | POST | /api/auth/logout | identity-service | protected | http-tests/suites/api-auth.http |
 | POST | /api/auth/refresh | identity-service | public | http-tests/suites/api-auth.http |
 | POST | /api/auth/register | identity-service | public | http-tests/suites/api-auth.http |
+| GET | /profile | identity-service | protected |  |
+| PUT | /profile | identity-service | protected |  |
 | GET | /api/groups | user-group-service | protected | http-tests/suites/api-groups.http |
 | POST | /api/groups | user-group-service | protected | http-tests/suites/api-groups.http |
 | DELETE | /api/groups/{groupId} | user-group-service | protected | http-tests/suites/api-groups.http |
@@ -51,5 +53,30 @@
 | GET | /api/users/{userId} | user-group-service | protected | http-tests/suites/api-groups.http |
 | PUT | /api/users/{userId} | user-group-service | protected | http-tests/suites/api-groups.http |
 | GET | /api/users/{userId}/groups | user-group-service | protected | http-tests/suites/api-groups.http |
+| POST | /api/reports/srs | report-service | protected |  |
+| GET | /api/reports/{reportId} | report-service | protected |  |
+| GET | /api/reports | report-service | protected |  |
+| GET | /api/reports/{reportId}/download | report-service | protected |  |
+| GET | /api/reports/students/me/tasks | report-service | protected |  |
+| GET | /api/reports/students/me/github-stats | report-service | protected |  |
+| GET | /api/reports/students/me/contribution-summary | report-service | protected |  |
+| GET | /api/reports/lecturer/overview | report-service | protected |  |
+| GET | /api/reports/lecturer/groups/{groupId}/progress | report-service | protected |  |
+| GET | /api/reports/lecturer/groups/{groupId}/recent-activities | report-service | protected |  |
+| GET | /api/reports/leader/groups/{groupId}/tasks | report-service | protected |  |
+| PATCH | /api/reports/leader/groups/{groupId}/tasks/{taskId}/assignee | report-service | protected |  |
+| PATCH | /api/reports/leader/groups/{groupId}/tasks/{taskId}/status | report-service | protected |  |
+| GET | /api/reports/leader/groups/{groupId}/progress | report-service | protected |  |
+| GET | /api/reports/leader/groups/{groupId}/commit-summary | report-service | protected |  |
+| GET | /api/reports/members/me/tasks | report-service | protected |  |
+| PATCH | /api/reports/members/me/tasks/{taskId}/status | report-service | protected |  |
+| GET | /api/reports/members/me/task-stats | report-service | protected |  |
+| GET | /api/reports/members/me/commit-stats | report-service | protected |  |
+| POST | /api/sync/jira/issues | sync-service | protected |  |
+| POST | /api/sync/github/commits | sync-service | protected |  |
+| POST | /api/sync/all | sync-service | protected |  |
+| GET | /api/sync/jobs/{syncJobId} | sync-service | protected |  |
+| GET | /api/sync/jobs | sync-service | protected |  |
 | GET | /internal/project-configs/{id}/tokens | project-config-service | protected |  |
+| POST | /internal/ai/generate-srs | analysis-service | protected |  |
 

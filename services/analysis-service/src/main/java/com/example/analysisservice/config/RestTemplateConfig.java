@@ -9,14 +9,10 @@ import org.springframework.web.client.RestTemplate;
 public class RestTemplateConfig {
 
     @Bean
-    public RestTemplate restTemplate(OpenAiProperties properties) {
-        int timeout = properties.getTimeout() > 0 ? properties.getTimeout() : 5000;
-
-        SimpleClientHttpRequestFactory factory =
-                new SimpleClientHttpRequestFactory();
-
-        factory.setConnectTimeout(timeout);
-        factory.setReadTimeout(timeout);
+    public RestTemplate restTemplate() {
+        var factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(10000);   // 10s
+        factory.setReadTimeout(120000);     // 120s (rất quan trọng)
 
         return new RestTemplate(factory);
     }
