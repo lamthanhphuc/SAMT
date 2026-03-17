@@ -39,7 +39,7 @@ jobs:
           echo "BASE_URL=http://localhost:9080" >> .env.runtime.test
 
       - name: Start backend stack
-        run: docker compose up -d
+        run: docker compose -f config/docker/docker-compose.yml up -d
 
       - name: Wait for gateway health
         run: |
@@ -74,5 +74,5 @@ jobs:
 
       - name: Tear down
         if: always()
-        run: docker compose down -v
+        run: docker compose -f config/docker/docker-compose.yml down -v
 

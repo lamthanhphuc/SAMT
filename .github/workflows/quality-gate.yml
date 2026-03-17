@@ -148,7 +148,7 @@ jobs:
           PY
 
       - name: Start backend stack
-        run: docker compose up -d
+        run: docker compose -f config/docker/docker-compose.yml up -d
 
       - name: Wait for API gateway health
         run: |
@@ -172,4 +172,4 @@ jobs:
 
       - name: Teardown stack
         if: always()
-        run: docker compose down -v
+        run: docker compose -f config/docker/docker-compose.yml down -v
