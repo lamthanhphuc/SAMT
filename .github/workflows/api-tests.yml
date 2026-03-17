@@ -33,6 +33,9 @@ jobs:
       - name: Prepare test environment
         run: |
           cp .env.test .env.runtime.test
+          mkdir -p .local-certs
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out .local-certs/identity-jwt-private.pkcs8.pem
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out .local-certs/gateway-internal-jwt-private.pkcs8.pem
           echo "BASE_URL=http://localhost:9080" >> .env.runtime.test
 
       - name: Start backend stack
