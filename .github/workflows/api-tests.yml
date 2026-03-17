@@ -52,6 +52,9 @@ jobs:
           PY
           echo "BASE_URL=http://localhost:9080" >> .env.runtime.test
 
+      - name: Build backend artifacts for Docker images
+        run: ./mvnw -B -DskipTests -DskipITs=true package
+
       - name: Start backend stack
         run: docker compose -f config/docker/docker-compose.yml --env-file .env up -d
 
