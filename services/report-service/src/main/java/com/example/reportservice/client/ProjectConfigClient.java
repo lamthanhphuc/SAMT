@@ -61,6 +61,7 @@ public class ProjectConfigClient {
         return new ProjectConfigSnapshot(
             UUID.fromString(data.path("id").asText()),
             data.path("groupId").asLong(),
+            textOrNull(data, "state"),
             textOrNull(data, "jiraHostUrl"),
             textOrNull(data, "githubRepoUrl")
         );
@@ -74,6 +75,7 @@ public class ProjectConfigClient {
     public record ProjectConfigSnapshot(
         UUID configId,
         Long groupId,
+        String state,
         String jiraHostUrl,
         String githubRepoUrl
     ) {

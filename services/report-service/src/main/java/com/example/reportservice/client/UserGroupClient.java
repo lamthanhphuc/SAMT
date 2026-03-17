@@ -108,6 +108,16 @@ public class UserGroupClient {
         return groups;
     }
 
+    public long countUsers() {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(properties.getUserGroupBaseUrl())
+            .path("/api/users")
+            .queryParam("page", 0)
+            .queryParam("size", 1);
+
+        JsonNode body = get(builder.toUriString());
+        return body.path("data").path("totalElements").asLong(0);
+    }
+
     private JsonNode get(String url) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
