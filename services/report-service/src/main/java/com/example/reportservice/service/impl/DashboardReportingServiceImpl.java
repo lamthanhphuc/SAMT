@@ -11,6 +11,7 @@ import com.example.reportservice.dto.response.ContributionSummaryResponse;
 import com.example.reportservice.dto.response.GithubStatsResponse;
 import com.example.reportservice.dto.response.GroupProgressResponse;
 import com.example.reportservice.dto.response.LecturerOverviewResponse;
+import com.example.reportservice.dto.response.AdminOverviewResponse;
 import com.example.reportservice.dto.response.PageResponse;
 import com.example.reportservice.dto.response.RecentActivityResponse;
 import com.example.reportservice.dto.response.StudentTaskResponse;
@@ -18,6 +19,7 @@ import com.example.reportservice.dto.response.TeamCommitSummaryResponse;
 import com.example.reportservice.dto.response.TeamMemberTaskStatsResponse;
 import com.example.reportservice.entity.GithubCommit;
 import com.example.reportservice.entity.JiraIssue;
+import com.example.reportservice.entity.SyncJob;
 import com.example.reportservice.entity.UnifiedActivity;
 import com.example.reportservice.entity.UnifiedActivity.ActivitySource;
 import com.example.reportservice.entity.UnifiedActivity.ActivityType;
@@ -57,6 +59,12 @@ import java.util.stream.Collectors;
 public class DashboardReportingServiceImpl implements com.example.reportservice.service.DashboardReportingService {
 
     private static final List<String> COMPLETED_STATUSES = List.of("done", "closed", "resolved", "completed", "merged", "approved");
+    private static final String HEALTH_NO_DATA = "NO_DATA";
+    private static final String HEALTH_HEALTHY = "HEALTHY";
+    private static final String HEALTH_DEGRADED = "DEGRADED";
+    private static final String HEALTH_ISSUE = "ISSUE";
+    private static final String SERVER_ONLINE = "ONLINE";
+    private static final String VERIFIED_STATE = "VERIFIED";
 
     private final UserGroupClient userGroupClient;
     private final ProjectConfigClient projectConfigClient;
@@ -66,6 +74,41 @@ public class DashboardReportingServiceImpl implements com.example.reportservice.
     private final SyncJobRepository syncJobRepository;
     private final SyncGrpcClient syncGrpcClient;
     private final JiraService jiraService;
+
+    @Override
+    public AdminOverviewResponse getAdminOverview(Long semesterId) {
+        List<GroupSummary> groups = userGroupClient.listGroups(null, semesterId);
+        long totalUsers = userGroupClient.countUsers();
+
+        Map<Long, ProjectConfigSnapshot> configsByGroupId = resolveConfigsByGroupId(
+            groups.stream().map(GroupSummary::groupId).toList()
+        );
+        List<ProjectConfigSnapshot> configs = new ArrayList<>(configsByGroupId.values());
+        List<UUID> configIds = configs.stream().map(ProjectConfigSnapshot::configId).toList();
+
+        long activeProjects = configs.stream()
+            .filter(config -> VERIFIED_STATE.equalsIgnoreCase(config.state()))
+            .count();
+
+        long pendingSyncJobs = configIds.isEmpty()
+            ? 0
+            : syncJobRepository.countByProjectConfigIdInAndStatus(configIds, "PENDING");
+
+        String jiraApiHealth = resolveSyncHealth(configIds, "JIRA_ISSUES");
+        String githubApiHealth = resolveSyncHealth(configIds, "GITHUB_COMMITS");
+
+        return AdminOverviewResponse.builder()
+            .semesterId(semesterId)
+            .totalUsers(totalUsers)
+            .totalGroups(groups.size())
+            .activeProjects(activeProjects)
+            .pendingSyncJobs(pendingSyncJobs)
+            .jiraApiHealth(jiraApiHealth)
+            .githubApiHealth(githubApiHealth)
+            .serverHealth(SERVER_ONLINE)
+            .lastCalculatedAt(LocalDateTime.now())
+            .build();
+    }
 
     @Override
     public LecturerOverviewResponse getLecturerOverview(Long actorId, List<String> roles, Long semesterId) {
@@ -1018,6 +1061,28 @@ public class DashboardReportingServiceImpl implements com.example.reportservice.
 
     private List<UUID> resolveConfigIds(List<Long> groupIds) {
         return new ArrayList<>(resolveConfigsByGroupId(groupIds).values().stream().map(ProjectConfigSnapshot::configId).toList());
+    }
+
+    private String resolveSyncHealth(List<UUID> configIds, String jobType) {
+        if (configIds.isEmpty()) {
+            return HEALTH_NO_DATA;
+        }
+        return syncJobRepository.findFirstByProjectConfigIdInAndJobTypeOrderByCreatedAtDesc(configIds, jobType)
+            .map(SyncJob::getStatus)
+            .map(this::mapHealthByStatus)
+            .orElse(HEALTH_NO_DATA);
+    }
+
+    private String mapHealthByStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return HEALTH_NO_DATA;
+        }
+        return switch (status.toUpperCase()) {
+            case "COMPLETED" -> HEALTH_HEALTHY;
+            case "FAILED" -> HEALTH_ISSUE;
+            case "PENDING", "RUNNING" -> HEALTH_DEGRADED;
+            default -> HEALTH_NO_DATA;
+        };
     }
 
     private GroupProgressResponse emptyProgress(Long groupId, String groupName) {

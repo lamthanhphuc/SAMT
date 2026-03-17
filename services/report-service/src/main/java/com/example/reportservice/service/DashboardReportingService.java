@@ -4,6 +4,7 @@ import com.example.reportservice.dto.response.ContributionSummaryResponse;
 import com.example.reportservice.dto.response.GithubStatsResponse;
 import com.example.reportservice.dto.response.GroupProgressResponse;
 import com.example.reportservice.dto.response.LecturerOverviewResponse;
+import com.example.reportservice.dto.response.AdminOverviewResponse;
 import com.example.reportservice.dto.response.PageResponse;
 import com.example.reportservice.dto.response.RecentActivityResponse;
 import com.example.reportservice.dto.response.StudentTaskResponse;
@@ -14,6 +15,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface DashboardReportingService {
+
+    AdminOverviewResponse getAdminOverview(Long semesterId);
 
     LecturerOverviewResponse getLecturerOverview(Long actorId, List<String> roles, Long semesterId);
 

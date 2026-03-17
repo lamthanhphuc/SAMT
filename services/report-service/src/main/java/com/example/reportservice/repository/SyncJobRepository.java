@@ -7,9 +7,14 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface SyncJobRepository extends JpaRepository<SyncJob, Long> {
+
+  long countByProjectConfigIdInAndStatus(List<UUID> projectConfigIds, String status);
+
+  Optional<SyncJob> findFirstByProjectConfigIdInAndJobTypeOrderByCreatedAtDesc(List<UUID> projectConfigIds, String jobType);
 
     @Query("""
         select max(s.completedAt) from SyncJob s

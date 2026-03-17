@@ -33,10 +33,30 @@ jobs:
       - name: Prepare test environment
         run: |
           cp .env.test .env.runtime.test
+          cp .env.example .env
+          mkdir -p .local-certs
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out .local-certs/identity-jwt-private.pkcs8.pem
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out .local-certs/gateway-internal-jwt-private.pkcs8.pem
+          python - <<'PY'
+          import base64
+          import secrets
+          from pathlib import Path
+
+          env_path = Path('.env')
+          text = env_path.read_text(encoding='utf-8')
+          text = text.replace('CHANGE_ME_STRONG_PASSWORD_HERE', secrets.token_urlsafe(18))
+          text = text.replace('CHANGE_ME_256_BIT_KEY', base64.b16encode(secrets.token_bytes(32)).decode('ascii').lower())
+          env_path.write_text(text, encoding='utf-8')
+          with env_path.open('a', encoding='utf-8') as env_file:
+            env_file.write(f"REDIS_PASSWORD={secrets.token_urlsafe(18)}\n")
+          PY
           echo "BASE_URL=http://localhost:9080" >> .env.runtime.test
 
+      - name: Build backend artifacts for Docker images
+        run: ./mvnw -B -DskipTests -DskipITs=true package
+
       - name: Start backend stack
-        run: docker compose up -d
+        run: docker compose -f config/docker/docker-compose.yml --env-file .env up -d
 
       - name: Wait for gateway health
         run: |
@@ -48,7 +68,7 @@ jobs:
             sleep 5
           done
           echo "Gateway did not become healthy in time"
-          docker compose ps
+          docker compose -f config/docker/docker-compose.yml --env-file .env ps
           exit 1
 
       - name: Run self-healing API pipeline
@@ -71,5 +91,5 @@ jobs:
 
       - name: Tear down
         if: always()
-        run: docker compose down -v
+        run: docker compose -f config/docker/docker-compose.yml --env-file .env down -v
 
