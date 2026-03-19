@@ -48,7 +48,7 @@ public class ReportController {
     private final ReportingService service;
 
     @PostMapping("/srs")
-    @PreAuthorize("hasAnyRole('ADMIN','LECTURER')")
+    @PreAuthorize("hasAnyRole('ADMIN','LECTURER','STUDENT')")
     @Operation(summary = "Generate SRS report")
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "Report generated", content = @Content(schema = @Schema(implementation = ReportResponse.class), examples = @ExampleObject(value = "{\"success\":true,\"status\":201,\"path\":\"/api/reports/srs\",\"data\":{\"reportId\":\"5f2c5d35-431f-4a59-8168-88ff3c42649e\",\"status\":\"COMPLETED\",\"createdAt\":\"2026-03-12T10:30:00\",\"downloadUrl\":\"/api/reports/5f2c5d35-431f-4a59-8168-88ff3c42649e/download\"},\"timestamp\":\"2026-03-12T10:30:01Z\"}"))),
@@ -70,18 +70,25 @@ public class ReportController {
     }
 
     @GetMapping("/{reportId:[0-9a-fA-F-]{36}}")
-    @PreAuthorize("hasAnyRole('ADMIN','LECTURER')")
+    @PreAuthorize("hasAnyRole('ADMIN','LECTURER','STUDENT')")
     @Operation(summary = "Get report metadata")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Metadata retrieved", content = @Content(schema = @Schema(implementation = ReportMetadataResponse.class))),
         @ApiResponse(responseCode = "404", description = "Report not found")
     })
-    public ReportMetadataResponse getReport(@PathVariable UUID reportId) {
-        return service.getReport(reportId);
+    public ReportMetadataResponse getReport(@PathVariable UUID reportId, @AuthenticationPrincipal Jwt jwt) {
+        ReportMetadataResponse metadata = service.getReport(reportId);
+        if (isStudent(jwt)) {
+            UUID me = toCreatedBy(jwt.getSubject());
+            if (metadata.getCreatedBy() == null || !metadata.getCreatedBy().equals(me)) {
+                throw new org.springframework.security.access.AccessDeniedException("Students can only access own reports");
+            }
+        }
+        return metadata;
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','LECTURER')")
+    @PreAuthorize("hasAnyRole('ADMIN','LECTURER','STUDENT')")
     @Operation(summary = "List generated reports")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Report history retrieved", content = @Content(schema = @Schema(implementation = PageResponse.class))),
@@ -90,22 +97,32 @@ public class ReportController {
     public PageResponse<ReportMetadataResponse> listReports(
         @RequestParam(required = false) String projectConfigId,
         @RequestParam(required = false) String type,
+        @RequestParam(required = false) String status,
         @RequestParam(required = false) UUID createdBy,
         @RequestParam(defaultValue = "0") @Min(0) int page,
-        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
+        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+        @AuthenticationPrincipal Jwt jwt
     ) {
-        return service.listReports(projectConfigId, type, createdBy, page, size);
+        // Student scope: list only reports created by the current user.
+        // Admin/Lecturer: keep existing filters.
+        UUID effectiveCreatedBy = createdBy;
+        if (isStudent(jwt)) {
+            effectiveCreatedBy = toCreatedBy(jwt.getSubject());
+        }
+        return service.listReports(projectConfigId, type, status, effectiveCreatedBy, page, size);
     }
 
     @GetMapping("/{reportId:[0-9a-fA-F-]{36}}/download")
-    @PreAuthorize("hasAnyRole('ADMIN','LECTURER')")
+    @PreAuthorize("hasAnyRole('ADMIN','LECTURER','STUDENT')")
     @Operation(summary = "Download generated report file")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Report file streamed", content = @Content(mediaType = "application/octet-stream")),
         @ApiResponse(responseCode = "404", description = "Report or file not found")
     })
-    public ResponseEntity<Resource> downloadReport(@PathVariable UUID reportId) {
-        ReportingService.ReportDownload download = service.loadReportDownload(reportId);
+    public ResponseEntity<Resource> downloadReport(@PathVariable UUID reportId, @AuthenticationPrincipal Jwt jwt) {
+        ReportingService.ReportDownload download = isStudent(jwt)
+            ? service.loadReportDownloadForCreatedBy(reportId, toCreatedBy(jwt.getSubject()))
+            : service.loadReportDownload(reportId);
 
         return ResponseEntity.ok()
             .contentType(download.mediaType())
@@ -114,5 +131,28 @@ public class ReportController {
                 .build()
                 .toString())
             .body(download.resource());
+    }
+
+    private boolean isStudent(Jwt jwt) {
+        if (jwt == null) {
+            return false;
+        }
+        String role = jwt.getClaimAsString("role");
+        if (role != null && "STUDENT".equalsIgnoreCase(role.trim())) {
+            return true;
+        }
+        var roles = jwt.getClaimAsStringList("roles");
+        if (roles != null) {
+            return roles.stream().anyMatch(r -> r != null && "STUDENT".equalsIgnoreCase(r.trim()));
+        }
+        return false;
+    }
+
+    private UUID toCreatedBy(String subject) {
+        try {
+            return UUID.fromString(subject);
+        } catch (IllegalArgumentException ignored) {
+            return UUID.nameUUIDFromBytes(("user:" + subject).getBytes(StandardCharsets.UTF_8));
+        }
     }
 }

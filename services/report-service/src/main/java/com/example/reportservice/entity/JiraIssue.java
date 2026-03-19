@@ -3,6 +3,7 @@ package com.example.reportservice.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -71,4 +72,7 @@ public class JiraIssue {
 
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
+
+    @Column(name = "due_date")
+    private LocalDate dueDate;
 }

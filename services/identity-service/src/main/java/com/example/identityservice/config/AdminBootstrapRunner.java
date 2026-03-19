@@ -18,7 +18,7 @@ public class AdminBootstrapRunner implements CommandLineRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @Value("${app.bootstrap-admin.enabled:true}")
+    @Value("${app.bootstrap-admin.enabled:false}")
     private boolean enabled;
 
     @Value("${app.bootstrap-admin.email:admin@samt.local}")
@@ -30,7 +30,7 @@ public class AdminBootstrapRunner implements CommandLineRunner {
     @Value("${app.bootstrap-admin.full-name:System Admin}")
     private String fullName;
 
-    @Value("${app.bootstrap-admin.force-reset-password:true}")
+    @Value("${app.bootstrap-admin.force-reset-password:false}")
     private boolean forceResetPassword;
 
     public AdminBootstrapRunner(UserRepository userRepository, PasswordEncoder passwordEncoder) {

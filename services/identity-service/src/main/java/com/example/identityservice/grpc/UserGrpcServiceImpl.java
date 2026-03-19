@@ -233,14 +233,22 @@ public class UserGrpcServiceImpl extends UserGrpcServiceGrpc.UserGrpcServiceImpl
      * Build GetUserResponse from User entity.
      */
     private GetUserResponse buildGetUserResponse(User user) {
-        return GetUserResponse.newBuilder()
+        GetUserResponse.Builder builder = GetUserResponse.newBuilder()
                 .setUserId(String.valueOf(user.getId()))
                 .setEmail(user.getEmail())
                 .setFullName(user.getFullName())
                 .setStatus(mapStatus(user.getStatus()))
                 .setRole(mapRole(user.getRole()))
-                .setDeleted(user.getDeletedAt() != null)
-                .build();
+                .setDeleted(user.getDeletedAt() != null);
+
+        if (user.getJiraAccountId() != null) {
+            builder.setJiraAccountId(user.getJiraAccountId());
+        }
+        if (user.getGithubUsername() != null) {
+            builder.setGithubUsername(user.getGithubUsername());
+        }
+
+        return builder.build();
     }
 
     /**

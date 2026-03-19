@@ -24,6 +24,25 @@ spring:
     gateway:
       server:
         webflux:
+          # Enable CORS for frontend dev / Playwright origins
+          globalcors:
+            add-to-simple-url-handler-mapping: true
+            cors-configurations:
+              '[/**]':
+                allowedOrigins:
+                  - "http://localhost:5173"
+                  - "http://127.0.0.1:4174"
+                  - "http://localhost:4174"
+                allowedMethods:
+                  - GET
+                  - POST
+                  - PUT
+                  - DELETE
+                  - PATCH
+                  - OPTIONS
+                allowedHeaders:
+                  - "*"
+                allowCredentials: true
 
           routes:
 
@@ -81,33 +100,18 @@ spring:
 
           httpclient:
             connect-timeout: 2000
-            response-timeout: 25s
+            # Report generation can involve heavy upstream work (sync + AI),
+            # so we allow a longer response window for local E2E runs.
+            response-timeout: 600s
             pool:
               max-connections: 2000
               max-idle-time: 20s
               max-life-time: 120s
               acquire-timeout: 45000
 
-      # Enable CORS for frontend dev origin
-      globalcors:
-        add-to-simple-url-handler-mapping: true
-        cors-configurations:
-          '[/**]':
-            allowedOrigins:
-              - "http://localhost:5173"
-            allowedMethods:
-              - GET
-              - POST
-              - PUT
-              - DELETE
-              - PATCH
-              - OPTIONS
-            allowedHeaders:
-              - "*"
-            allowCredentials: true
-
 jwt:
-  jwks-uri: ${JWT_JWKS_URI:http://identity-service:8081/.well-known/jwks.json}
+  # Default for local (non-docker) runs; docker-compose overrides JWT_JWKS_URI.
+  jwks-uri: ${JWT_JWKS_URI:http://localhost:8081/.well-known/jwks.json}
 
 gateway:
   internal-jwt:
@@ -175,6 +179,8 @@ resilience4j:
         base-config: gatewayRoute
       reportServiceCircuitBreaker:
         base-config: gatewayRoute
+        # Report generation can legitimately take minutes (sync + AI).
+        timeout-duration: 600s
       notificationServiceCircuitBreaker:
         base-config: gatewayRoute
 

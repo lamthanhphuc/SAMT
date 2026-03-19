@@ -93,7 +93,8 @@ logging:
 ai:
   base-url: ${AI_BASE_URL:http://ollama:11434}
   model: ${AI_MODEL:phi3}
-  timeout-ms: ${AI_TIMEOUT_MS:120000}
+  # Extraction + writing can take minutes on local models.
+  timeout-ms: ${AI_TIMEOUT_MS:600000}
 
 resilience4j:
   retry:

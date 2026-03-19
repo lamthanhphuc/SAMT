@@ -47,7 +47,13 @@ public class ProjectConfigClient {
             );
             return Optional.of(parseConfig(response.getBody()));
         } catch (HttpStatusCodeException ex) {
+            // Missing config is normal.
             if (ex.getStatusCode() == HttpStatus.NOT_FOUND) {
+                return Optional.empty();
+            }
+            // Some configs may exist but have unreadable encrypted credentials (e.g. bad key rotation).
+            // Treat them as "not usable" for dashboard aggregation instead of failing the whole overview.
+            if (ex.getStatusCode() == HttpStatus.CONFLICT) {
                 return Optional.empty();
             }
             throw new UpstreamServiceException("project-config-service unavailable", ex);

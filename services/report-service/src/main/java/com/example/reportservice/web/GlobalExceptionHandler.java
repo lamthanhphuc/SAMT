@@ -3,6 +3,7 @@ package com.example.reportservice.web;
 import com.example.common.api.ApiProblemDetailsFactory;
 import com.example.common.exception.ExternalServiceException;
 import com.example.reportservice.config.CorrelationIdFilter;
+import com.example.reportservice.dto.response.ReportGenerationFailureResponse;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
@@ -29,6 +30,17 @@ import java.util.Arrays;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(ReportGenerationFailedException.class)
+    public ResponseEntity<ReportGenerationFailureResponse> handleReportGenerationFailed(ReportGenerationFailedException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ReportGenerationFailureResponse(
+                        "FAILED",
+                        ex.getStep(),
+                        ex.getReason(),
+                        ex.getLogs()
+                ));
+    }
 
     @ExceptionHandler({BadRequestException.class, IllegalArgumentException.class})
     public ResponseEntity<ProblemDetail> handleBadRequest(RuntimeException ex) {

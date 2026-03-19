@@ -123,6 +123,8 @@ public class GroupServiceImpl implements GroupService {
                             .fullName(userInfo != null ? userInfo.getFullName() : "<Deleted User>")
                             .email(userInfo != null && !userInfo.getDeleted() ? userInfo.getEmail() : null)
                             .role(m.getGroupRole().name())
+                            .jiraAccountId(userInfo != null ? userInfo.getJiraAccountId() : null)
+                            .githubUsername(userInfo != null ? userInfo.getGithubUsername() : null)
                             .build();
                 })
                 .collect(Collectors.toList());

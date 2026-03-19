@@ -121,6 +121,13 @@ public class GatewayRoutesConfig {
                                 .addRequestHeader("X-Forwarded-Host", "gateway"))
                         .uri(identityServiceUri))
 
+                .route("identity-integrations-api", r -> r
+                        .path("/api/integrations/**", "/api/members/**")
+                        .filters(f -> f
+                                .filter(rateLimitGatewayFilter.globalRateLimit("identity-integrations-api"))
+                                .addRequestHeader("X-Forwarded-Host", "gateway"))
+                        .uri(identityServiceUri))
+
                 .route("identity-service-api", r -> r
                         .path("/api/identity/**")
                         .filters(f -> f

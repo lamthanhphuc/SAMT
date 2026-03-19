@@ -47,56 +47,93 @@ public class GithubClient {
      * @param repoUrl Repository URL (e.g., https://github.com/owner/repo)
      * @param accessToken GitHub personal access token
      * @param perPage Number of commits per request (max 100)
-     * @return List of GitHub commits
+        * @return List of GitHub commits (all pages)
      */
     @Retry(name = "githubRetry", fallbackMethod = "fetchCommitsFallback")
     @CircuitBreaker(name = "githubCircuitBreaker", fallbackMethod = "fetchCommitsFallback")
     @RateLimiter(name = "githubRateLimiter")
     public List<GithubCommitDto> fetchCommits(String repoUrl, String accessToken, int perPage) {
-        log.debug("Fetching GitHub commits for repo={}", repoUrl);
+        log.debug("Fetching GitHub commits for repo={} with pageSize={}", repoUrl, perPage);
 
         String[] parts = extractOwnerAndRepo(repoUrl);
         String owner = parts[0];
         String repo = parts[1];
 
         try {
-            List<GithubCommitDto> commits = githubWebClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/repos/{owner}/{repo}/commits")
-                            .queryParam("per_page", perPage)
-                            .build(owner, repo))
-                    .header("Authorization", "Bearer " + accessToken)
-                    .header("Accept", "application/vnd.github+json")
-                    .header("X-GitHub-Api-Version", "2022-11-28")
-                    .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, clientResponse -> {
-                        if (clientResponse.statusCode() == HttpStatus.FORBIDDEN) {
-                            log.warn("GitHub rate limit exceeded (403)");
-                            return Mono.error(new RateLimitExceededException("GitHub rate limit exceeded"));
-                        } else if (clientResponse.statusCode() == HttpStatus.UNAUTHORIZED) {
-                            log.error("GitHub authentication failed (401)");
-                            return Mono.error(new AuthenticationException("GitHub token invalid"));
-                        } else if (clientResponse.statusCode() == HttpStatus.NOT_FOUND) {
-                            log.error("GitHub repository not found (404): {}/{}", owner, repo);
-                            return Mono.error(new RepositoryNotFoundException("Repository not found: " + owner + "/" + repo));
-                        }
-                        return clientResponse.createException();
-                    })
-                    .onStatus(HttpStatusCode::is5xxServerError, clientResponse -> {
-                        log.error("GitHub server error: {}", clientResponse.statusCode());
-                        return clientResponse.createException();
-                    })
-                    .bodyToMono(new ParameterizedTypeReference<List<GithubCommitDto>>() {})
-                    .timeout(Duration.ofSeconds(30))
-                    .block();
+            final int pageSize = Math.min(Math.max(perPage, 1), 100); // GitHub max 100
+            List<GithubCommitDto> allCommits = new java.util.ArrayList<>();
 
-            if (commits == null || commits.isEmpty()) {
+            int page = 1;
+            while (true) {
+                final int currentPage = page;
+                List<GithubCommitDto> commits = githubWebClient.get()
+                        .uri(uriBuilder -> uriBuilder
+                                .path("/repos/{owner}/{repo}/commits")
+                                .queryParam("per_page", pageSize)
+                                .queryParam("page", currentPage)
+                                .build(owner, repo))
+                        .header("Authorization", "Bearer " + accessToken)
+                        .header("Accept", "application/vnd.github+json")
+                        .header("X-GitHub-Api-Version", "2022-11-28")
+                        .retrieve()
+                        .onStatus(HttpStatusCode::is4xxClientError, clientResponse -> {
+                            if (clientResponse.statusCode() == HttpStatus.FORBIDDEN) {
+                                log.warn("GitHub rate limit exceeded (403)");
+                                return Mono.error(new RateLimitExceededException("GitHub rate limit exceeded"));
+                            } else if (clientResponse.statusCode() == HttpStatus.UNAUTHORIZED) {
+                                log.error("GitHub authentication failed (401)");
+                                return Mono.error(new AuthenticationException("GitHub token invalid"));
+                            } else if (clientResponse.statusCode() == HttpStatus.NOT_FOUND) {
+                                log.error("GitHub repository not found (404): {}/{}", owner, repo);
+                                return Mono.error(new RepositoryNotFoundException("Repository not found: " + owner + "/" + repo));
+                            }
+                            return clientResponse.createException();
+                        })
+                        .onStatus(HttpStatusCode::is5xxServerError, clientResponse -> {
+                            log.error("GitHub server error: {}", clientResponse.statusCode());
+                            return clientResponse.createException();
+                        })
+                        .bodyToMono(new ParameterizedTypeReference<List<GithubCommitDto>>() {})
+                        .timeout(Duration.ofSeconds(30))
+                        .block();
+
+                if (commits == null || commits.isEmpty()) {
+                    break;
+                }
+
+                // IMPORTANT: the list-commits endpoint does NOT include "stats".
+                // Enrich each commit via the commit-detail endpoint so we can persist additions/deletions/totalChanges.
+                for (GithubCommitDto base : commits) {
+                    if (base == null || base.getSha() == null || base.getSha().isBlank()) {
+                        continue;
+                    }
+                    try {
+                        GithubCommitDto detailed = fetchCommitDetail(owner, repo, base.getSha(), accessToken);
+                        allCommits.add(detailed != null ? detailed : base);
+                    } catch (RateLimitExceededException | AuthenticationException | RepositoryNotFoundException e) {
+                        // Let the outer handler deal with these explicitly
+                        throw e;
+                    } catch (Exception e) {
+                        // If a single commit fails to enrich, keep the base commit (stats will be missing => 0)
+                        log.warn("Failed to fetch GitHub commit detail sha={} repo={}/{}: {}", base.getSha(), owner, repo, e.getMessage());
+                        allCommits.add(base);
+                    }
+                }
+
+                // If we received less than a full page, we've reached the end.
+                if (commits.size() < pageSize) {
+                    break;
+                }
+                page++;
+            }
+
+            if (allCommits.isEmpty()) {
                 log.info("No commits found for repo={}/{}", owner, repo);
                 return List.of();
             }
 
-            log.info("Fetched {} commits from GitHub repo={}/{}", commits.size(), owner, repo);
-            return commits;
+            log.info("Fetched {} commits from GitHub repo={}/{}", allCommits.size(), owner, repo);
+            return allCommits;
 
         } catch (RateLimitExceededException e) {
             log.error("GitHub rate limit exceeded for repo={}/{}", owner, repo);
@@ -111,6 +148,31 @@ public class GithubClient {
             log.error("Error fetching GitHub commits for repo={}/{}: {}", owner, repo, e.getMessage(), e);
             throw new GithubClientException("Failed to fetch GitHub commits: " + e.getMessage(), e);
         }
+    }
+
+    private GithubCommitDto fetchCommitDetail(String owner, String repo, String sha, String accessToken) {
+        return githubWebClient.get()
+            .uri(uriBuilder -> uriBuilder
+                .path("/repos/{owner}/{repo}/commits/{sha}")
+                .build(owner, repo, sha))
+            .header("Authorization", "Bearer " + accessToken)
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .retrieve()
+            .onStatus(HttpStatusCode::is4xxClientError, clientResponse -> {
+                if (clientResponse.statusCode() == HttpStatus.FORBIDDEN) {
+                    return Mono.error(new RateLimitExceededException("GitHub rate limit exceeded"));
+                } else if (clientResponse.statusCode() == HttpStatus.UNAUTHORIZED) {
+                    return Mono.error(new AuthenticationException("GitHub token invalid"));
+                } else if (clientResponse.statusCode() == HttpStatus.NOT_FOUND) {
+                    return Mono.error(new RepositoryNotFoundException("Repository not found: " + owner + "/" + repo));
+                }
+                return clientResponse.createException();
+            })
+            .onStatus(HttpStatusCode::is5xxServerError, clientResponse -> clientResponse.createException())
+            .bodyToMono(GithubCommitDto.class)
+            .timeout(Duration.ofSeconds(30))
+            .block();
     }
 
     /**

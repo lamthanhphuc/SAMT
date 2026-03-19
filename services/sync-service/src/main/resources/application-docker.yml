@@ -4,6 +4,9 @@ spring:
   data:
     redis:
       host: redis
+  mvc:
+    async:
+      request-timeout: 10m
 
 server:
   port: 8080

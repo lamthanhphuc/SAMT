@@ -30,11 +30,63 @@ public class UserGroupClient {
     private final InternalServiceProperties properties;
     private final AuthenticatedRequestSupport requestSupport;
 
+    /**
+     * List ALL groups for overview calculations (pages through /api/groups).
+     * This is required because user-group-service paginates results and the first page is capped (default 100).
+     */
     public List<GroupSummary> listGroups(Long lecturerId, Long semesterId) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(properties.getUserGroupBaseUrl())
+        // user-group-service enforces a max page size (validation). Keep this <= 100.
+        final int pageSize = 100;
+        int page = 0;
+        int totalPages = 1;
+
+        List<GroupSummary> groups = new ArrayList<>();
+        while (page < totalPages) {
+            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(properties.getUserGroupBaseUrl())
+                .path("/api/groups")
+                .queryParam("page", page)
+                .queryParam("size", pageSize);
+            if (lecturerId != null) {
+                builder.queryParam("lecturerId", lecturerId);
+            }
+            if (semesterId != null) {
+                builder.queryParam("semesterId", semesterId);
+            }
+
+            JsonNode body = get(builder.toUriString());
+            JsonNode data = body.path("data");
+            totalPages = data.path("totalPages").asInt(totalPages);
+
+            JsonNode content = data.path("content");
+            if (content.isArray()) {
+                for (JsonNode item : content) {
+                    groups.add(new GroupSummary(
+                        item.path("id").asLong(),
+                        item.path("groupName").asText(),
+                        item.path("semesterId").asLong(),
+                        item.path("semesterCode").asText(null),
+                        item.path("memberCount").asLong()
+                    ));
+                }
+            }
+
+            // Defensive break if API returns no content to avoid infinite loops.
+            if (!content.isArray() || content.isEmpty()) {
+                break;
+            }
+            page++;
+        }
+        return groups;
+    }
+
+    /**
+     * Count groups using paging metadata without loading all rows.
+     */
+    public long countGroups(Long lecturerId, Long semesterId) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(properties.getUserGroupBaseUrl())
             .path("/api/groups")
             .queryParam("page", 0)
-            .queryParam("size", 100);
+            .queryParam("size", 1);
         if (lecturerId != null) {
             builder.queryParam("lecturerId", lecturerId);
         }
@@ -42,24 +94,11 @@ public class UserGroupClient {
             builder.queryParam("semesterId", semesterId);
         }
         JsonNode body = get(builder.toUriString());
-        List<GroupSummary> groups = new ArrayList<>();
-        JsonNode content = body.path("data").path("content");
-        if (content.isArray()) {
-            for (JsonNode item : content) {
-                groups.add(new GroupSummary(
-                    item.path("id").asLong(),
-                    item.path("groupName").asText(),
-                    item.path("semesterId").asLong(),
-                    item.path("semesterCode").asText(null),
-                    item.path("memberCount").asLong()
-                ));
-            }
-        }
-        return groups;
+        return body.path("data").path("totalElements").asLong(0);
     }
 
     public GroupDetail getGroup(Long groupId) {
-        String url = UriComponentsBuilder.fromHttpUrl(properties.getUserGroupBaseUrl())
+        String url = UriComponentsBuilder.fromUriString(properties.getUserGroupBaseUrl())
             .path("/api/groups/{groupId}")
             .buildAndExpand(groupId)
             .toUriString();
@@ -97,11 +136,15 @@ public class UserGroupClient {
                 if (jiraAccountId == null) {
                     jiraAccountId = textOrNull(userNode.path("jiraAccountId"));
                 }
+                String githubUsername = textOrNull(member.path("githubUsername"));
+                if (githubUsername == null) {
+                    githubUsername = textOrNull(userNode.path("githubUsername"));
+                }
                 String role = textOrNull(member.path("role"));
                 if (role == null) {
                     role = textOrNull(member.path("groupRole"));
                 }
-                membersDetailed.add(new GroupMember(userId, email, fullName, role, jiraAccountId));
+                membersDetailed.add(new GroupMember(userId, email, fullName, role, jiraAccountId, githubUsername));
             }
         }
         return new GroupDetail(
@@ -116,7 +159,7 @@ public class UserGroupClient {
     }
 
     public UserProfile getUserProfile(Long userId) {
-        String url = UriComponentsBuilder.fromHttpUrl(properties.getUserGroupBaseUrl())
+        String url = UriComponentsBuilder.fromUriString(properties.getUserGroupBaseUrl())
             .path("/api/users/{userId}")
             .buildAndExpand(userId)
             .toUriString();
@@ -130,7 +173,7 @@ public class UserGroupClient {
     }
 
     public List<UserGroupMembership> getUserGroups(Long userId) {
-        String url = UriComponentsBuilder.fromHttpUrl(properties.getUserGroupBaseUrl())
+        String url = UriComponentsBuilder.fromUriString(properties.getUserGroupBaseUrl())
             .path("/api/users/{userId}/groups")
             .buildAndExpand(userId)
             .toUriString();
@@ -153,7 +196,7 @@ public class UserGroupClient {
     }
 
     public long countUsers() {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(properties.getUserGroupBaseUrl())
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(properties.getUserGroupBaseUrl())
             .path("/api/users")
             .queryParam("page", 0)
             .queryParam("size", 1);
@@ -221,7 +264,8 @@ public class UserGroupClient {
         String email,
         String fullName,
         String role,
-        String jiraAccountId
+        String jiraAccountId,
+        String githubUsername
     ) {
     }
 

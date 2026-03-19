@@ -7,6 +7,8 @@ public class InternalServiceProperties {
 
     private String userGroupBaseUrl = "http://user-group-service:8082";
     private String projectConfigBaseUrl = "http://project-config-service:8084";
+    private String syncServiceBaseUrl = "http://sync-service:8083";
+    private String identityBaseUrl = "http://identity-service:8081";
 
     public String getUserGroupBaseUrl() {
         return userGroupBaseUrl;
@@ -22,5 +24,21 @@ public class InternalServiceProperties {
 
     public void setProjectConfigBaseUrl(String projectConfigBaseUrl) {
         this.projectConfigBaseUrl = projectConfigBaseUrl;
+    }
+
+    public String getSyncServiceBaseUrl() {
+        return syncServiceBaseUrl;
+    }
+
+    public void setSyncServiceBaseUrl(String syncServiceBaseUrl) {
+        this.syncServiceBaseUrl = syncServiceBaseUrl;
+    }
+
+    public String getIdentityBaseUrl() {
+        return identityBaseUrl;
+    }
+
+    public void setIdentityBaseUrl(String identityBaseUrl) {
+        this.identityBaseUrl = identityBaseUrl;
     }
 }

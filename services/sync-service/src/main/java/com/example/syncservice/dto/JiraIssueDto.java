@@ -49,6 +49,9 @@ public class JiraIssueDto {
         
         private String created;
         private String updated;
+
+        @JsonProperty("duedate")
+        private String dueDate;
     }
 
     @Data

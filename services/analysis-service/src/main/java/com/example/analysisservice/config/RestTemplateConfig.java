@@ -9,10 +9,12 @@ import org.springframework.web.client.RestTemplate;
 public class RestTemplateConfig {
 
     @Bean
-    public RestTemplate restTemplate() {
+    public RestTemplate restTemplate(LocalAiProperties localAiProperties) {
         var factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(10000);   // 10s
-        factory.setReadTimeout(120000);     // 120s (rất quan trọng)
+        // Ollama can legitimately take minutes for extraction + writing. Keep this aligned with AI_TIMEOUT_MS.
+        int timeoutMs = Math.max(10_000, localAiProperties.getTimeoutMs());
+        factory.setConnectTimeout(Math.min(10_000, timeoutMs));
+        factory.setReadTimeout(timeoutMs);
 
         return new RestTemplate(factory);
     }

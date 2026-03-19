@@ -123,3 +123,11 @@ springdoc:
     operations-sorter: method
     tags-sorter: alpha
 
+# ==============================================
+# JIRA INTEGRATION (for accountId lookup)
+# ==============================================
+jira:
+  host: ${JIRA_HOST:}
+  email: ${JIRA_EMAIL:}
+  api-token: ${JIRA_API_TOKEN:}
+

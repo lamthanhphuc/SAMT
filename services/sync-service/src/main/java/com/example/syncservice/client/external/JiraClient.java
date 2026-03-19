@@ -72,6 +72,7 @@ public class JiraClient {
             "assignee",
             "reporter",
             "priority",
+            "duedate",
             "created",
             "updated"
         );
@@ -160,6 +161,7 @@ public class JiraClient {
         dtoFields.setDescription(extractDescription(fields.get("description")));
         dtoFields.setCreated((String) fields.get("created"));
         dtoFields.setUpdated((String) fields.get("updated"));
+        dtoFields.setDueDate((String) fields.get("duedate"));
 
         // IssueType
         Map<String, Object> issueType = (Map<String, Object>) fields.get("issuetype");

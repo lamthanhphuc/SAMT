@@ -119,7 +119,8 @@ grpc:
 ai:
   service:
     url: ${AI_SERVICE_URL:http://localhost:8083}
-    timeout: ${AI_SERVICE_TIMEOUT_MS:180000}
+    # AI generation can take several minutes (extraction + write). Keep >= gateway report timelimiter.
+    timeout: ${AI_SERVICE_TIMEOUT_MS:600000}
 
 report:
   integrations:

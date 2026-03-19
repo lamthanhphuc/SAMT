@@ -1,6 +1,5 @@
 package com.example.syncservice.client.grpc;
 
-import com.example.syncservice.client.grpc.*;
 import com.example.syncservice.entity.GithubCommit;
 import com.example.syncservice.entity.JiraIssue;
 import com.example.syncservice.entity.UnifiedActivity;
@@ -57,6 +56,7 @@ public class SyncGrpcService extends SyncServiceGrpc.SyncServiceImplBase {
                                 .setReporterName(nullSafe(issue.getReporterName()))
                         .setCreatedAt(issue.getCreatedAt() == null ? "" : issue.getCreatedAt().toString())
                         .setUpdatedAt(issue.getUpdatedAt() == null ? "" : issue.getUpdatedAt().toString())
+                        .setDueDate(issue.getDueDate() == null ? "" : issue.getDueDate().toString())
                                 .build()
                 );
             }
@@ -97,6 +97,9 @@ public class SyncGrpcService extends SyncServiceGrpc.SyncServiceImplBase {
                         .setCommittedDate(commit.getCommittedDate() == null ? "" : commit.getCommittedDate().toString())
                         .setAuthorEmail(nullSafe(commit.getAuthorEmail()))
                         .setAuthorName(nullSafe(commit.getAuthorName()))
+                        .setAdditions(commit.getAdditions() == null ? 0 : Math.max(0, commit.getAdditions()))
+                        .setDeletions(commit.getDeletions() == null ? 0 : Math.max(0, commit.getDeletions()))
+                        .setTotalChanges(commit.getTotalChanges() == null ? 0 : Math.max(0, commit.getTotalChanges()))
                         .build()
                 );
             }

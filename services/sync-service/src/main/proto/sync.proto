@@ -37,6 +37,7 @@ message IssueResponse {
   string reporterName = 11;
   string createdAt = 12;
   string updatedAt = 13;
+  string dueDate = 14;
 }
 
 message IssueListResponse {
@@ -49,6 +50,9 @@ message GithubCommitResponse {
   string committedDate = 3;
   string authorEmail = 4;
   string authorName = 5;
+  int32 additions = 6;
+  int32 deletions = 7;
+  int32 totalChanges = 8;
 }
 
 message GithubCommitListResponse {

@@ -74,6 +74,11 @@ public class GlobalExceptionHandler {
         return problem(HttpStatus.SERVICE_UNAVAILABLE, "external-service-unavailable", "External service unavailable", ex.getMessage(), request);
     }
 
+    @ExceptionHandler(BadGatewayException.class)
+    public ResponseEntity<ProblemDetail> handleBadGateway(BadGatewayException ex, HttpServletRequest request) {
+        return problem(HttpStatus.BAD_GATEWAY, "bad-gateway", "Bad gateway", ex.getMessage(), request);
+    }
+
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ProblemDetail> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
         return problem(HttpStatus.BAD_REQUEST, "invalid-request", "Invalid request", "Invalid value for parameter '" + ex.getName() + "'", request);

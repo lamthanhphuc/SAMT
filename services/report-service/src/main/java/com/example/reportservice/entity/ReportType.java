@@ -1,5 +1,7 @@
 package com.example.reportservice.entity;
 
 public enum ReportType {
-    SRS
+    SRS,
+    WORK_DISTRIBUTION,
+    COMMIT_ANALYSIS
 }

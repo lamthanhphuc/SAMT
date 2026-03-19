@@ -50,6 +50,8 @@ message GetUserResponse {
   UserStatus status = 4;
   UserRole role = 5;
   bool deleted = 6;
+  string jira_account_id = 7;
+  string github_username = 8;
 }
 
 message GetUserRoleRequest {

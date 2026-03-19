@@ -1,6 +1,7 @@
 package com.example.analysisservice.exception;
 
 import com.example.analysisservice.config.CorrelationIdFilter;
+import com.example.analysisservice.web.AiModelOutputException;
 import com.example.analysisservice.web.BadRequestException;
 import com.example.analysisservice.web.UpstreamServiceException;
 import com.example.common.api.ApiProblemDetailsFactory;
@@ -35,6 +36,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ProblemDetail> handleUpstream(RuntimeException ex) {
         log.warn("Upstream dependency failure. correlationId={}", MDC.get(CorrelationIdFilter.MDC_KEY), ex);
         return build(HttpStatus.SERVICE_UNAVAILABLE, "external-service-unavailable", "External service unavailable", "Dependent service temporarily unavailable");
+    }
+
+    @ExceptionHandler(AiModelOutputException.class)
+    public ResponseEntity<ProblemDetail> handleAiOutput(AiModelOutputException ex) {
+        // Deliberately NOT mapped to 503, to avoid circuit breaker cascades on "model said nonsense".
+        log.info("AI output invalid. correlationId={}", MDC.get(CorrelationIdFilter.MDC_KEY), ex);
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, "ai-output-invalid", "AI output invalid", ex.getMessage());
     }
 
     @ExceptionHandler(AccessDeniedException.class)

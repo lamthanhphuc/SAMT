@@ -57,7 +57,7 @@ public class LecturerDashboardController {
     }
 
     @GetMapping("/groups/{groupId}/progress")
-    @PreAuthorize("hasAnyRole('LECTURER','ADMIN')")
+    @PreAuthorize("hasAnyRole('LECTURER','ADMIN','STUDENT')")
     @Operation(summary = "Get task progress for a group")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Progress retrieved", content = @Content(schema = @Schema(implementation = GroupProgressResponse.class))),
@@ -109,7 +109,7 @@ public class LecturerDashboardController {
     }
 
     @GetMapping("/groups/{groupId}/recent-activities")
-    @PreAuthorize("hasAnyRole('LECTURER','ADMIN')")
+    @PreAuthorize("hasAnyRole('LECTURER','ADMIN','STUDENT')")
     @Operation(summary = "Get recent normalized activities for a group")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Activities retrieved", content = @Content(schema = @Schema(implementation = PageResponse.class))),

@@ -69,6 +69,8 @@ public class InternalJwtWebFilter implements WebFilter, Ordered {
         String path = exchange.getRequest().getURI().getPath();
         return "/profile".equals(path)
             || "/api/users/me".equals(path)
+                || path.startsWith("/api/members/")
+                || path.startsWith("/api/integrations/")
                 || path.startsWith("/api/auth/")
                 || path.startsWith("/api/admin/")
                 || path.startsWith("/api/identity/");

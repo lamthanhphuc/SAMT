@@ -43,6 +43,8 @@ public class GroupDetailResponse {
         private String fullName;
         private String email;
         private String role;
+        private String jiraAccountId;
+        private String githubUsername;
     }
     
 }

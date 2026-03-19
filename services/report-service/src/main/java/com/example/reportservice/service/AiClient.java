@@ -4,6 +4,7 @@ import com.example.reportservice.config.AiServiceProperties;
 import com.example.reportservice.config.CorrelationIdFilter;
 import com.example.reportservice.dto.ai.AiRequest;
 import com.example.reportservice.dto.ai.AiResponse;
+import com.example.reportservice.dto.ai.AiStructuredResponse;
 import com.example.reportservice.web.UpstreamServiceException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
@@ -78,6 +79,59 @@ public class AiClient {
         } catch (RestClientException e) {
 
             log.error("Failed to call AI Service", e);
+            throw new TransientAiUpstreamException("AI Service unavailable", e);
+        }
+    }
+
+    @Retry(name = "analysisApi")
+    @CircuitBreaker(name = "analysisApi")
+    public AiStructuredResponse generateSrsStructured(String rawContent, boolean strict) {
+
+        String url = properties.getUrl() + "/internal/ai/generate-srs-structured";
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            relayAuthorization(headers);
+
+            // send strict flag without changing shared request dto shape
+            // (analysis-service AiRequest includes 'strict'; report-service AiRequest doesn't)
+            Object payload = strict
+                    ? java.util.Map.of("rawRequirements", rawContent, "strict", true)
+                    : java.util.Map.of("rawRequirements", rawContent, "strict", false);
+
+            ResponseEntity<AiStructuredResponse> response =
+                    restTemplate.exchange(
+                            url,
+                            HttpMethod.POST,
+                            new HttpEntity<>(payload, headers),
+                            AiStructuredResponse.class);
+
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                HttpStatusCode status = response.getStatusCode();
+                String message = "AI Service error: " + status;
+                if (status.is5xxServerError() || status.value() == 429) {
+                    throw new TransientAiUpstreamException(message);
+                }
+                throw new UpstreamServiceException(message);
+            }
+
+            AiStructuredResponse body = response.getBody();
+            if (body == null || body.getSrsContent() == null) {
+                throw new UpstreamServiceException("Invalid AI structured response");
+            }
+            return body;
+
+        } catch (HttpStatusCodeException e) {
+            HttpStatusCode status = e.getStatusCode();
+            String message = "AI Service HTTP error: " + status;
+            if (status.is5xxServerError() || status.value() == 429) {
+                throw new TransientAiUpstreamException(message, e);
+            }
+            throw new UpstreamServiceException(message, e);
+        } catch (RestClientException e) {
+
+            log.error("Failed to call AI Service (structured)", e);
             throw new TransientAiUpstreamException("AI Service unavailable", e);
         }
     }

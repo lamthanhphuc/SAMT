@@ -710,9 +710,11 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
       SERVER_PORT: ${ANALYSIS_SERVICE_PORT:-8087}
-      AI_BASE_URL: ${AI_BASE_URL:-http://ollama:11434}
+      # In docker network, Ollama is reachable by service name.
+      # Avoid inheriting host AI_BASE_URL (often set to http://localhost:11434) which breaks container-to-container calls.
+      AI_BASE_URL: http://ollama:11434
       AI_MODEL: ${AI_MODEL:-phi3}
-      AI_TIMEOUT_MS: ${AI_TIMEOUT_MS:-120000}
+      AI_TIMEOUT_MS: ${AI_TIMEOUT_MS:-600000}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-analysis:5432/${DB_ANALYSIS_NAME:-samt_analysis}?serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
@@ -774,7 +776,7 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:? REDIS_PASSWORD is required - create .env file}
       AI_SERVICE_URL: http://analysis-service:8087
-      AI_SERVICE_TIMEOUT_MS: ${AI_SERVICE_TIMEOUT_MS:-180000}
+      AI_SERVICE_TIMEOUT_MS: ${AI_SERVICE_TIMEOUT_MS:-600000}
       JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms256m -Xmx512m}
     ports:
       - "${REPORT_SERVICE_PORT:-8088}:${REPORT_SERVICE_PORT:-8088}"

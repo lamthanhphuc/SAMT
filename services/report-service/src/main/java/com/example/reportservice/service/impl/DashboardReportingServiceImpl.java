@@ -2,6 +2,7 @@ package com.example.reportservice.service.impl;
 
 import com.example.reportservice.client.ProjectConfigClient;
 import com.example.reportservice.client.ProjectConfigClient.ProjectConfigSnapshot;
+import com.example.reportservice.client.SyncJobClient;
 import com.example.reportservice.client.UserGroupClient;
 import com.example.reportservice.client.UserGroupClient.GroupDetail;
 import com.example.reportservice.client.UserGroupClient.GroupSummary;
@@ -19,7 +20,6 @@ import com.example.reportservice.dto.response.TeamCommitSummaryResponse;
 import com.example.reportservice.dto.response.TeamMemberTaskStatsResponse;
 import com.example.reportservice.entity.GithubCommit;
 import com.example.reportservice.entity.JiraIssue;
-import com.example.reportservice.entity.SyncJob;
 import com.example.reportservice.entity.UnifiedActivity;
 import com.example.reportservice.entity.UnifiedActivity.ActivitySource;
 import com.example.reportservice.entity.UnifiedActivity.ActivityType;
@@ -29,7 +29,6 @@ import com.example.reportservice.grpc.SyncGrpcClient;
 import com.example.reportservice.grpc.UnifiedActivityResponse;
 import com.example.reportservice.repository.GithubCommitRepository;
 import com.example.reportservice.repository.JiraIssueRepository;
-import com.example.reportservice.repository.SyncJobRepository;
 import com.example.reportservice.repository.UnifiedActivityRepository;
 import com.example.reportservice.service.JiraService;
 import com.example.reportservice.web.UpstreamServiceException;
@@ -71,12 +70,13 @@ public class DashboardReportingServiceImpl implements com.example.reportservice.
     private final JiraIssueRepository jiraIssueRepository;
     private final UnifiedActivityRepository unifiedActivityRepository;
     private final GithubCommitRepository githubCommitRepository;
-    private final SyncJobRepository syncJobRepository;
+    private final SyncJobClient syncJobClient;
     private final SyncGrpcClient syncGrpcClient;
     private final JiraService jiraService;
 
     @Override
     public AdminOverviewResponse getAdminOverview(Long semesterId) {
+        long totalGroups = userGroupClient.countGroups(null, semesterId);
         List<GroupSummary> groups = userGroupClient.listGroups(null, semesterId);
         long totalUsers = userGroupClient.countUsers();
 
@@ -84,23 +84,21 @@ public class DashboardReportingServiceImpl implements com.example.reportservice.
             groups.stream().map(GroupSummary::groupId).toList()
         );
         List<ProjectConfigSnapshot> configs = new ArrayList<>(configsByGroupId.values());
-        List<UUID> configIds = configs.stream().map(ProjectConfigSnapshot::configId).toList();
 
         long activeProjects = configs.stream()
             .filter(config -> VERIFIED_STATE.equalsIgnoreCase(config.state()))
             .count();
 
-        long pendingSyncJobs = configIds.isEmpty()
-            ? 0
-            : syncJobRepository.countByProjectConfigIdInAndStatus(configIds, "PENDING");
+        // Sync jobs are owned by sync-service. Query it directly for RUNNING jobs count.
+        long pendingSyncJobs = syncJobClient.countJobsByStatus("RUNNING");
 
-        String jiraApiHealth = resolveSyncHealth(configIds, "JIRA_ISSUES");
-        String githubApiHealth = resolveSyncHealth(configIds, "GITHUB_COMMITS");
+        String jiraApiHealth = resolveSyncHealth("JIRA_ISSUES");
+        String githubApiHealth = resolveSyncHealth("GITHUB_COMMITS");
 
         return AdminOverviewResponse.builder()
             .semesterId(semesterId)
             .totalUsers(totalUsers)
-            .totalGroups(groups.size())
+            .totalGroups(totalGroups)
             .activeProjects(activeProjects)
             .pendingSyncJobs(pendingSyncJobs)
             .jiraApiHealth(jiraApiHealth)
@@ -162,7 +160,8 @@ public class DashboardReportingServiceImpl implements com.example.reportservice.
             .completedTaskCount(completedTaskCount)
             .githubCommitCount(githubCommitCount)
             .githubPrCount(githubPrCount)
-            .lastSyncAt(configIds.isEmpty() ? null : syncJobRepository.findLastCompletedAt(configIds))
+            // Last sync timestamp is owned by sync-service; keep null if not available.
+            .lastSyncAt(null)
             .build();
     }
 
@@ -622,11 +621,23 @@ public class DashboardReportingServiceImpl implements com.example.reportservice.
             .findFirst()
             .orElseThrow(() -> new EntityNotFoundException("Assignee is not a member of the group"));
 
-        if (assignee.jiraAccountId() == null || assignee.jiraAccountId().isBlank()) {
+        String jiraAccountId = (assignee.jiraAccountId() == null || assignee.jiraAccountId().isBlank())
+            ? null
+            : assignee.jiraAccountId().trim();
+
+        // Fallback: resolve Jira accountId via user-group-service user profile (backed by identity-service gRPC).
+        if (jiraAccountId == null) {
+            UserProfile profile = userGroupClient.getUserProfile(assigneeUserId);
+            jiraAccountId = (profile == null || profile.jiraAccountId() == null || profile.jiraAccountId().isBlank())
+                ? null
+                : profile.jiraAccountId().trim();
+        }
+
+        if (jiraAccountId == null) {
             throw new EntityNotFoundException("Assignee Jira account ID is not configured");
         }
 
-        jiraService.assignIssue(requireIssueKey(issue), assignee.jiraAccountId());
+        jiraService.assignIssue(requireIssueKey(issue), jiraAccountId);
 
         String assigneeName = assignee.fullName();
         if (assigneeName == null || assigneeName.isBlank()) {
@@ -1038,9 +1049,13 @@ public class DashboardReportingServiceImpl implements com.example.reportservice.
         if (roles.contains("ADMIN")) {
             return;
         }
-        if (!roles.contains("LECTURER") || !actorId.equals(group.lecturerId())) {
-            throw new AccessDeniedException("Lecturer can only access supervised groups");
+        if (roles.contains("LECTURER") && actorId.equals(group.lecturerId())) {
+            return;
         }
+        if (roles.contains("STUDENT") && isLeaderInGroup(actorId, group.groupId())) {
+            return;
+        }
+        throw new AccessDeniedException("Only supervising lecturer/admin or group leader can access this group");
     }
 
     private void assertStudentInGroup(Long studentId, Long groupId) {
@@ -1063,14 +1078,12 @@ public class DashboardReportingServiceImpl implements com.example.reportservice.
         return new ArrayList<>(resolveConfigsByGroupId(groupIds).values().stream().map(ProjectConfigSnapshot::configId).toList());
     }
 
-    private String resolveSyncHealth(List<UUID> configIds, String jobType) {
-        if (configIds.isEmpty()) {
+    private String resolveSyncHealth(String jobType) {
+        String latestStatus = syncJobClient.findLatestStatusByJobType(jobType);
+        if (latestStatus == null) {
             return HEALTH_NO_DATA;
         }
-        return syncJobRepository.findFirstByProjectConfigIdInAndJobTypeOrderByCreatedAtDesc(configIds, jobType)
-            .map(SyncJob::getStatus)
-            .map(this::mapHealthByStatus)
-            .orElse(HEALTH_NO_DATA);
+        return mapHealthByStatus(latestStatus);
     }
 
     private String mapHealthByStatus(String status) {
@@ -1080,7 +1093,7 @@ public class DashboardReportingServiceImpl implements com.example.reportservice.
         return switch (status.toUpperCase()) {
             case "COMPLETED" -> HEALTH_HEALTHY;
             case "FAILED" -> HEALTH_ISSUE;
-            case "PENDING", "RUNNING" -> HEALTH_DEGRADED;
+            case "PARTIAL_FAILURE", "PENDING", "RUNNING" -> HEALTH_DEGRADED;
             default -> HEALTH_NO_DATA;
         };
     }
@@ -1276,8 +1289,21 @@ public class DashboardReportingServiceImpl implements com.example.reportservice.
                 .reporterName(item.getReporterName())
                 .createdAt(parseIssueTimestamp(item.getCreatedAt()))
                 .updatedAt(parseIssueTimestamp(item.getUpdatedAt()))
+                .dueDate(parseLocalDate(item.getDueDate()))
                 .build())
             .toList();
+    }
+
+    private java.time.LocalDate parseLocalDate(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String v = value.trim();
+        try {
+            return java.time.LocalDate.parse(v);
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private List<GithubCommit> toGithubCommits(List<GithubCommitResponse> source, UUID configId) {
@@ -1291,6 +1317,9 @@ public class DashboardReportingServiceImpl implements com.example.reportservice.
                     .committedDate(committedAt == null ? LocalDateTime.MIN : committedAt)
                     .authorEmail(item.getAuthorEmail())
                     .authorName(item.getAuthorName())
+                    .additions(item.getAdditions())
+                    .deletions(item.getDeletions())
+                    .totalChanges(item.getTotalChanges())
                     .build();
             })
             .toList();

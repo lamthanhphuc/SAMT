@@ -3,6 +3,7 @@ package com.example.syncservice.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 /**
@@ -61,4 +62,7 @@ public class JiraIssue extends BaseEntity {
 
     @Column(name = "priority", length = 50)
     private String priority;
+
+    @Column(name = "due_date")
+    private LocalDate dueDate;
 }

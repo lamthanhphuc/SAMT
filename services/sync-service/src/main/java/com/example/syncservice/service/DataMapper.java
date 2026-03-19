@@ -2,7 +2,6 @@ package com.example.syncservice.service;
 
 import com.example.syncservice.dto.GithubCommitDto;
 import com.example.syncservice.dto.JiraIssueDto;
-import com.example.syncservice.dto.ProjectConfigDto;
 import com.example.syncservice.entity.*;
 import com.example.syncservice.metrics.SyncMetrics;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
@@ -109,6 +109,17 @@ public class DataMapper {
         }
         if (dto.getFields().getUpdated() != null) {
             issue.setUpdatedAt(parseIsoDateTime(dto.getFields().getUpdated(), "updatedAt", dto.getKey()));
+        }
+
+        // Jira due date is ISO_LOCAL_DATE (yyyy-MM-dd)
+        String dueDateRaw = dto.getFields().getDueDate();
+        if (dueDateRaw != null && !dueDateRaw.isBlank()) {
+            try {
+                issue.setDueDate(LocalDate.parse(dueDateRaw.trim()));
+            } catch (Exception ignored) {
+                log.warn("⚠️ Failed to parse Jira dueDate. issueKey={} rawValue=[{}]", dto.getKey(), dueDateRaw);
+                syncMetrics.recordParserWarning();
+            }
         }
         
         return issue;
